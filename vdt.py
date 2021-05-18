@@ -1,10 +1,10 @@
-import os, signal, datetime, getopt, sys
+import os, signal, datetime, getopt, sys, time
 
 # Called when Ctrl+C
 def sigint_handler(sig, frame):
     print('\n\n[x] SIGINT: Exiting...')
 
-    domains.close()
+    domains_file.close()
 
     quit()
 signal.signal(signal.SIGINT, sigint_handler)
@@ -15,10 +15,10 @@ if __name__ == '__main__':
 
         for opt, arg in opts:
             if opt == '-D':
-                domains_file = arg
+                domains_file_name = arg
                 domains_found = True
 
-        if not domains_found or domains_file == '':
+        if not domains_found or domains_file_name == '':
             raise Exception
             
     except Exception:
@@ -27,9 +27,18 @@ if __name__ == '__main__':
 
     print("[+] Starting time: %s" % datetime.datetime.now())
     print("[+] PID: %d" % os.getpid())
-    print("[+] Domains file: %s" % domains_file)
+    print("[+] Domains file: %s" % domains_file_name)
 
-    domains = open(domains_file, 'r')
-    
+    try:
+        domains_file = open(domains_file_name, 'r')
+    except FileNotFoundError:
+        print('[x] Domains file not found')
+        exit()
+
     while True:
-        pass
+        domain = domains_file.readline()
+        if not domain:
+            time.sleep(5)
+            continue
+        
+        print(domain)
