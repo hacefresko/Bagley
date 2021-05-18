@@ -1,7 +1,4 @@
-import os, signal, datetime
-
-DOMAINS_FILE = "domains.txt"
-
+import os, signal, datetime, getopt, sys
 
 # Called when Ctrl+C
 def sigint_handler(sig, frame):
@@ -13,11 +10,26 @@ def sigint_handler(sig, frame):
 signal.signal(signal.SIGINT, sigint_handler)
 
 if __name__ == '__main__':
-    t = datetime.datetime.now()
-    print("[+] Starting time: %s-%s-%s %s:%s:%s" % (t.day, t.month, t.year, t.hour, t.minute, t.second))
-    print("[+] PID: %d" % os.getpid())
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'D:')
 
-    domains = open(DOMAINS_FILE, 'r')
+        for opt, arg in opts:
+            if opt == '-D':
+                domains_file = arg
+                domains_found = True
+
+        if not domains_found or domains_file == '':
+            raise Exception
+            
+    except Exception:
+        print(os.path.basename(__file__) + ' -D <domains file>')
+        exit()
+
+    print("[+] Starting time: %s" % datetime.datetime.now())
+    print("[+] PID: %d" % os.getpid())
+    print("[+] Domains file: %s" % domains_file)
+
+    domains = open(domains_file, 'r')
     
     while True:
         pass
