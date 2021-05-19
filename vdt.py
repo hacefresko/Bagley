@@ -16,16 +16,20 @@ URLS_LOCK = threading.Lock()
 # Called when Ctrl+C
 def sigint_handler(sig, frame):
     print('\n[x] SIGINT: Exiting...')
-
     scope_file.close()
-
     quit()
 signal.signal(signal.SIGINT, sigint_handler)
 
 class Crawler (threading.Thread):
+    def __init__(self, scope_file):
+        threading.Thread.__init__(self)
+        self.scope_file = scope_file
+        self.crawled = []
+        self.protocol = 'http'
+
     def run(self):
         while True:
-            line = scope_file.readline()
+            line = self.scope_file.readline()
             if not line:
                 time.sleep(5)
                 continue
@@ -35,42 +39,42 @@ class Crawler (threading.Thread):
             if domain not in SCOPE:
                 SCOPE.append(domain)
             
-            for path in self.__crawl(domain):
+            print("[+] Crawling %s" % domain)
+
+            initial_request = requests.get(self.protocol + '://' + domain,  allow_redirects=False)
+            if initial_request.status_code == 301 and urlparse(initial_request.headers.get('Location')).scheme == 'https':
+                self.protocol = 'https'
+
+            self.__crawl(self.protocol + "://" + domain)
+
+            print("[+] Finished crawling %s" % domain)
+
+    def __crawl(self, parent_url):
+        self.crawled.append(parent_url)
+
+        try:
+            r = requests.get(parent_url)
+        except Exception as e:
+            print('[x] Exception ocurred when requesting %s: %s' % (url, e))
+            return
+
+        parser = BeautifulSoup(r.text, 'html.parser')
+        for link in parser.find_all('a'):
+            path = link.get('href') 
+
+            if path == '#' or path is None:
+                return
+
+            path = urljoin(parent_url, path)
+            domain = urlparse(path).netloc
+
+            if domain in SCOPE and path not in self.crawled:
+
                 URLS_LOCK.acquire()
-                print(path)
                 DISCOVERED_URLS.append(path)
                 URLS_LOCK.release()
 
-    # Returns a generator object of paths to iterate over and it stores them
-    def __crawl(self, parent_domain):
-        to_crawl = ["http://" + parent_domain]
-        crawled = []
-
-        print("[+] Crawling %s" % parent_domain)
-
-        while to_crawl:
-            url = to_crawl.pop()
-            crawled.append(url)
-            try:
-                r = requests.get(url)
-            except Exception as e:
-                print('[x] Exception ocurred when requesting %s: %s' % (url, e))
-                continue
-
-            parser = BeautifulSoup(r.text, 'html.parser')
-            for link in parser.find_all('a'):
-                path = link.get('href')
-
-                if path == '#' or path is None:
-                    continue
-                
-                if path[:2] == '//':
-                    path = 'http:' + path
-
-                domain = urlparse(path).netloc
-                if domain in SCOPE and path not in crawled:
-                    to_crawl.append(path)
-                    yield path
+                self.__crawl(path)
 
 if __name__ == '__main__':
     try:
@@ -103,5 +107,18 @@ if __name__ == '__main__':
             SCOPE.append(line.split(' ')[0])
     scope_file.seek(0, 0)
 
-    crawler = Crawler()
+    crawler = Crawler(scope_file)
     crawler.start()
+
+    i=0
+    while True:
+        URLS_LOCK.acquire()
+        try:
+            url = DISCOVERED_URLS[i]
+        except:
+            continue
+        finally:
+            URLS_LOCK.release()
+        i=i+1
+
+        print(url)
