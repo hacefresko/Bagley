@@ -141,4 +141,4 @@ if __name__ == '__main__':
             TARGETS_LOCK.release()
         i=i+1
 
-        print(target.get('url'))
+        
