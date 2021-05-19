@@ -9,8 +9,8 @@ set_start_method("spawn")
 SCOPE = []
 
 # Map of urls for each domain
-DISCOVERED_URLS = []
-URLS_LOCK = threading.Lock()
+TARGETS = []
+TARGETS_LOCK = threading.Lock()
 
 
 # Called when Ctrl+C
@@ -55,7 +55,7 @@ class Crawler (threading.Thread):
         try:
             r = requests.get(parent_url)
         except Exception as e:
-            print('[x] Exception ocurred when requesting %s: %s' % (url, e))
+            print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
             return
 
         parser = BeautifulSoup(r.text, 'html.parser')
@@ -68,22 +68,33 @@ class Crawler (threading.Thread):
             path = urljoin(parent_url, path)
             domain = urlparse(path).netloc
 
-            params = urlparse(path).query.split('&')
-            if params[0]:
-                new_params = ''
-                for param in params:
-                    value = param.split('=')[0]
-                    new_params += value + "=1337&"
-                new_params = new_params[:-1]
-                path = urlparse(path)._replace(query=new_params).geturl()
-
             if domain in SCOPE and path not in self.crawled:
+                params = urlparse(path).query.split('&')
+                if params[0]:
+                    new_params = ''
+                    for param in params:
+                        value = param.split('=')[0]
+                        new_params += value + "=1337&"
+                    new_params = new_params[:-1]
+                    path_name = urlparse(path)._replace(query=new_params).geturl()
+                else:
+                    path_name = path
 
-                URLS_LOCK.acquire()
-                DISCOVERED_URLS.append(path)
-                URLS_LOCK.release()
+                found = False
+                TARGETS_LOCK.acquire()
+                for target in TARGETS:
+                    if target.get('url') == path_name and target.get('type') == 'GET':
+                        target.get('requests').append([r.text])
+                        found = True
+                        break
+
+                if not found:
+                    TARGETS.append({'url': path_name, 'type': 'GET', 'requests': [r.text]})
+                TARGETS_LOCK.release()
 
                 self.__crawl(path)
+
+
 
 if __name__ == '__main__':
     try:
@@ -121,13 +132,13 @@ if __name__ == '__main__':
 
     i=0
     while True:
-        URLS_LOCK.acquire()
+        TARGETS_LOCK.acquire()
         try:
-            url = DISCOVERED_URLS[i]
+            target = TARGETS[i]
         except:
             continue
         finally:
-            URLS_LOCK.release()
+            TARGETS_LOCK.release()
         i=i+1
 
-        print(url)
+        print(target.get('url'))
