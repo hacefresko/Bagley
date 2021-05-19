@@ -68,6 +68,15 @@ class Crawler (threading.Thread):
             path = urljoin(parent_url, path)
             domain = urlparse(path).netloc
 
+            params = urlparse(path).query.split('&')
+            if params[0]:
+                new_params = ''
+                for param in params:
+                    value = param.split('=')[0]
+                    new_params += value + "=1337&"
+                new_params = new_params[:-1]
+                path = urlparse(path)._replace(query=new_params).geturl()
+
             if domain in SCOPE and path not in self.crawled:
 
                 URLS_LOCK.acquire()
