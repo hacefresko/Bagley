@@ -20,7 +20,7 @@ class Crawler (threading.Thread):
             if initial_request.status_code == 301 and urlparse(initial_request.headers.get('Location')).scheme == 'https':
                 self.protocol = 'https'
         except Exception as e:
-            print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
+            print('[x] Exception ocurred when requesting %s: %s' % (self.protocol + '://' + self.domain, e))
             return
 
         self.__crawl(self.protocol + "://" + self.domain)
