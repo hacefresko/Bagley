@@ -3,7 +3,7 @@ import crawler, database
 
 db = database.VDT_DB()
 try:
-    db.connect('vdt.db')
+    db.connect()
 except:
     print('[x] Couldn\'t connect to the database')
 

@@ -1,6 +1,9 @@
 PRAGMA foreign_keys=OFF;
 BEGIN TRANSACTION;
 
+DROP TABLE domains;
+DROP TABLE paths;
+
 CREATE TABLE domains (
     name TEXT PRIMARY KEY NOT NULL
     );

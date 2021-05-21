@@ -14,10 +14,14 @@ class Crawler (threading.Thread):
         self.domain = domain
         print("[+] Crawling %s" % self.domain)
 
-        # Check for https
-        initial_request = requests.get(self.protocol + '://' + self.domain,  allow_redirects=False)
-        if initial_request.status_code == 301 and urlparse(initial_request.headers.get('Location')).scheme == 'https':
-            self.protocol = 'https'
+        try:
+            # Check for https
+            initial_request = requests.get(self.protocol + '://' + self.domain,  allow_redirects=False)
+            if initial_request.status_code == 301 and urlparse(initial_request.headers.get('Location')).scheme == 'https':
+                self.protocol = 'https'
+        except Exception as e:
+            print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
+            return
 
         self.__crawl(self.protocol + "://" + self.domain)
 
