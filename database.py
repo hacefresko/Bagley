@@ -7,7 +7,7 @@ class VDT_DB:
     def connect(self):
         self.db = sqlite3.connect(DB_NAME)
 
-    def _execute(self, query, params):
+    def _query(self, query, params):
         cursor = self.db.cursor()
         cursor.execute(query, params)
         self.db.commit()
@@ -18,15 +18,15 @@ class VDT_DB:
 
     # Checks if domain exists in db
     def checkDomain(self, domain):
-        return  True if self._execute('SELECT name FROM domains WHERE name = ?', [domain]).fetchone() else False
+        return  True if self._query('SELECT name FROM domains WHERE name = ?', [domain]).fetchone() else False
 
     # Inserts the domain in db
     def insertDomain(self, domain):
-        self._execute('INSERT INTO domains (name) VALUES (?)', [domain])
+        self._query('INSERT INTO domains (name) VALUES (?)', [domain])
 
     # Checks if path exists in db
     def checkPath(self, element, domain, parent):
-        return  True if self._execute('SELECT * FROM paths WHERE element = ? AND domain = ? AND parent = ?', [element, domain, parent]).fetchone() else False
+        return  True if self._query('SELECT * FROM paths WHERE element = ? AND domain = ? AND parent = ?', [element, domain, parent]).fetchone() else False
     
     # Inserts each path inside the URL in db if not already inserted
     def insertPath(self, url):
@@ -40,5 +40,5 @@ class VDT_DB:
         prevElem = None
         for element in urlparse(url)[2].split('/'):
             if not self.checkPath(element, domain, prevElem):
-                self._execute('INSERT INTO paths (element, parent, domain) VALUES (?,?,?)', [element, prevElem, domain])
+                self._query('INSERT INTO paths (element, parent, domain) VALUES (?,?,?)', [element, prevElem, domain])
             prevElem = element
