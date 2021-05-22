@@ -45,7 +45,7 @@ crawler = crawler.Crawler(db)
 
 while True:
     line = scope_file.readline()
-    if not line:
+    if not line :
         time.sleep(5)
         continue
 

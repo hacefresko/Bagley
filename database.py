@@ -1,4 +1,4 @@
-import sqlite3
+import sqlite3, requests
 from urllib.parse import urlparse
 
 DB_NAME = 'vdt.db'
@@ -49,9 +49,17 @@ class VDT_DB:
         result = self._query('SELECT id FROM headers WHERE key = ? AND value = ?', [key, value]).fetchone()
         return result[0] if result else False
 
-    def insertHeader(self, key, value):
-        result = self._query('INSERT INTO headers (key, value) VALUES (?,?)', [key, value])
-        return result.lastrowid
+    # Inserts header into response
+    def insertHeader(self, response, key, value):
+        header = self.checkHeader(key, value)
+        if not header:
+            header = self._query('INSERT INTO headers (key, value) VALUES (?,?)', [key, value]).lastrowid
+        self._query('INSERT INTO response_headers (response, header) VALUES (?,?)', [response, header])
+
+    # Insert an object CookieJar into response
+    def insertCookie(self, response, key, value):
+        cookie_id = self._query('INSERT INTO cookies (key, value) VALUES (?,?)', [key, value]).lastrowid
+        self._query('INSERT INTO response_cookies (response, cookie) VALUES (?,?)', [response, cookie_id])
 
     # Inserts a new response from url, with type (GET, POST, etc.),a dictionary of headers and strings for cookies and body
     def insertResponse(self, path, type, response):
@@ -59,19 +67,8 @@ class VDT_DB:
         result = self._query('INSERT INTO responses (path, params, type, body) VALUES (?,?,?,?)', [path, params, type, response.text])
         response_id = result.lastrowid
 
-        # Insert headers
         for key, value in response.headers.items():
-            header = self.checkHeader(key, value)
-            if not header:
-                header = self.insertHeader(key, value)
-            
-            self._query('INSERT INTO response_headers (response, header) VALUES (?,?)', [response_id, header])
+            self.insertHeader(response_id, key, value)
 
-        '''# Insert cookies
-        for key, value in response.cookies.get_dict(domain=):
-            header = self.checkHeader(key, value)
-            if not header:
-                header = self.insertHeader(key, value)
-            
-            self._query('INSERT INTO response_headers (response, header) VALUES (?,?)', [response_id, header])'''
-            
+        for key, value in response.cookies.get_dict().items():
+            self.insertCookie(response_id, key, value)
