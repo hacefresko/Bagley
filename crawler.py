@@ -17,7 +17,7 @@ class Crawler (threading.Thread):
         try:
             # Check for https
             initial_request = requests.get(self.protocol + '://' + self.domain,  allow_redirects=False)
-            if initial_request.status_code == 301 and urlparse(initial_request.headers.get('Location')).scheme == 'https':
+            if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
                 self.protocol = 'https'
         except Exception as e:
             print('[x] Exception ocurred when requesting %s: %s' % (self.protocol + '://' + self.domain, e))
@@ -28,7 +28,6 @@ class Crawler (threading.Thread):
         print("[+] Finished crawling %s" % self.domain)
 
     def __crawl(self, parent_url):
-        self.db.insertPath(parent_url)
         self.crawled.append(parent_url)
 
         try:
@@ -36,6 +35,8 @@ class Crawler (threading.Thread):
         except Exception as e:
             print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
             return
+
+        self.db.insertResponse(self.db.insertPath(parent_url), 'GET', r)
 
         parser = BeautifulSoup(r.text, 'html.parser')
         for link in parser.find_all('a'):
@@ -49,16 +50,5 @@ class Crawler (threading.Thread):
             domain = urlparse(url).netloc
 
             if self.db.checkDomain(domain) and url not in self.crawled:
-                '''params = urlparse(path).query.split('&')
-                if params[0]:
-                    new_params = ''
-                    for param in params:
-                        value = param.split('=')[0]
-                        new_params += value + "=1337&"
-                    new_params = new_params[:-1]
-                    path_name = urlparse(path)._replace(query=new_params).geturl()
-                else:
-                    path_name = path'''
-
                 self.__crawl(url)
 
