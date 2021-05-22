@@ -25,8 +25,8 @@ class VDT_DB:
         self._query('INSERT INTO domains (name) VALUES (?)', [domain])
 
     # Checks if path exists in db
-    def checkPath(self, element, domain, parent):
-        return  True if self._query('SELECT * FROM paths WHERE element = ? AND domain = ? AND parent = ?', [element, domain, parent]).fetchone() else False
+    def checkPath(self, element, parent, domain):
+        return  True if self._query('SELECT * FROM paths WHERE element = ? AND parent = ? AND domain = ?', [element, parent, domain]).fetchone() else False
     
     # Inserts each path inside the URL in db if not already inserted
     def insertPath(self, url):
@@ -37,8 +37,8 @@ class VDT_DB:
         element = urlparse(url)[2].split('/')[-1]
 
         # Iterate over each domain/file from URL
-        prevElem = None
+        prevElem = ''
         for element in urlparse(url)[2].split('/'):
-            if not self.checkPath(element, domain, prevElem):
+            if not self.checkPath(element, prevElem, domain):
                 self._query('INSERT INTO paths (element, parent, domain) VALUES (?,?,?)', [element, prevElem, domain])
             prevElem = element
