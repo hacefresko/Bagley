@@ -55,13 +55,23 @@ class VDT_DB:
 
     # Inserts a new response from url, with type (GET, POST, etc.),a dictionary of headers and strings for cookies and body
     def insertResponse(self, path, type, response):
-        result = self._query('INSERT INTO responses (path, url, type, cookies, body) VALUES (?,?,?,?,?)', [path, response.url, type, 'cookies', response.text])
+        params = urlparse(response.url).query
+        result = self._query('INSERT INTO responses (path, params, type, body) VALUES (?,?,?,?)', [path, params, type, response.text])
         response_id = result.lastrowid
 
+        # Insert headers
         for key, value in response.headers.items():
             header = self.checkHeader(key, value)
             if not header:
                 header = self.insertHeader(key, value)
             
             self._query('INSERT INTO response_headers (response, header) VALUES (?,?)', [response_id, header])
+
+        '''# Insert cookies
+        for key, value in response.cookies.get_dict(domain=):
+            header = self.checkHeader(key, value)
+            if not header:
+                header = self.insertHeader(key, value)
+            
+            self._query('INSERT INTO response_headers (response, header) VALUES (?,?)', [response_id, header])'''
             
