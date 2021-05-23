@@ -45,6 +45,7 @@ class VDT_DB:
 
         return prevElem if prevElem != '' else None
 
+    # Checks if header exists and returns id or None if it does not exist  
     def checkHeader(self, key, value):
         result = self._query('SELECT id FROM headers WHERE key = ? AND value = ?', [key, value]).fetchone()
         return result[0] if result else False
@@ -61,10 +62,10 @@ class VDT_DB:
         cookie_id = self._query('INSERT INTO cookies (key, value) VALUES (?,?)', [key, value]).lastrowid
         self._query('INSERT INTO response_cookies (response, cookie) VALUES (?,?)', [response, cookie_id])
 
-    # Inserts a new response from url, with type (GET, POST, etc.),a dictionary of headers and strings for cookies and body
-    def insertResponse(self, path, type, response):
+    # Inserts a new response from url, with method (GET, POST, etc.),a dictionary of headers and strings for cookies and body
+    def insertResponse(self, path, method, response):
         params = urlparse(response.url).query
-        result = self._query('INSERT INTO responses (path, params, type, body) VALUES (?,?,?,?)', [path, params, type, response.text])
+        result = self._query('INSERT INTO responses (path, params, method, body) VALUES (?,?,?,?)', [path, params, method, response.text])
         response_id = result.lastrowid
 
         for key, value in response.headers.items():

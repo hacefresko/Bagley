@@ -38,7 +38,7 @@ CREATE TABLE responses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     path INTEGER NOT NULL,
     params TEXT,
-    type TEXT NOT NULL,
+    method TEXT NOT NULL,
     body TEXT NOT NULL,
     FOREIGN KEY (path) REFERENCES paths(id)
 );
