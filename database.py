@@ -1,4 +1,4 @@
-import sqlite3, requests
+import sqlite3, requests, json
 from urllib.parse import urlparse
 
 DB_NAME = 'vdt.db'
@@ -56,20 +56,21 @@ class VDT_DB:
         if not header:
             header = self._query('INSERT INTO headers (key, value) VALUES (?,?)', [key, value]).lastrowid
         self._query('INSERT INTO response_headers (response, header) VALUES (?,?)', [response, header])
-
-    # Insert an object CookieJar into response
-    def insertCookie(self, response, key, value):
         cookie_id = self._query('INSERT INTO cookies (key, value) VALUES (?,?)', [key, value]).lastrowid
         self._query('INSERT INTO response_cookies (response, cookie) VALUES (?,?)', [response, cookie_id])
 
     # Inserts a new response from url, with method (GET, POST, etc.),a dictionary of headers and strings for cookies and body
-    def insertResponse(self, path, method, response):
+    def insertResponse(self, path, method, response, data):
         params = urlparse(response.url).query
-        result = self._query('INSERT INTO responses (path, params, method, body) VALUES (?,?,?,?)', [path, params, method, response.text])
+        cookies = json.dumps(response.cookies.get_dict())
+
+        if method == 'POST' and data is not None:
+            data = json.dumps(data)
+        else:
+            data = None
+
+        result = self._query('INSERT INTO responses (path, params, method, cookies, data, body) VALUES (?,?,?,?,?,?)', [path, params, method, cookies, data, response.text])
         response_id = result.lastrowid
 
         for key, value in response.headers.items():
             self.insertHeader(response_id, key, value)
-
-        for key, value in response.cookies.get_dict().items():
-            self.insertCookie(response_id, key, value)

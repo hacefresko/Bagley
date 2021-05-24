@@ -7,8 +7,8 @@ class Crawler (threading.Thread):
     def __init__(self, db):
         threading.Thread.__init__(self)
         self.db = db
-        self.get_crawled = []
-        self.post_crawled = []
+        self.get_crawled = []   # List to store crawled urls by GET
+        self.post_crawled = {}  # Dict to store crawled urls with data keys by POST
         self.protocol = 'http'
 
     def run(self, domain):
@@ -29,6 +29,7 @@ class Crawler (threading.Thread):
         print("[+] Finished crawling %s" % self.domain)
 
     def __crawl(self, method, parent_url, data):
+        print(parent_url)
         self.get_crawled.append(parent_url)
 
         try:
@@ -40,30 +41,63 @@ class Crawler (threading.Thread):
         except Exception as e:
             print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
             return
-        
-
-        self.db.insertResponse(self.db.insertPath(parent_url), 'GET', r)
+         
+        self.db.insertResponse(self.db.insertPath(parent_url), method, r, data)
 
         parser = BeautifulSoup(r.text, 'html.parser')
-        for link in parser.find_all('a'):
-            path = link.get('href') 
+        for element in parser(['a', 'form']):
+            if element.name == 'a':
+                path = element.get('href')
+                if path is None:
+                    continue
+                
+                # Cut the html id selector from url
+                if '#' in path:
+                    path = path[:path.find('#')]
 
-            if path == '#' or path is None:
-                return
+                url = urljoin(parent_url, path)
+                domain = urlparse(url).netloc
 
-            url = urljoin(parent_url, path)
-            domain = urlparse(url).netloc
+                if self.db.checkDomain(domain) and url not in self.get_crawled:
+                    self.__crawl('GET', url, None)
+                
+            elif element.name =='form':
+                form_id = element.get('id')
+                method = element.get('method')
+                action = element.get('action') if element.get('action') is not None else ''
 
-            if self.db.checkDomain(domain) and url not in self.get_crawled:
-                self.__crawl('GET', url, None)
+                url = urljoin(parent_url, action)
+                domain = urlparse(url).netloc
 
-        for form in parser.find_all('form'):
-            method = form.get('method')
-            action = form.get('action') if form.get('action') is not None else ''
+                if self.db.checkDomain(domain):
+                    # Parse input, select and textarea (textarea is outside forms, linked by form attribute)
+                    data = {}
+                    textareas = parser('textarea', form=form_id) if form_id is not None else []
+                    for input in element(['input','select'], ) + textareas:
+                        # Skip submit buttons
+                        if input.get('type') != 'submit':
+                            # If value is empty, put '1337'
+                            data[input.get('name')] = input.get('value') if input.get('value') is not None and input.get('value') != '' else '1337'
 
-            url = urljoin(parent_url, action)
-            domain = urlparse(url).netloc
+                    # If form method is GET, append data to URL as params and set data to None
+                    if method == 'GET' and len(data) > 0:
+                        url += '?'
+                        for key, value in data.items():
+                            if key not in url:
+                                url += key + '=' + value
+                                url += '&'
+                        url = url[:-1]
 
-            # Need to parse input, textarea and select
+                        data = None
 
-            
+                    if method == 'GET' and url not in self.get_crawled:
+                        self.get_crawled.append(url)
+                    elif method == 'POST' and (self.post_crawled.get(url) is None or data.keys() not in self.post_crawled.get(url)):
+                        if self.post_crawled.get(url) is None:
+                            self.post_crawled[url] = [data.keys()]
+                        elif data.keys() not in self.post_crawled.get(url):
+                            self.post_crawled.get(url).append(data.keys())
+                    else:
+                        continue
+
+                    self.__crawl(method, url, data)
