@@ -29,7 +29,6 @@ class Crawler (threading.Thread):
         print("[+] Finished crawling %s" % self.domain)
 
     def __crawl(self, method, parent_url, data):
-        print(parent_url)
         self.get_crawled.append(parent_url)
 
         try:
@@ -41,11 +40,11 @@ class Crawler (threading.Thread):
         except Exception as e:
             print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
             return
-         
-        self.db.insertResponse(self.db.insertPath(parent_url), method, r, data)
+
+        response = self.db.insertResponse(self.db.insertPath(parent_url), method, r, data)
 
         parser = BeautifulSoup(r.text, 'html.parser')
-        for element in parser(['a', 'form']):
+        for element in parser(['a', 'form', 'script']):
             if element.name == 'a':
                 path = element.get('href')
                 if path is None:
@@ -61,7 +60,7 @@ class Crawler (threading.Thread):
                 if self.db.checkDomain(domain) and url not in self.get_crawled:
                     self.__crawl('GET', url, None)
                 
-            elif element.name =='form':
+            elif element.name == 'form':
                 form_id = element.get('id')
                 method = element.get('method')
                 action = element.get('action') if element.get('action') is not None else ''
@@ -73,7 +72,7 @@ class Crawler (threading.Thread):
                     # Parse input, select and textarea (textarea is outside forms, linked by form attribute)
                     data = {}
                     textareas = parser('textarea', form=form_id) if form_id is not None else []
-                    for input in element(['input','select'], ) + textareas:
+                    for input in element(['input','select']) + textareas:
                         # Skip submit buttons
                         if input.get('type') != 'submit':
                             # If value is empty, put '1337'
@@ -101,3 +100,18 @@ class Crawler (threading.Thread):
                         continue
 
                     self.__crawl(method, url, data)
+
+            elif element.name == 'script':
+                src = element.get('src')
+                if src is None:
+                    if element.string is None:
+                        continue
+
+                    self.db.insertScript(None, element.string, response)
+                else:
+                    src = urljoin(parent_url, src)
+                    domain = domain = urlparse(src).netloc
+                    if not self.db.checkDomain(domain):
+                        continue
+
+                    # get script
