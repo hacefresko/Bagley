@@ -3,10 +3,12 @@ BEGIN TRANSACTION;
 
 DROP TABLE domains;
 DROP TABLE paths;
-DROP TABLE headers;
 DROP TABLE responses;
-DROP TABLE response_headers;
+DROP TABLE bodies;
+DROP TABLE headers;
 DROP TABLE scripts;
+DROP TABLE response_bodies;
+DROP TABLE response_headers;
 DROP TABLE response_scripts;
 
 CREATE TABLE domains (
@@ -23,12 +25,6 @@ CREATE TABLE paths (
     FOREIGN KEY (parent) REFERENCES paths(id)
 );
 
-CREATE TABLE headers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    key TEXT NOT NULL,
-    value TEXT NOT NULL
-);
-
 CREATE TABLE responses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     path INTEGER NOT NULL,
@@ -36,8 +32,33 @@ CREATE TABLE responses (
     method TEXT NOT NULL,
     cookies TEXT,
     data TEXT,
-    body TEXT NOT NULL,
     FOREIGN KEY (path) REFERENCES paths(id)
+);
+
+CREATE TABLE bodies (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    hash TEXT UNIQUE NOT NULL,
+    content TEXT NOT NULL
+);
+
+CREATE TABLE headers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL
+);
+
+CREATE TABLE scripts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    hash TEXT UNIQUE NOT NULL,
+    url TEXT,
+    content TEXT NOT NULL
+);
+
+CREATE TABLE response_bodies (
+    response INTEGER NOT NULL,
+    body INTEGER NOT NULL,
+    FOREIGN KEY (response) REFERENCES responses(id),
+    FOREIGN KEY (body) REFERENCES bodies(id)
 );
 
 CREATE TABLE response_headers (
@@ -47,17 +68,9 @@ CREATE TABLE response_headers (
     FOREIGN KEY (header) REFERENCES headers(id)
 );
 
--- id is script hash (since some scripts does not have any identifier such as url, we need a way of identifying them)
-CREATE TABLE scripts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    hash TEXT UNIQUE NOT NULL,
-    url TEXT,
-    content TEXT NOT NULL
-);
-
 CREATE TABLE response_scripts (
     response INTEGER NOT NULL,
-    script TEXT NOT NULL,
+    script INTEGER NOT NULL,
     FOREIGN KEY (response) REFERENCES responses(id),
     FOREIGN KEY (script) REFERENCES scripts(id)
 );

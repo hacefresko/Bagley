@@ -62,17 +62,19 @@ class VDT_DB:
         result = self._query('SELECT id FROM headers WHERE key = ? AND value = ?', [key, value]).fetchone()
         return result[0] if result else False
 
-    # Inserts header into response
-    def insertHeader(self, response, key, value):
+    # Inserts header if not already inserted and links it to response
+    def insertHeader(self, key, value, response):
         header = self.checkHeader(key, value)
         if not header:
             header = self._query('INSERT INTO headers (key, value) VALUES (?,?)', [key, value]).lastrowid
         self._query('INSERT INTO response_headers (response, header) VALUES (?,?)', [response, header])
     
+    # Checks if script exists and returns id or False
     def checkScript(self, script_hash):
         result = self._query('SELECT id FROM scripts WHERE hash = ?', [script_hash]).fetchone()
         return result[0] if result else False
 
+    # Inserts script if not already inserted and links it to used_by (a response) if exists
     def insertScript(self, url, content, used_by):
         script_hash = hashlib.sha1(content.encode('utf-8')).hexdigest()
         script = self.checkScript(script_hash)
@@ -80,6 +82,20 @@ class VDT_DB:
         if not script:
             script = self._query('INSERT INTO scripts (hash, url, content) VALUES (?,?,?)', [script_hash, url, content]).lastrowid
         self._query('INSERT INTO response_scripts (response, script) VALUES (?,?)', [used_by, script])
+
+    # Checks if body exists and returns id or False
+    def checkBody(self, body_hash):
+        result = self._query('SELECT id FROM bodies WHERE hash = ?', [body_hash]).fetchone()
+        return result[0] if result else False
+
+    # Inserts body if not already inserted and links it to response
+    def insertBody(self, content, response):
+        body_hash = hashlib.sha1(content.encode('utf-8')).hexdigest()
+        body = self.checkBody(body_hash)
+
+        if not body:
+            body = self._query('INSERT INTO bodies (hash, content) VALUES (?,?)', [body_hash, content]).lastrowid
+        self._query('INSERT INTO response_bodies (response, body) VALUES (?,?)', [response, body])
 
     # Inserts a new response from path, with method (GET, POST, etc.) and POST data or None. Returns response id
     def insertResponse(self, path, method, response, data):
@@ -91,9 +107,11 @@ class VDT_DB:
         else:
             data = None
 
-        response_id = self._query('INSERT INTO responses (path, params, method, cookies, data, body) VALUES (?,?,?,?,?,?)', [path, params, method, cookies, data, response.text]).lastrowid
+        response_id = self._query('INSERT INTO responses (path, params, method, cookies, data) VALUES (?,?,?,?,?)', [path, params, method, cookies, data]).lastrowid
+
+        self.insertBody(response.text, response_id)
 
         for key, value in response.headers.items():
-            self.insertHeader(response_id, key, value)
+            self.insertHeader(key, value, response_id)
 
         return response_id
