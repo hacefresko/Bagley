@@ -114,4 +114,6 @@ class Crawler (threading.Thread):
                     if not self.db.checkDomain(domain):
                         continue
 
-                    # get script
+                    script = requests.get(src)
+                    print(src)
+                    self.db.insertScript(src, script.text, response)
