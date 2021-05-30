@@ -4,29 +4,40 @@ from bs4 import BeautifulSoup
 import database
 
 class Crawler (threading.Thread):
-    def __init__(self, db):
+    def __init__(self, db, scope_file):
         threading.Thread.__init__(self)
         self.db = db
+        self.scope = scope_file
         self.get_crawled = []   # List to store crawled urls by GET
         self.post_crawled = {}  # Dict to store crawled urls with data keys by POST
-        self.protocol = 'http'
 
-    def run(self, domain):
-        self.domain = domain
-        print("[+] Crawling %s" % self.domain)
+    def run(self):
+        while True:
+            line = self.scope.readline()
+            if not line :
+                time.sleep(5)
+                continue
 
-        try:
-            # Check for https
-            initial_request = requests.get(self.protocol + '://' + self.domain,  allow_redirects=False)
-            if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
-                self.protocol = 'https'
-        except Exception as e:
-            print('[x] Exception ocurred when requesting %s: %s' % (self.protocol + '://' + self.domain, e))
-            return
+            domain = line.split(' ')[0]
 
-        self.__crawl('GET', self.protocol + "://" + self.domain, None)
+            if not self.db.checkDomain(domain):
+                self.db.insertDomain(domain)
 
-        print("[+] Finished crawling %s" % self.domain)
+            print("[+] Crawling %s" % domain)
+
+            try:
+                # Check for https
+                protocol = 'http'
+                initial_request = requests.get(protocol + '://' + domain,  allow_redirects=False)
+                if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
+                    protocol = 'https'
+            except Exception as e:
+                print('[x] Exception ocurred when requesting %s: %s' % (protocol + '://' + domain, e))
+                continue
+
+            self.__crawl('GET', protocol + "://" + domain, None)
+
+            print("[+] Finished crawling %s" % domain)
 
     def __crawl(self, method, parent_url, data):
         self.get_crawled.append(parent_url)
@@ -115,5 +126,4 @@ class Crawler (threading.Thread):
                         continue
 
                     script = requests.get(src)
-                    print(src)
                     self.db.insertScript(src, script.text, response)

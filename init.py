@@ -41,17 +41,5 @@ except FileNotFoundError:
     print('[x] Scope file not found')
     exit()
 
-crawler = crawler.Crawler(db)
-
-while True:
-    line = scope_file.readline()
-    if not line :
-        time.sleep(5)
-        continue
-
-    domain = line.split(' ')[0]
-
-    if not db.checkDomain(domain):
-        db.insertDomain(domain)
-            
-    crawler.run(domain)
+crawler = crawler.Crawler(db, scope_file)
+crawler.run()
