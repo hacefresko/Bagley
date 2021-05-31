@@ -7,6 +7,7 @@ DROP TABLE requests;
 DROP TABLE responses;
 DROP TABLE headers;
 DROP TABLE scripts;
+DROP TABLE request_headers;
 DROP TABLE response_headers;
 DROP TABLE response_scripts;
 
@@ -26,6 +27,7 @@ CREATE TABLE paths (
 
 CREATE TABLE requests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    protocol TEXT NOT NULL,
     path INTEGER NOT NULL,
     params TEXT NOT NULL,
     method TEXT NOT NULL,
@@ -52,6 +54,13 @@ CREATE TABLE scripts (
     hash TEXT UNIQUE NOT NULL,
     url TEXT NOT NULL,
     content TEXT NOT NULL
+);
+
+CREATE TABLE request_headers (
+    request INTEGER NOT NULL,
+    header INTEGER NOT NULL,
+    FOREIGN KEY (request) REFERENCES requests(id),
+    FOREIGN KEY (header) REFERENCES headers(id)
 );
 
 CREATE TABLE response_headers (

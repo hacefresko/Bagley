@@ -64,7 +64,7 @@ class Crawler (threading.Thread):
                 path = element.get('href')
                 if path is None:
                     continue
-                
+
                 # Cut the html id selector from url
                 if '#' in path:
                     path = path[:path.find('#')]
