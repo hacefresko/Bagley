@@ -7,8 +7,6 @@ class Crawler (threading.Thread):
     def __init__(self, scope_file):
         threading.Thread.__init__(self)
         self.scope = scope_file
-        self.get_crawled = []   # List to store crawled urls by GET
-        self.post_crawled = {}  # Dict to store crawled urls with data keys by POST
 
     def run(self):
         self.db = database.VDT_DB()
@@ -25,10 +23,10 @@ class Crawler (threading.Thread):
 
             domain = line.split(' ')[0]
 
+            print("[+] Crawling %s" % domain)
+
             if not self.db.checkDomain(domain):
                 self.db.insertDomain(domain)
-
-            print("[+] Crawling %s" % domain)
 
             try:
                 # Check for https
@@ -40,12 +38,13 @@ class Crawler (threading.Thread):
                 print('[x] Exception ocurred when requesting %s: %s' % (protocol + '://' + domain, e))
                 continue
 
-            self.__crawl('GET', protocol + "://" + domain, None)
+            self.__crawl(protocol + "://" + domain, 'GET', None)
 
             print("[+] Finished crawling %s" % domain)
 
-    def __crawl(self, method, parent_url, data):
-        self.get_crawled.append(parent_url)
+    def __crawl(self, parent_url, method, data):
+        print(parent_url)
+        request = self.db.insertRequest(parent_url, method, data)
 
         try:
             if (method == 'GET'):
@@ -57,7 +56,7 @@ class Crawler (threading.Thread):
             print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
             return
 
-        response = self.db.insertResponse(self.db.insertPath(parent_url), method, r, data)
+        response = self.db.insertResponse(r, request)
 
         parser = BeautifulSoup(r.text, 'html.parser')
         for element in parser(['a', 'form', 'script']):
@@ -73,8 +72,8 @@ class Crawler (threading.Thread):
                 url = urljoin(parent_url, path)
                 domain = urlparse(url).netloc
 
-                if self.db.checkDomain(domain) and url not in self.get_crawled:
-                    self.__crawl('GET', url, None)
+                if self.db.checkDomain(domain) and not self.db.checkRequest(url, 'GET', None):
+                    self.__crawl(url, 'GET', None)
                 
             elif element.name == 'form':
                 form_id = element.get('id')
@@ -105,17 +104,8 @@ class Crawler (threading.Thread):
 
                         data = None
 
-                    if method == 'GET' and url not in self.get_crawled:
-                        self.get_crawled.append(url)
-                    elif method == 'POST' and (self.post_crawled.get(url) is None or data.keys() not in self.post_crawled.get(url)):
-                        if self.post_crawled.get(url) is None:
-                            self.post_crawled[url] = [data.keys()]
-                        elif data.keys() not in self.post_crawled.get(url):
-                            self.post_crawled.get(url).append(data.keys())
-                    else:
-                        continue
-
-                    self.__crawl(method, url, data)
+                    if self.db.checkRequest(url, method, data):
+                        self.__crawl(url, method, data)
 
             elif element.name == 'script':
                 src = element.get('src')

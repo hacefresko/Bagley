@@ -11,9 +11,7 @@ DROP TABLE response_headers;
 DROP TABLE response_scripts;
 
 CREATE TABLE domains (
-    protocol TEXT NOT NULL,
-    name TEXT NOT NULL,
-    PRIMARY KEY (protocol, name)
+    name TEXT PRIMARY KEY
 );
 
 -- path 0 means it's the domain
@@ -29,9 +27,9 @@ CREATE TABLE paths (
 CREATE TABLE requests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     path INTEGER NOT NULL,
-    params TEXT,
+    params TEXT NOT NULL,
     method TEXT NOT NULL,
-    data TEXT,
+    data TEXT NOT NULL,
     response TEXT,
     FOREIGN KEY (path) REFERENCES paths(id)
     FOREIGN KEY (response) REFERENCES responses(hash)
@@ -40,8 +38,7 @@ CREATE TABLE requests (
 CREATE TABLE responses (
     hash TEXT PRIMARY KEY,
     content TEXT NOT NULL,
-    cookies TEXT,
-    FOREIGN KEY (request) REFERENCES requests(id)
+    cookies TEXT NOT NULL
 );
 
 CREATE TABLE headers (
@@ -53,7 +50,7 @@ CREATE TABLE headers (
 CREATE TABLE scripts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     hash TEXT UNIQUE NOT NULL,
-    url TEXT,
+    url TEXT NOT NULL,
     content TEXT NOT NULL
 );
 
