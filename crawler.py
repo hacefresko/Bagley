@@ -43,7 +43,6 @@ class Crawler (threading.Thread):
             print("[+] Finished crawling %s" % domain)
 
     def __crawl(self, parent_url, method, data):
-        print(parent_url)
         request = self.db.insertRequest(parent_url, method, data)
 
         try:
@@ -51,10 +50,11 @@ class Crawler (threading.Thread):
                 r = requests.get(parent_url)
             elif (method == 'POST'):
                 r = requests.post(parent_url, data)
-
         except Exception as e:
             print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
             return
+
+        print(r.status_code)
 
         response = self.db.insertResponse(r, request)
 

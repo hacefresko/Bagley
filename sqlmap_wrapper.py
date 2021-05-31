@@ -1,4 +1,4 @@
-import threading, time
+import threading, time, sqlite3
 import database
 
 class Sqlmap (threading.Thread):
@@ -12,6 +12,16 @@ class Sqlmap (threading.Thread):
         except:
             print('[x] Couldn\'t connect to the database')
 
-        response_id = 1
+        request_id = 1
         while True:
-        
+            try:
+                request = self.db.stringifyRequest(request_id)
+            except sqlite3.OperationalError:
+                pass
+
+            if request is None or not request:
+                time.sleep(1)
+                continue
+            
+            print(request)
+            request_id += 1

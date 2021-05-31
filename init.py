@@ -1,5 +1,5 @@
 import os, signal, datetime, getopt, sys, time
-import crawler 
+import crawler, sqlmap_wrapper
 
 # Called when Ctrl+C
 def sigint_handler(sig, frame):
@@ -36,3 +36,6 @@ except FileNotFoundError:
 
 crawler = crawler.Crawler(scope_file)
 crawler.start()
+
+sqlmap_wrapper = sqlmap_wrapper.Sqlmap()
+sqlmap_wrapper.start()

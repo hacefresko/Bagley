@@ -7,14 +7,14 @@ class VDT_DB:
     def connect(self):
         self.db = sqlite3.connect(DB_NAME)
 
+    def close(self):
+        self.db.close()
+
     def __query(self, query, params):
         cursor = self.db.cursor()
         cursor.execute(query, params)
         self.db.commit()
         return cursor
-
-    def close(self):
-        self.db.close()
 
     def stringifyURL(self, protocol, path, params):
         result = ''
@@ -26,16 +26,23 @@ class VDT_DB:
         
         result = domain + result
         result = protocol + "://" + result
-        result += '?' + params
+        if params is not None:
+            result += '?' + params
 
         return result 
 
     def stringifyRequest(self, request_id):
         request = self.__query('SELECT * FROM requests WHERE id = ?', [request_id]).fetchone()
+        if not request:
+            return False
+
         headers = self.__query('SELECT key, value FROM headers INNER JOIN request_headers on id=header WHERE request = ?', [request_id]).fetchall()
-        uri = self.stringifyURL(request[1], request[2], request[3])
-        domain = urlparse(uri).netloc
-        uri = urlparse(uri).path + '?' + urlparse(uri).query
+        
+        url = self.stringifyURL(request[1], request[2], request[3] if request[3] != '0' else None)
+        domain = urlparse(url).netloc
+        uri = urlparse(url).path if urlparse(url).path != '' else '/'
+        if urlparse(url).query != '':
+            uri += '?' + urlparse(url).query
 
         result = "%s %s HTTP/1.1\r\n" % (request[4], uri)
         result += "Host: %s\r\n" % (domain)
@@ -215,5 +222,5 @@ class VDT_DB:
 if __name__ == "__main__":
     db = VDT_DB()
     db.connect()
-    print(db.stringifyRequest(8))
+    
     db.close()
