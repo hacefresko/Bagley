@@ -32,10 +32,18 @@ class VDT_DB:
 
     def stringifyRequest(self, request_id):
         request = self.__query('SELECT * FROM requests WHERE id = ?', [request_id]).fetchone()
+        headers = self.__query('SELECT key, value FROM headers INNER JOIN request_headers on id=header WHERE request = ?', [request_id]).fetchall()
         uri = self.stringifyURL(request[1], request[2], request[3])
+        domain = urlparse(uri).netloc
         uri = urlparse(uri).path + '?' + urlparse(uri).query
 
         result = "%s %s HTTP/1.1\r\n" % (request[4], uri)
+        result += "Host: %s\r\n" % (domain)
+        for header in headers:
+            result += "%s: %s\r\n" % (header[0], header[1])
+
+        if request[5] != "0":
+            result += "\r\n%s\r\n" % (request[5])
 
         return result
 
@@ -60,7 +68,7 @@ class VDT_DB:
             url_to_parse = list(urlparse(url))
             url_to_parse[2] = "/"
             url = urlunparse(url_to_parse)
-            
+
         # Get domain
         domain = urlparse(url)[1]
 
