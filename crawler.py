@@ -4,14 +4,19 @@ from bs4 import BeautifulSoup
 import database
 
 class Crawler (threading.Thread):
-    def __init__(self, db, scope_file):
+    def __init__(self, scope_file):
         threading.Thread.__init__(self)
-        self.db = db
         self.scope = scope_file
         self.get_crawled = []   # List to store crawled urls by GET
         self.post_crawled = {}  # Dict to store crawled urls with data keys by POST
 
     def run(self):
+        self.db = database.VDT_DB()
+        try:
+            self.db.connect()
+        except:
+            print('[x] Couldn\'t connect to the database')
+            
         while True:
             line = self.scope.readline()
             if not line :

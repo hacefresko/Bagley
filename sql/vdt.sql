@@ -3,16 +3,17 @@ BEGIN TRANSACTION;
 
 DROP TABLE domains;
 DROP TABLE paths;
+DROP TABLE requests;
 DROP TABLE responses;
-DROP TABLE bodies;
 DROP TABLE headers;
 DROP TABLE scripts;
-DROP TABLE response_bodies;
 DROP TABLE response_headers;
 DROP TABLE response_scripts;
 
 CREATE TABLE domains (
-    name TEXT PRIMARY KEY NOT NULL
+    protocol TEXT NOT NULL,
+    name TEXT NOT NULL,
+    PRIMARY KEY (protocol, name)
 );
 
 -- path 0 means it's the domain
@@ -25,20 +26,22 @@ CREATE TABLE paths (
     FOREIGN KEY (parent) REFERENCES paths(id)
 );
 
-CREATE TABLE responses (
+CREATE TABLE requests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     path INTEGER NOT NULL,
     params TEXT,
     method TEXT NOT NULL,
-    cookies TEXT,
     data TEXT,
+    response TEXT,
     FOREIGN KEY (path) REFERENCES paths(id)
+    FOREIGN KEY (response) REFERENCES responses(hash)
 );
 
-CREATE TABLE bodies (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    hash TEXT UNIQUE NOT NULL,
-    content TEXT NOT NULL
+CREATE TABLE responses (
+    hash TEXT PRIMARY KEY,
+    content TEXT NOT NULL,
+    cookies TEXT,
+    FOREIGN KEY (request) REFERENCES requests(id)
 );
 
 CREATE TABLE headers (
@@ -54,24 +57,17 @@ CREATE TABLE scripts (
     content TEXT NOT NULL
 );
 
-CREATE TABLE response_bodies (
-    response INTEGER NOT NULL,
-    body INTEGER NOT NULL,
-    FOREIGN KEY (response) REFERENCES responses(id),
-    FOREIGN KEY (body) REFERENCES bodies(id)
-);
-
 CREATE TABLE response_headers (
-    response INTEGER NOT NULL,
+    response TEXT NOT NULL,
     header INTEGER NOT NULL,
-    FOREIGN KEY (response) REFERENCES responses(id),
+    FOREIGN KEY (response) REFERENCES responses(hash),
     FOREIGN KEY (header) REFERENCES headers(id)
 );
 
 CREATE TABLE response_scripts (
-    response INTEGER NOT NULL,
+    response TEXT NOT NULL,
     script INTEGER NOT NULL,
-    FOREIGN KEY (response) REFERENCES responses(id),
+    FOREIGN KEY (response) REFERENCES responses(hash),
     FOREIGN KEY (script) REFERENCES scripts(id)
 );
 

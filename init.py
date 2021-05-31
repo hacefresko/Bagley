@@ -1,18 +1,11 @@
 import os, signal, datetime, getopt, sys, time
-import crawler, database
-
-db = database.VDT_DB()
-try:
-    db.connect()
-except:
-    print('[x] Couldn\'t connect to the database')
+import crawler 
 
 # Called when Ctrl+C
 def sigint_handler(sig, frame):
     print('\n[x] SIGINT: Exiting...')
 
     scope_file.close()
-    db.close()
 
     quit()
 signal.signal(signal.SIGINT, sigint_handler)
@@ -41,5 +34,5 @@ except FileNotFoundError:
     print('[x] Scope file not found')
     exit()
 
-crawler = crawler.Crawler(db, scope_file)
-crawler.run()
+crawler = crawler.Crawler(scope_file)
+crawler.start()
