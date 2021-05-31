@@ -54,8 +54,6 @@ class Crawler (threading.Thread):
             print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
             return
 
-        print(r.status_code)
-
         response = self.db.insertResponse(r, request)
 
         parser = BeautifulSoup(r.text, 'html.parser')
@@ -104,7 +102,7 @@ class Crawler (threading.Thread):
 
                         data = None
 
-                    if self.db.checkRequest(url, method, data):
+                    if not self.db.checkRequest(url, method, data):
                         self.__crawl(url, method, data)
 
             elif element.name == 'script':

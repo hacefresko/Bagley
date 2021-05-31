@@ -15,13 +15,16 @@ class Sqlmap (threading.Thread):
         request_id = 1
         while True:
             try:
-                request = self.db.stringifyRequest(request_id)
+                request = self.db.getRequest(request_id)
             except sqlite3.OperationalError:
                 pass
 
-            if request is None or not request:
+            if request is None:
                 time.sleep(1)
                 continue
-            
-            print(request)
+
+            print(request.get('url'))
+            if request.get('method') == 'POST':
+                print(request.get('data'))
+
             request_id += 1

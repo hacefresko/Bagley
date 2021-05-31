@@ -26,7 +26,7 @@ class VDT_DB:
         
         result = domain + result
         result = protocol + "://" + result
-        if params is not None:
+        if params is not None and params != '0':
             result += '?' + params
 
         return result 
@@ -153,6 +153,19 @@ class VDT_DB:
         params = urlparse(url).query if urlparse(url).query != '' else False
 
         return True if self.__query('SELECT id FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path, params, method, data]).fetchone() else False
+
+    # Returns request dict with url, method and data of request id, else None
+    def getRequest(self, id):
+        request = self.__query('SELECT * FROM requests WHERE id = ?', [id]).fetchone()
+        if not request:
+            return None
+
+        result = {}
+        result['url'] = self.stringifyURL(request[1], request[2], request[3])
+        result['method'] = request[4]
+        result['data'] = request[5]
+
+        return result
 
     # Inserts request. If already inserted or URL not in the database, returns False
     def insertRequest(self, url, method, data):
