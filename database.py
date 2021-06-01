@@ -146,8 +146,6 @@ class VDT_DB:
 
         if data is None or method != 'POST':
             data = False
-        else:
-            data = str(data)
 
         protocol = urlparse(url).scheme
         params = urlparse(url).query if urlparse(url).query != '' else False
@@ -173,8 +171,6 @@ class VDT_DB:
 
         if data is None or method != 'POST':
             data = False
-        else:
-            data = str(data)
 
         params = urlparse(url).query if urlparse(url).query != '' else False
         protocol = urlparse(url).scheme
@@ -236,4 +232,6 @@ if __name__ == "__main__":
     db = VDT_DB()
     db.connect()
     
+    
+
     db.close()

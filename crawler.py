@@ -83,23 +83,21 @@ class Crawler (threading.Thread):
 
                 if self.db.checkDomain(domain):
                     # Parse input, select and textarea (textarea is outside forms, linked by form attribute)
-                    data = {}
+                    data = ''
                     textareas = parser('textarea', form=form_id) if form_id is not None else []
                     for input in element(['input','select']) + textareas:
                         # Skip submit buttons
                         if input.get('type') != 'submit':
                             # If value is empty, put '1337'
-                            data[input.get('name')] = input.get('value') if input.get('value') is not None and input.get('value') != '' else '1337'
+                            data += input.get('name') + "="
+                            data += input.get('value') if input.get('value') is not None and input.get('value') != '' else '1337'
+                            data += "&"
+                    data = data[:-1]
+                        
 
                     # If form method is GET, append data to URL as params and set data to None
-                    if method == 'GET' and len(data) > 0:
-                        url += '?'
-                        for key, value in data.items():
-                            if key not in url:
-                                url += key + '=' + value
-                                url += '&'
-                        url = url[:-1]
-
+                    if method == 'GET' and len(data) != '':
+                        url += '?' + data
                         data = None
 
                     if not self.db.checkRequest(url, method, data):

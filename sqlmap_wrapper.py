@@ -23,8 +23,9 @@ class Sqlmap (threading.Thread):
                 time.sleep(1)
                 continue
 
-            print(request.get('url'))
             if request.get('method') == 'POST':
-                print(request.get('data'))
-
+                print('sqlmap -u "%s" --data "%s"' % (request.get('url'), request.get('data')))
+            else:
+                print('sqlmap -u "%s"' % (request.get('url')))
+                
             request_id += 1
