@@ -1,4 +1,5 @@
-import threading, time, sqlite3
+import threading, time, sqlite3, subprocess
+
 import database
 
 class Sqlmap (threading.Thread):
@@ -22,10 +23,11 @@ class Sqlmap (threading.Thread):
             if request is None:
                 time.sleep(1)
                 continue
-
-            if request.get('method') == 'POST':
-                print('sqlmap -u "%s" --data "%s"' % (request.get('url'), request.get('data')))
-            else:
-                print('sqlmap -u "%s"' % (request.get('url')))
-                
+            '''
+            if '?' in request.get('url'):
+                if request.get('method') == 'POST':
+                    print('sqlmap --batch -u "%s" --data "%s"' % (request.get('url'), request.get('data')))
+                else:
+                    print('sqlmap --batch -u "%s"' % (request.get('url')))
+                '''
             request_id += 1

@@ -37,14 +37,18 @@ class Crawler (threading.Thread):
             except Exception as e:
                 print('[x] Exception ocurred when requesting %s: %s' % (protocol + '://' + domain, e))
                 continue
-
-            self.__crawl(protocol + "://" + domain, 'GET', None)
+                
+            try:
+                self.__crawl(protocol + "://" + domain, 'GET', None)
+            except Exception as e:
+                print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + domain, e))
+                continue
 
             print("[+] Finished crawling %s" % domain)
 
     def __crawl(self, parent_url, method, data):
         request = self.db.insertRequest(parent_url, method, data)
-
+        print(parent_url)
         try:
             if (method == 'GET'):
                 r = requests.get(parent_url)
@@ -75,7 +79,7 @@ class Crawler (threading.Thread):
                 
             elif element.name == 'form':
                 form_id = element.get('id')
-                method = element.get('method')
+                method = element.get('method') if element.get('method') else 'GET'
                 action = element.get('action') if element.get('action') is not None else ''
 
                 url = urljoin(parent_url, action)
@@ -94,7 +98,6 @@ class Crawler (threading.Thread):
                             data += "&"
                     data = data[:-1]
                         
-
                     # If form method is GET, append data to URL as params and set data to None
                     if method == 'GET' and len(data) != '':
                         url += '?' + data

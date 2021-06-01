@@ -134,23 +134,46 @@ class VDT_DB:
             header = self.__query('INSERT INTO headers (key, value) VALUES (?,?)', [key, value]).lastrowid
         self.__query('INSERT INTO request_headers (request, header) VALUES (?,?)', [request, header])
 
+    def __getParamKeys(self, data):
+        keys = []
+        for parameter in data.split('&'):
+                keys.append(parameter.split('=')[0])
+
+        return keys
+
     # Returns True if request exists else False
     def __checkRequest(self, protocol, path, params, method, data):
-        return True if self.__query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path, params, method, data]).fetchone() else False
+        requests = self.__query('SELECT params, data FROM requests WHERE protocol = ? AND path = ? AND method = ?', [protocol, path, method]).fetchall()
+
+        # If all keys from params and data are the same, returns true, else false
+        if requests:
+            params_match = False
+            data_match = False
+
+            for request in requests:
+                if params:
+                    if self.__getParamKeys(request[0]) == self.__getParamKeys(params):
+                        params_match = True
+                else:
+                    params_match = True
+                    
+                if method == 'POST' and data:
+                    if self.__getParamKeys(request[1]) == self.__getParamKeys(data):
+                        data_match = True
+
+            return (params_match and data_match) if (method == 'POST' and data) else params_match
+
+        return False
 
     # Returns true if request exists else False
     def checkRequest(self, url, method, data):
         path = self.__getPath(url)
         if not path:
             return False
-
-        if data is None or method != 'POST':
-            data = False
-
         protocol = urlparse(url).scheme
         params = urlparse(url).query if urlparse(url).query != '' else False
 
-        return True if self.__query('SELECT id FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path, params, method, data]).fetchone() else False
+        return self.__checkRequest(protocol, path, params, method, data)
 
     # Returns request dict with url, method and data of request id, else None
     def getRequest(self, id):
