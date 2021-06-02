@@ -37,5 +37,5 @@ except FileNotFoundError:
 crawler = crawler.Crawler(scope_file)
 crawler.start()
 
-sqlmap_wrapper = sqlmap_wrapper.Sqlmap()
-sqlmap_wrapper.start()
+#sqlmap_wrapper = sqlmap_wrapper.Sqlmap()
+#sqlmap_wrapper.start()

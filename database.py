@@ -1,5 +1,6 @@
 import sqlite3, requests, hashlib
 from urllib.parse import urlparse, urlunparse
+import time
 
 DB_NAME = 'vdt.db'
 
@@ -134,6 +135,7 @@ class VDT_DB:
             header = self.__query('INSERT INTO headers (key, value) VALUES (?,?)', [key, value]).lastrowid
         self.__query('INSERT INTO request_headers (request, header) VALUES (?,?)', [request, header])
 
+    # Get all keys from data
     def __getParamKeys(self, data):
         keys = []
         for parameter in data.split('&'):
@@ -143,27 +145,10 @@ class VDT_DB:
 
     # Returns True if request exists else False
     def __checkRequest(self, protocol, path, params, method, data):
-        requests = self.__query('SELECT params, data FROM requests WHERE protocol = ? AND path = ? AND method = ?', [protocol, path, method]).fetchall()
+        if data is None or method != 'POST':
+            data = False
 
-        # If all keys from params and data are the same, returns true, else false
-        if requests:
-            params_match = False
-            data_match = False
-
-            for request in requests:
-                if params:
-                    if self.__getParamKeys(request[0]) == self.__getParamKeys(params):
-                        params_match = True
-                else:
-                    params_match = True
-                    
-                if method == 'POST' and data:
-                    if self.__getParamKeys(request[1]) == self.__getParamKeys(data):
-                        data_match = True
-
-            return (params_match and data_match) if (method == 'POST' and data) else params_match
-
-        return False
+        return True if self.__query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path, params, method, data]).fetchone() else False
 
     # Returns true if request exists else False
     def checkRequest(self, url, method, data):
@@ -187,6 +172,24 @@ class VDT_DB:
         result['data'] = request[5]
 
         return result
+
+    def getRequestsByParamsAndData(self):
+        requests_to_skip = []
+        id = 1
+        while True:
+            request = self.__query('SELECT * FROM requests WHERE id = ?', [id]).fetchone()
+            if request:
+                if request[0] in requests_to_skip:
+                    continue
+
+                # For each request with same path, protocol and method, if it has same params or data keys, skip that request
+                similar_requests = self.__query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ?', [request[1], request[2], request[4]]).fetchall()
+                for similar_request in similar_requests:
+                    if ((request[3] == '0') or (self.__getParamKeys(request[3]) == self.__getParamKeys(similar_request[3]))) and ((request[4] != 'POST' or request[5] == '0') or (self.__getParamKeys(request[5]) == self.__getParamKeys(similar_request[5]))):
+                        requests_to_skip.append(similar_request[0])
+
+                id += 1
+                yield request
 
     # Inserts request. If already inserted or URL not in the database, returns False
     def insertRequest(self, url, method, data):

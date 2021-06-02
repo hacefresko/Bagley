@@ -54,11 +54,10 @@ class Crawler (threading.Thread):
                 r = requests.get(parent_url)
             elif (method == 'POST'):
                 r = requests.post(parent_url, data)
+            response = self.db.insertResponse(r, request)
         except Exception as e:
             print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
             return
-
-        response = self.db.insertResponse(r, request)
 
         parser = BeautifulSoup(r.text, 'html.parser')
         for element in parser(['a', 'form', 'script']):

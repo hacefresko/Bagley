@@ -23,11 +23,17 @@ class Sqlmap (threading.Thread):
             if request is None:
                 time.sleep(1)
                 continue
-            '''
+
             if '?' in request.get('url'):
+                params = request.get('url').split('?')[1]
+                keys = self.db.getParamKeys(params)
+
+
+
+
                 if request.get('method') == 'POST':
                     print('sqlmap --batch -u "%s" --data "%s"' % (request.get('url'), request.get('data')))
                 else:
                     print('sqlmap --batch -u "%s"' % (request.get('url')))
-                '''
+
             request_id += 1
