@@ -32,26 +32,24 @@ class Crawler (threading.Thread):
                 initial_request = requests.get(protocol + '://' + domain,  allow_redirects=False)
                 if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
                     protocol = 'https'
-            except Exception as e:
-                print('[x] Exception ocurred when requesting %s: %s' % (protocol + '://' + domain, e))
-                continue
-                
-            try:
+
                 self.__crawl(protocol + "://" + domain, 'GET', None)
             except Exception as e:
                 print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + domain, e))
                 continue
-
-            print("[+] Finished crawling %s" % domain)
+            finally:
+                print("[+] Finished crawling %s" % domain)
 
     def __crawl(self, parent_url, method, data):
-        print("[+] Crawling %s" % parent_url)
+        print("[+] Crawling %s [%s]" % (parent_url, method))
         request = self.db.insertRequest(parent_url, method, data)
         try:
             if (method == 'GET'):
                 r = requests.get(parent_url)
             elif (method == 'POST'):
                 r = requests.post(parent_url, data)
+            else:
+                return
             response = self.db.insertResponse(r, request)
         except Exception as e:
             print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
@@ -76,7 +74,7 @@ class Crawler (threading.Thread):
                 
             elif element.name == 'form':
                 form_id = element.get('id')
-                method = element.get('method') if element.get('method') else 'GET'
+                method = element.get('method').upper() if element.get('method') else 'GET'
                 action = element.get('action') if element.get('action') is not None else ''
 
                 url = urljoin(parent_url, action)
@@ -88,7 +86,7 @@ class Crawler (threading.Thread):
                     textareas = parser('textarea', form=form_id) if form_id is not None else []
                     for input in element(['input','select']) + textareas:
                         # Skip submit buttons
-                        if input.get('type') != 'submit':
+                        if input.get('type') != 'submit' and input.get('name') is not None:
                             # If input is a CSRF value, put CSRFvalue
                             if 'csrf' in input.get('name').lower():
                                 data += input.get('name') + "=CSRFvalue&"

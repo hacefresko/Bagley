@@ -31,13 +31,18 @@ class Sqlmap (threading.Thread):
                 # Merge both lists
                 requests_to_skip = [*self.db.getRequestWithSameKeys(id), *requests_to_skip]
             except sqlite3.OperationalError:
-                print("EXCEPTION")
                 continue
 
             id += 1
 
             if request.get('method') == 'POST':
-                print('[+] Execute: sqlmap --batch -u "%s" --data "%s"' % (request.get('url'), request.get('data')))
+                command = ['sqlmap', '-v', '0', '--flush-session', '--batch', '-u',  request.get("url"), '--data', request.get("data")]
             else:
-                print('[+] Execute: sqlmap --batch -u "%s"' % (request.get('url')))
+                command = ['sqlmap', '-v', '0', '--flush-session', '--batch', '-u',  request.get("url")]
+
+            result = subprocess.run(command, capture_output=True, encoding='utf-8')
+
+            if "---" in result.stdout:
+                print("[+] SQL injection found in %s" % request.get('url'))
+                print(result.stdout)
            
