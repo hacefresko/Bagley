@@ -13,27 +13,31 @@ class Sqlmap (threading.Thread):
         except:
             print('[x] Couldn\'t connect to the database')
 
-        request_id = 1
+
+        requests_to_skip = []
+        id = 1
         while True:
             try:
-                request = self.db.getRequest(request_id)
+                if id in requests_to_skip:
+                    id += 1
+                    continue
+                request = self.db.getRequest(id)
+                if request is None:
+                    time.sleep(2)
+                    continue
+                if len(request.get('url').split('?')) < 2 and request.get('data') is None:
+                    id += 1
+                    continue
+                # Merge both lists
+                requests_to_skip = [*self.db.getRequestWithSameKeys(id), *requests_to_skip]
             except sqlite3.OperationalError:
-                pass
-
-            if request is None:
-                time.sleep(1)
+                print("EXCEPTION")
                 continue
 
-            if '?' in request.get('url'):
-                params = request.get('url').split('?')[1]
-                keys = self.db.getParamKeys(params)
+            id += 1
 
-
-
-
-                if request.get('method') == 'POST':
-                    print('sqlmap --batch -u "%s" --data "%s"' % (request.get('url'), request.get('data')))
-                else:
-                    print('sqlmap --batch -u "%s"' % (request.get('url')))
-
-            request_id += 1
+            if request.get('method') == 'POST':
+                print('[+] Execute: sqlmap --batch -u "%s" --data "%s"' % (request.get('url'), request.get('data')))
+            else:
+                print('[+] Execute: sqlmap --batch -u "%s"' % (request.get('url')))
+           

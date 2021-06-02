@@ -143,15 +143,33 @@ class VDT_DB:
 
         return keys
 
-    # Returns True if request exists else False
+    # Subtitues all values of each param with newValue
+    def __subtituteParamsValue(self, params, newValue):
+        new_data = ''
+        for p in params.split('&'):
+            new_data += p.split('=')[0]
+            new_data += '=' + newValue + '&'
+        return new_data[:-1]
+
+    # Returns True if request exists else False. If there are already some requests with the same path, protocol, method and response 
+    # but different params/data, it returns True to avoid saving same requests with different CSRFs, session values, etc.
     def __checkRequest(self, protocol, path, params, method, data):
-        if data is None or method != 'POST':
-            data = False
+        if params or data:
+            if params and data:
+                result = self.__query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ? AND data LIKE ?', [protocol, path, method, self.__subtituteParamsValue(params, '%'), self.__subtituteParamsValue(data, '%')]).fetchall()
+            elif data:
+                result = self.__query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND data LIKE ?', [protocol, path, method, self.__subtituteParamsValue(data, '%')]).fetchall()
+            elif params:
+                result = self.__query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ?', [protocol, path, method, self.__subtituteParamsValue(params, '%')]).fetchall()
+
+            if len(result) > 10:
+                return True
 
         return True if self.__query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path, params, method, data]).fetchone() else False
 
     # Returns true if request exists else False
     def checkRequest(self, url, method, data):
+        data = data if (data is not None and method == 'POST') else False
         path = self.__getPath(url)
         if not path:
             return False
@@ -159,6 +177,18 @@ class VDT_DB:
         params = urlparse(url).query if urlparse(url).query != '' else False
 
         return self.__checkRequest(protocol, path, params, method, data)
+
+    # Inserts request. If already inserted or URL not in the database, returns False
+    def insertRequest(self, url, method, data):
+        path = self.insertPath(url)
+        data = data if (data is not None and method == 'POST') else False
+        params = urlparse(url).query if urlparse(url).query != '' else False
+        protocol = urlparse(url).scheme
+
+        if self.__checkRequest(protocol, path, params, method, data):
+            return False
+
+        return self.__query('INSERT INTO requests (protocol, path, params, method, data) VALUES (?,?,?,?,?)', [protocol, path, params, method, data]).lastrowid
 
     # Returns request dict with url, method and data of request id, else None
     def getRequest(self, id):
@@ -169,42 +199,51 @@ class VDT_DB:
         result = {}
         result['url'] = self.stringifyURL(request[1], request[2], request[3])
         result['method'] = request[4]
-        result['data'] = request[5]
+        result['data'] = request[5] if request[5] != '0' else None
 
         return result
 
-    def getRequestsByParamsAndData(self):
+    # Returns a list of request ids with the same keys inside params or data
+    def getRequestWithSameKeys(self, id):
+        result = []
+        request = self.__query('SELECT * FROM requests WHERE id = ?', [id]).fetchone()
+        if request:
+            # For each request with same path, protocol and method, if it has same params or data keys, skip that request
+            similar_requests = self.__query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ?', [request[1], request[2], request[4]]).fetchall()
+            for similar_request in similar_requests:
+                if self.__getParamKeys(request[3]) == self.__getParamKeys(similar_request[3]) and self.__getParamKeys(request[5]) == self.__getParamKeys(similar_request[5]):
+                    result.append(similar_request[0])
+
+        return result
+
+    # Iterates over all requests with params or data yielding only one request form those whose params or data have same keys 
+    # (i.e if we have /product?id=1 and /product?id=2 it will only yield one of them)
+    def iterateRequestsByParamsAndData(self):
         requests_to_skip = []
         id = 1
         while True:
             request = self.__query('SELECT * FROM requests WHERE id = ?', [id]).fetchone()
             if request:
-                if request[0] in requests_to_skip:
+                if (request[3] == '0' and request[5] == '0') or request[0] in requests_to_skip:
+                    id += 1
                     continue
 
                 # For each request with same path, protocol and method, if it has same params or data keys, skip that request
                 similar_requests = self.__query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ?', [request[1], request[2], request[4]]).fetchall()
                 for similar_request in similar_requests:
-                    if ((request[3] == '0') or (self.__getParamKeys(request[3]) == self.__getParamKeys(similar_request[3]))) and ((request[4] != 'POST' or request[5] == '0') or (self.__getParamKeys(request[5]) == self.__getParamKeys(similar_request[5]))):
+                    if self.__getParamKeys(request[3]) == self.__getParamKeys(similar_request[3]) and self.__getParamKeys(request[5]) == self.__getParamKeys(similar_request[5]):
                         requests_to_skip.append(similar_request[0])
 
                 id += 1
-                yield request
 
-    # Inserts request. If already inserted or URL not in the database, returns False
-    def insertRequest(self, url, method, data):
-        path = self.insertPath(url)
+                result = {}
+                result['url'] = self.stringifyURL(request[1], request[2], request[3])
+                result['method'] = request[4]
+                result['data'] = request[5]
 
-        if data is None or method != 'POST':
-            data = False
-
-        params = urlparse(url).query if urlparse(url).query != '' else False
-        protocol = urlparse(url).scheme
-
-        if self.__checkRequest(protocol, path, params, method, data):
-            return False
-
-        return self.__query('INSERT INTO requests (protocol, path, params, method, data) VALUES (?,?,?,?,?)', [protocol, path, params, method, data]).lastrowid
+                yield result
+            else:
+                time.sleep(2)
 
     # Returns response hash
     def __hashResponse(self, response):
@@ -257,7 +296,6 @@ class VDT_DB:
 if __name__ == "__main__":
     db = VDT_DB()
     db.connect()
-    
-    
+
 
     db.close()

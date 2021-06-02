@@ -23,8 +23,6 @@ class Crawler (threading.Thread):
 
             domain = line.split(' ')[0]
 
-            print("[+] Crawling %s" % domain)
-
             if not self.db.checkDomain(domain):
                 self.db.insertDomain(domain)
 
@@ -47,8 +45,8 @@ class Crawler (threading.Thread):
             print("[+] Finished crawling %s" % domain)
 
     def __crawl(self, parent_url, method, data):
+        print("[+] Crawling %s" % parent_url)
         request = self.db.insertRequest(parent_url, method, data)
-        print(parent_url)
         try:
             if (method == 'GET'):
                 r = requests.get(parent_url)
@@ -91,10 +89,14 @@ class Crawler (threading.Thread):
                     for input in element(['input','select']) + textareas:
                         # Skip submit buttons
                         if input.get('type') != 'submit':
+                            # If input is a CSRF value, put CSRFvalue
+                            if 'csrf' in input.get('name').lower():
+                                data += input.get('name') + "=CSRFvalue&"
                             # If value is empty, put '1337'
-                            data += input.get('name') + "="
-                            data += input.get('value') if input.get('value') is not None and input.get('value') != '' else '1337'
-                            data += "&"
+                            elif input.get('value') is None or input.get('value') == '':
+                                data += input.get('name') + "=1337&"
+                            else:
+                                data += input.get('name') + "=" + input.get('value') + "&"
                     data = data[:-1]
                         
                     # If form method is GET, append data to URL as params and set data to None
