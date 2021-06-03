@@ -216,35 +216,6 @@ class VDT_DB:
 
         return result
 
-    # Iterates over all requests with params or data yielding only one request form those whose params or data have same keys 
-    # (i.e if we have /product?id=1 and /product?id=2 it will only yield one of them)
-    def iterateRequestsByParamsAndData(self):
-        requests_to_skip = []
-        id = 1
-        while True:
-            request = self.__query('SELECT * FROM requests WHERE id = ?', [id]).fetchone()
-            if request:
-                if (request[3] == '0' and request[5] == '0') or request[0] in requests_to_skip:
-                    id += 1
-                    continue
-
-                # For each request with same path, protocol and method, if it has same params or data keys, skip that request
-                similar_requests = self.__query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ?', [request[1], request[2], request[4]]).fetchall()
-                for similar_request in similar_requests:
-                    if self.__getParamKeys(request[3]) == self.__getParamKeys(similar_request[3]) and self.__getParamKeys(request[5]) == self.__getParamKeys(similar_request[5]):
-                        requests_to_skip.append(similar_request[0])
-
-                id += 1
-
-                result = {}
-                result['url'] = self.stringifyURL(request[1], request[2], request[3])
-                result['method'] = request[4]
-                result['data'] = request[5]
-
-                yield result
-            else:
-                time.sleep(2)
-
     # Returns response hash
     def __hashResponse(self, response):
         to_hash = response.text + str(response.headers) + str(response.cookies.get_dict())
