@@ -1,4 +1,7 @@
 *.db
 *.db-journal
+*.log
+test.*
 __pycache__/
 domains.txt
+.DS_Store
