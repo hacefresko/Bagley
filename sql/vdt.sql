@@ -40,7 +40,7 @@ CREATE TABLE requests (
 
 CREATE TABLE responses (
     hash TEXT PRIMARY KEY,
-    code NOT NULL INTEGER,
+    code INTEGER NOT NULL,
     mimeType TEXT,
     content TEXT
 );

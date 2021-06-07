@@ -17,12 +17,13 @@ class DB:
         if self.__db is not None:
             raise Exception("DB is a singleton")
         else:
-            self.__db = sqlite3.connect(DB_NAME)
+            self.__connection = sqlite3.connect(DB_NAME)
+            self.__db = self
 
     def query(self, query, params):
-        cursor = self.__db.cursor()
+        cursor = self.__connection.cursor()
         cursor.execute(query, params)
-        self.__db.commit()
+        self.__connection.commit()
         return cursor
 
 class VDT_DB:
