@@ -33,14 +33,16 @@ CREATE TABLE requests (
     method TEXT NOT NULL,
     data TEXT NOT NULL,
     response TEXT,
+    cookies TEXT,
     FOREIGN KEY (path) REFERENCES paths(id)
     FOREIGN KEY (response) REFERENCES responses(hash)
 );
 
 CREATE TABLE responses (
     hash TEXT PRIMARY KEY,
-    content TEXT NOT NULL,
-    cookies TEXT NOT NULL
+    code NOT NULL INTEGER,
+    mimeType TEXT,
+    content TEXT
 );
 
 CREATE TABLE headers (
@@ -52,8 +54,9 @@ CREATE TABLE headers (
 CREATE TABLE scripts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     hash TEXT UNIQUE NOT NULL,
-    url TEXT NOT NULL,
-    content TEXT NOT NULL
+    path INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    FOREIGN KEY (path) REFERENCES paths(id)
 );
 
 CREATE TABLE request_headers (

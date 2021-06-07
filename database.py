@@ -4,6 +4,27 @@ import time
 
 DB_NAME = 'vdt.db'
 
+class DB:
+    __db = None
+
+    @staticmethod
+    def getConnection():
+        if DB.__db is None:
+            DB()
+        return DB().__db
+
+    def __init__(self):
+        if self.__db is not None:
+            raise Exception("DB is a singleton")
+        else:
+            self.__db = sqlite3.connect(DB_NAME)
+
+    def query(self, query, params):
+        cursor = self.__db.cursor()
+        cursor.execute(query, params)
+        self.__db.commit()
+        return cursor
+
 class VDT_DB:
     def connect(self):
         self.db = sqlite3.connect(DB_NAME)
@@ -261,12 +282,3 @@ class VDT_DB:
         if not script:
             script = self.__query('INSERT INTO scripts (hash, url, content) VALUES (?,?,?)', [script_hash, url, content]).lastrowid
         self.__query('INSERT INTO response_scripts (response, script) VALUES (?,?)', [response, script])
-
-
-
-if __name__ == "__main__":
-    db = VDT_DB()
-    db.connect()
-
-
-    db.close()
