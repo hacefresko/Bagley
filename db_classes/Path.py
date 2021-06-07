@@ -36,14 +36,14 @@ class Path:
 
         return result 
     
-    # Returns true if path specified by element, parent and domain exists else False
+    # Returns id of path if path specified by element, parent and domain exists else False
     @staticmethod
     def __getPath(element, parent, domain):
         db = DB.getConnection()
         result = db.query('SELECT * FROM paths WHERE element = ? AND parent = ? AND domain = ?', [element, parent, domain]).fetchone()
-        return True if result else False
+        return result[0] if result else False
 
-    # Returns a dict with domain and a list elements with each
+    # Returns a dict with domain and a list elements with each element from the URL. URL must have protocol, domain and elements in order to get parsed correctly.
     @staticmethod
     def __parseURL(url):
         result = {}
@@ -52,6 +52,7 @@ class Path:
             url_to_parse = list(urlparse(url))
             url_to_parse[2] = "/"
             url = urlunparse(url_to_parse)
+
         # Get domain
         result['domain'] = urlparse(url)[1]
         # Get elements and subsitute '' by False
