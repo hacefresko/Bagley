@@ -39,17 +39,17 @@ class Header:
 
     # Links the header to the specified request. If request is not a request, returns False
     def linkToRequest(self, request):
-        db = DB.getConnection()
-        if isinstance(request, Request):
+        if not isinstance(request, Request):
             return False
+        db = DB.getConnection()
         db.query('INSERT INTO request_headers (request, header) VALUES (?,?)', [request.id, self.id])
         return True
 
     # Links the header to the specified response. If response is not a response, returns False
     def linkToResponse(self, response):
-        db = DB.getConnection()
-        if isinstance(response, Response):
+        if not isinstance(response, Response):
             return False
+        db = DB.getConnection()
         db.query('INSERT INTO response_headers (response, header) VALUES (?,?)', [response.id, self.id])
         return True
 
