@@ -5,5 +5,5 @@ class Request:
         self.path = path
         self.params = params
         self.method = method
-        self.data = data if data != '0' else None
+        self.data = data
         self.response = response

@@ -15,8 +15,8 @@ class Header:
     @staticmethod
     def getHeader(key, value):
         db = DB.getConnection()
-        # Format date not to save every date header
-        if key == 'Date':
+        # Format date and cookie so we don't save all dates and cookies (cookies will be saved apart)
+        if key == 'Date' or key == 'Cookie':
             value = '1337'
         result = db.query('SELECT * FROM headers WHERE key = ? AND value = ?', [key, value]).fetchone()
         if not result:
@@ -28,8 +28,8 @@ class Header:
     @staticmethod
     def insertHeader(key, value):
         db = DB.getConnection()
-        # Format date not to save every date header
-        if key == 'Date':
+        # Format date and cookie so we don't save all dates and cookies (cookies will be saved apart)
+        if key == 'Date' or key == 'Cookie':
             value = '1337'
         header = Header.getHeader(key, value)
         if not header:
