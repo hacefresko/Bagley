@@ -2,25 +2,6 @@ from database import DB
 from urllib.parse import urlparse, urlunparse
 
 class Path:
-    ################ DOMAIN METHODS ################
-    # Returns True if domain or subdomains exist, else False
-    @staticmethod
-    def checkDomain(domain):
-        db = DB.getConnection()
-        # If a group of subdomains is specified like .example.com
-        if domain[0] == '.':
-            return True if db.query('SELECT name FROM domains WHERE name = ? OR name LIKE ?', [domain[1:], '%' + domain]).fetchone() else False
-        else:
-            return True if db.query('SELECT name FROM domains WHERE name = ?', [domain]).fetchone() else False
-
-    # Inserts domain if not already inserted
-    @staticmethod
-    def insertDomain(domain):
-        db = DB.getConnection()
-        if not Path.checkDomain(domain):
-            db.query('INSERT INTO domains (name) VALUES (?)', [domain])
-
-    ################# PATH METHODS ##################
     def __init__(self, id, element, parent, domain):
         self.id = id
         self.element = element
@@ -85,7 +66,7 @@ class Path:
         db = DB.getConnection()
         parsedURL = Path.__parseURL(url)
 
-        if not Path.checkDomain(parsedURL['domain']):
+        if not Domain.checkDomain(parsedURL['domain']):
             return False
 
         # Iterate over each domain/file from URL
