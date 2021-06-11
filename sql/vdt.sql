@@ -11,6 +11,7 @@ DROP TABLE headers;
 DROP TABLE cookies;
 DROP TABLE scripts;
 DROP TABLE request_headers;
+DROP TABLE request_cookies;
 DROP TABLE response_headers;
 DROP TABLE response_scripts;
 
@@ -61,15 +62,15 @@ CREATE TABLE cookies (
     hash TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     value TEXT,
-    path INTEGER NOT NULL,
+    domain TEXT,
+    path TEXT,      -- Neither path nor domain are foreign keys since domain can specify a range of subdomains
     expires TEXT,
     size INTEGER,
     httponly BOOL,
     secure BOOL,
     samesite TEXT,
     sameparty TEXT,
-    priority TEXT,
-    FOREIGN KEY (path) REFERENCES paths(id)
+    priority TEXT
 );
 
 CREATE TABLE scripts (

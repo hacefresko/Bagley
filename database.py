@@ -1,6 +1,5 @@
-import sqlite3, requests, hashlib
+import sqlite3, requests, hashlib, time
 from urllib.parse import urlparse, urlunparse
-import time
 
 DB_NAME = 'vdt.db'
 
