@@ -8,7 +8,7 @@ class Header:
         self.key = key
         self.value = value
 
-    def toString(self):
+    def __str__(self):
         return self.key + ": " + self.value
 
     # Returns header or False if it does not exist  
