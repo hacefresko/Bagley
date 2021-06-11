@@ -1,11 +1,14 @@
 PRAGMA foreign_keys=OFF;
 BEGIN TRANSACTION;
 
+-- Those tables whose columns are all unique, has an identifier hash, managed by correspondant class
+
 DROP TABLE domains;
 DROP TABLE paths;
 DROP TABLE requests;
 DROP TABLE responses;
 DROP TABLE headers;
+DROP TABLE cookies;
 DROP TABLE scripts;
 DROP TABLE request_headers;
 DROP TABLE response_headers;
@@ -25,6 +28,8 @@ CREATE TABLE paths (
     FOREIGN KEY (parent) REFERENCES paths(id)
 );
 
+
+
 CREATE TABLE requests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     protocol TEXT NOT NULL,
@@ -33,7 +38,6 @@ CREATE TABLE requests (
     method TEXT NOT NULL,
     data TEXT NOT NULL,
     response TEXT,
-    cookies TEXT,
     FOREIGN KEY (path) REFERENCES paths(id)
     FOREIGN KEY (response) REFERENCES responses(hash)
 );
@@ -45,19 +49,37 @@ CREATE TABLE responses (
     content TEXT
 );
 
+
+
 CREATE TABLE headers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     key TEXT NOT NULL,
     value TEXT NOT NULL
 );
 
+CREATE TABLE cookies (
+    hash TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    value TEXT,
+    path INTEGER NOT NULL,
+    expires TEXT,
+    size INTEGER,
+    httponly BOOL,
+    secure BOOL,
+    samesite TEXT,
+    sameparty TEXT,
+    priority TEXT,
+    FOREIGN KEY (path) REFERENCES paths(id)
+);
+
 CREATE TABLE scripts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    hash TEXT UNIQUE NOT NULL,
+    hash TEXT PRIMARY KEY,
     path INTEGER NOT NULL,
     content TEXT NOT NULL,
     FOREIGN KEY (path) REFERENCES paths(id)
 );
+
+
 
 CREATE TABLE request_headers (
     request INTEGER NOT NULL,
@@ -65,6 +87,15 @@ CREATE TABLE request_headers (
     FOREIGN KEY (request) REFERENCES requests(id),
     FOREIGN KEY (header) REFERENCES headers(id)
 );
+
+CREATE TABLE request_cookies (
+    request INTEGER NOT NULL,
+    cookie TEXT NOT NULL,
+    FOREIGN KEY (request) REFERENCES requests(id),
+    FOREIGN KEY (cookie) REFERENCES cookies(hash)
+);
+
+
 
 CREATE TABLE response_headers (
     response TEXT NOT NULL,
@@ -75,9 +106,9 @@ CREATE TABLE response_headers (
 
 CREATE TABLE response_scripts (
     response TEXT NOT NULL,
-    script INTEGER NOT NULL,
+    script TEXT NOT NULL,
     FOREIGN KEY (response) REFERENCES responses(hash),
-    FOREIGN KEY (script) REFERENCES scripts(id)
+    FOREIGN KEY (script) REFERENCES scripts(hash)
 );
 
 COMMIT;
