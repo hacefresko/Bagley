@@ -3,11 +3,15 @@ from urllib.parse import urlparse, urlunparse
 
 class Path:
     ################ DOMAIN METHODS ################
-    # Returns True if domain exists, else False
+    # Returns True if domain or subdomains exist, else False
     @staticmethod
     def checkDomain(domain):
         db = DB.getConnection()
-        return True if db.query('SELECT name FROM domains WHERE name = ?', [domain]).fetchone() else False
+        # If a group of subdomains is specified like .example.com
+        if domain[0] == '.':
+            return True if db.query('SELECT name FROM domains WHERE name = ? OR name LIKE ?', [domain[1:], '%' + domain]).fetchone() else False
+        else:
+            return True if db.query('SELECT name FROM domains WHERE name = ?', [domain]).fetchone() else False
 
     # Inserts domain if not already inserted
     @staticmethod
@@ -23,7 +27,7 @@ class Path:
         self.parent = parent
         self.domain = domain
 
-    def toString(self):
+    def __str__(self):  
         db = DB.getConnection()
         result = ''
         path = [self.element if self.element else '', self.parent]
@@ -77,7 +81,7 @@ class Path:
 
     # Inserts each path inside the URL if not already inserted and returns last inserted path (last element from URL). If domain doesn't exist, return False
     @staticmethod
-    def insertPath(url):
+    def insertAllPaths(url):
         db = DB.getConnection()
         parsedURL = Path.__parseURL(url)
 
