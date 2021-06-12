@@ -57,7 +57,7 @@ CREATE TABLE headers (
 );
 
 CREATE TABLE cookies (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     value TEXT,
     domain TEXT,

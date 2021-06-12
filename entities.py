@@ -44,8 +44,8 @@ class Path:
     @staticmethod
     def __getPath(element, parent, domain):
         db = DB.getConnection()
-        result = db.query('SELECT * FROM paths WHERE element = ? AND parent = ? AND domain = ?', [element, parent, domain]).fetchone()
-        return result[0] if result else False
+        path = db.query('SELECT id FROM paths WHERE element = ? AND parent = ? AND domain = ?', [element, parent, domain]).fetchone()
+        return Path(path[0], path[1], path[2]) if path else False
 
     # Returns a dict with domain and a list elements with each element from the URL. URL must have protocol, domain and elements in order to get parsed correctly.
     @staticmethod
@@ -64,9 +64,16 @@ class Path:
 
         return result
 
+    # Returns path corresponding to id or False if it does not exist
+    @staticmethod
+    def getPath(id):
+        db = DB.getConnection()
+        path = db.query('SELECT id, element, parent, domain FROM paths WHERE id = ?', [id]).fetchone()
+        return Path(path[0], path[1], path[2]) if path else False
+
     # Returns path corresponding to URL or False if it does not exist
     @staticmethod
-    def getPath(url):
+    def parseURL(url):
         parsedURL = Path.__parseURL(url)
 
         # Iterate over each domain/file from URL
@@ -76,8 +83,8 @@ class Path:
             if not path:
                 return False
             if i == len(parsedURL['elements']) - 1:
-                return Path(path, element, parent, parsedURL['domain'])
-            parent = path
+                return path
+            parent = path.parent
 
     # Inserts each path inside the URL if not already inserted and returns last inserted path (last element from URL). If domain doesn't exist, return False
     @staticmethod
@@ -99,20 +106,23 @@ class Path:
             parent = path
 
 class Request:
-    def __init__(self, id, protocol, path, params, method, data, response):
+    def __init__(self, id, protocol, path_id, params, method, data):
         self.id = id
         self.protocol = protocol
-        self.path = path
+        self.path = Path.getPath(path_id)
         self.params = params
         self.method = method
         self.data = data
-        self.response = response
-
+        self.headers = Header.getHeaders(self)
+        self.cookies = Cookie.getCookie(self)
+    
 class Response:
     def __init__(self, hash, mimeType, body):
         self.hash = hash
         self.mimeType = mimeType
         self.body = body
+        self.headers = Header.getHeaders(self)
+        self.scripts = Script.getScripts(self)
 
 class Header:
     def __init__(self, id, key, value):
@@ -136,6 +146,24 @@ class Header:
         
         return Header(result[0], result[1], result[2])
 
+    # Returns a list of headers for specified target. If target is not a request nor a response, returns False
+    @staticmethod
+    def getHeaders(target):
+        db = DB.getConnection()
+    
+        if isinstance(target, Request):
+            headers = db.query('SELECT id, key, value FROM headers INNER JOIN request_headers on id = header WHERE request = ?', [target.id]).fetchall()
+        elif isinstance(target, Response):
+            headers = db.query('SELECT id, key, value FROM headers INNER JOIN response_headers on id = header WHERE response = ?', [target.hash]).fetchall()
+        else:
+            return False
+
+        result = []
+        for header in headers:
+            result.append(Header(header[0], header[1], header[2]))
+
+        return result
+
     # Inserts header if not inserted and returns it
     @staticmethod
     def insertHeader(key, value):
@@ -149,29 +177,26 @@ class Header:
             header = Header(id, key, value)
         return header
 
-    # Links the header to the specified request. If request is not a request, returns False
-    def linkToRequest(self, request):
-        if not isinstance(request, Request):
-            return False
+    # Links the header to the specified target. If target is not a request nor a response, returns False
+    def link(self, target):
         db = DB.getConnection()
-        db.query('INSERT INTO request_headers (request, header) VALUES (?,?)', [request.id, self.id])
-        return True
 
-    # Links the header to the specified response. If response is not a response, returns False
-    def linkToResponse(self, response):
-        if not isinstance(response, Response):
+        if isinstance(target, Request):
+            db.query('INSERT INTO request_headers (request, header) VALUES (?,?)', [target.id, self.id])
+            return True
+        elif isinstance(target, Response):
+            db.query('INSERT INTO response_headers (response, header) VALUES (?,?)', [target.hash, self.id])
+            return True
+        else:
             return False
-        db = DB.getConnection()
-        db.query('INSERT INTO response_headers (response, header) VALUES (?,?)', [response.hash, self.id])
-        return True
 
 class Cookie:
-    def __init__(self, id, name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority):
+    def __init__(self, id, name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority):
         self.id = id
         self.name = name 
-        self.domain = path
+        self.domain = cookie_domain
         self.value = value
-        self.path = path
+        self.path = cookie_path
         self.expires = expires
         self.size = size
         self.httponly = httponly
@@ -182,39 +207,54 @@ class Cookie:
 
     # Returns script or False if it does not exist   
     @staticmethod 
-    def getCookie(name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority):
-        if not Domain.checkDomain(domain):
+    def getCookie(name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority):
+        if not Domain.checkDomain(cookie_domain):
             return False
         
         db = DB.getConnection()
-        result = db.query('SELECT * FROM scripts WHERE name = ? AND value = ? AND domain = ? AND path = ? AND expires = ? AND size = ? AND httponly = ? AND secure = ? AND samesite = ? AND sameparty = ? AND priority = ?', [name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority]).fetchone()
+        result = db.query('SELECT * FROM scripts WHERE name = ? AND value = ? AND domain = ? AND path = ? AND expires = ? AND size = ? AND httponly = ? AND secure = ? AND samesite = ? AND sameparty = ? AND priority = ?', [name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority]).fetchone()
         if not result:
             return False
         return Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9], result[10], result[11])
 
-    # Inserts cookie if not already inserted, links it to the corresponding request and returns the cookie
-    @staticmethod
-    def insertCookie(name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority, request):
+    # Returns a list of cookies from the specified request. If request is not a Request object, returns False
+    @staticmethod 
+    def getCookies(request):
         if not isinstance(request, Request):
             return False
 
-        if not Domain.checkDomain(domain):
+        db = DB.getConnection()
+        cookies = db.query('SELECT id, name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority FROM cookies INNER JOIN request_cookies on id = cookie WHERE request = ?', [request.id]).fetchall()
+
+        result = []
+        for cookie in cookies:
+            result.append(Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9], cookie[10], cookie[11]))
+
+        return result
+
+    # Inserts cookie if not already inserted, links it to the corresponding request and returns the cookie
+    @staticmethod
+    def insertCookie(name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority, request):
+        if not isinstance(request, Request):
+            return False
+
+        if not Domain.checkDomain(cookie_domain):
             return False
 
         db = DB.getConnection()
-        cookie = Cookie.getCookie(name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority)
+        cookie = Cookie.getCookie(name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority)
         if not cookie:
-            id = db.query('INSERT INTO cookies (name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority) VALUES (?,?,?,?,?,?,?,?,?,?,?, ?)', [name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority]).lastrowid
-            cookie = Cookie(id, name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority)
+            id = db.query('INSERT INTO cookies (name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority) VALUES (?,?,?,?,?,?,?,?,?,?,?, ?)', [name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority]).lastrowid
+            cookie = Cookie(id, name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority)
         db.query('INSERT INTO request_cookies (request, cookie) VALUES (?,?)', [request.id, cookie.id])
 
         return cookie 
 
 class Script:
-    def __init__(self, hash, content, path):
+    def __init__(self, hash, content, path_id):
         self.hash = hash
         self.content = content
-        self.path = path
+        self.path = Path.getPath(path_id)
 
     # Returns hash of the script specified by url and content
     @staticmethod 
@@ -230,6 +270,21 @@ class Script:
         if not result:
             return False
         return Script(result[0], result[1], result[2])
+
+    # Returns a list of scripts from the specified response. If response is not a Response object, returns False   
+    @staticmethod 
+    def getScripts(response):
+        if not isinstance(response, Response):
+            return False
+
+        db = DB.getConnection()
+        scripts = db.query('SELECT hash, content, path FROM scripts INNER JOIN response_scripts on hash = script WHERE response = ?', [response.hash]).fetchall()
+
+        result = []
+        for script in scripts:
+            result.append(Script(script[0], script[1], script[2]))
+
+        return result
 
     # Inserts script if not already inserted, links it to the corresponding response if exists and returns it
     @staticmethod 
