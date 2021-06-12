@@ -1,8 +1,6 @@
 PRAGMA foreign_keys=OFF;
 BEGIN TRANSACTION;
 
--- Those tables whose columns are all unique, has an identifier hash, managed by correspondant class
-
 DROP TABLE domains;
 DROP TABLE paths;
 DROP TABLE requests;
@@ -59,7 +57,7 @@ CREATE TABLE headers (
 );
 
 CREATE TABLE cookies (
-    hash TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     value TEXT,
     domain TEXT,
@@ -91,9 +89,9 @@ CREATE TABLE request_headers (
 
 CREATE TABLE request_cookies (
     request INTEGER NOT NULL,
-    cookie TEXT NOT NULL,
+    cookie INTEGER NOT NULL,
     FOREIGN KEY (request) REFERENCES requests(id),
-    FOREIGN KEY (cookie) REFERENCES cookies(hash)
+    FOREIGN KEY (cookie) REFERENCES cookies(id)
 );
 
 

@@ -166,8 +166,8 @@ class Header:
         return True
 
 class Cookie:
-    def __init__(self, hash, name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority):
-        self.hash = hash
+    def __init__(self, id, name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority):
+        self.id = id
         self.name = name 
         self.domain = path
         self.value = value
@@ -180,11 +180,6 @@ class Cookie:
         self.sameparty = sameparty
         self.priority = priority
 
-    # Returns hash of the cookie specified by all its attributes
-    @staticmethod 
-    def __getHash(name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority):
-        return hashlib.sha1((name + value + path + expires + str(size) + str(httponly) + str(secure) + samesite + sameparty + priority).encode('utf-8')).hexdigest()
-
     # Returns script or False if it does not exist   
     @staticmethod 
     def getCookie(name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority):
@@ -192,7 +187,7 @@ class Cookie:
             return False
         
         db = DB.getConnection()
-        result = db.query('SELECT * FROM scripts WHERE hash = ?', [Cookie.__getHash(name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority)]).fetchone()
+        result = db.query('SELECT * FROM scripts WHERE name = ? AND value = ? AND domain = ? AND path = ? AND expires = ? AND size = ? AND httponly = ? AND secure = ? AND samesite = ? AND sameparty = ? AND priority = ?', [name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority]).fetchone()
         if not result:
             return False
         return Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9], result[10], result[11])
@@ -209,9 +204,9 @@ class Cookie:
         db = DB.getConnection()
         cookie = Cookie.getCookie(name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority)
         if not cookie:
-            db.query('INSERT INTO cookies (hash, name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority) VALUES (?,?,?,?,?,?,?,?,?,?,?, ?)', [Cookie.__getHash(name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority),name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority])
-            cookie = Cookie.getCookie(name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority)
-        db.query('INSERT INTO request_cookies (request, cookie) VALUES (?,?)', [request.id, cookie.hash])
+            id = db.query('INSERT INTO cookies (name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority) VALUES (?,?,?,?,?,?,?,?,?,?,?, ?)', [name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority]).lastrowid
+            cookie = Cookie(id, name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority)
+        db.query('INSERT INTO request_cookies (request, cookie) VALUES (?,?)', [request.id, cookie.id])
 
         return cookie 
 
