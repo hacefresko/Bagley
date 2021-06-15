@@ -7,9 +7,11 @@ DROP TABLE requests;
 DROP TABLE responses;
 DROP TABLE headers;
 DROP TABLE cookies;
+DROP TABLE data;
 DROP TABLE scripts;
 DROP TABLE request_headers;
 DROP TABLE request_cookies;
+DROP TABLE request_data;
 DROP TABLE response_headers;
 DROP TABLE response_scripts;
 
@@ -35,7 +37,6 @@ CREATE TABLE requests (
     path INTEGER NOT NULL,
     params TEXT NOT NULL,
     method TEXT NOT NULL,
-    data TEXT NOT NULL,
     response TEXT,
     FOREIGN KEY (path) REFERENCES paths(id)
     FOREIGN KEY (response) REFERENCES responses(hash)
@@ -71,6 +72,12 @@ CREATE TABLE cookies (
     priority TEXT
 );
 
+CREATE TABLE data (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL
+);
+
 CREATE TABLE scripts (
     hash TEXT PRIMARY KEY,
     path INTEGER NOT NULL,
@@ -92,6 +99,13 @@ CREATE TABLE request_cookies (
     cookie INTEGER NOT NULL,
     FOREIGN KEY (request) REFERENCES requests(id),
     FOREIGN KEY (cookie) REFERENCES cookies(id)
+);
+
+CREATE TABLE request_data (
+    request INTEGER NOT NULL,
+    data INTEGER NOT NULL,
+    FOREIGN KEY (request) REFERENCES requests(id),
+    FOREIGN KEY (data) REFERENCES data(id)
 );
 
 

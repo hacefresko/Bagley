@@ -44,8 +44,8 @@ class Path:
     @staticmethod
     def __getPath(element, parent, domain):
         db = DB.getConnection()
-        path = db.query('SELECT id FROM paths WHERE element = ? AND parent = ? AND domain = ?', [element, parent, domain]).fetchone()
-        return Path(path[0], path[1], path[2]) if path else False
+        path = db.query('SELECT * FROM paths WHERE element = ? AND parent = ? AND domain = ?', [element, parent, domain]).fetchone()
+        return Path(path[0], path[1], path[2], path[3]) if path else False
 
     # Returns a dict with domain and a list elements with each element from the URL. URL must have protocol, domain and elements in order to get parsed correctly.
     @staticmethod
@@ -69,7 +69,7 @@ class Path:
     def getPath(id):
         db = DB.getConnection()
         path = db.query('SELECT id, element, parent, domain FROM paths WHERE id = ?', [id]).fetchone()
-        return Path(path[0], path[1], path[2]) if path else False
+        return Path(path[0], path[1], path[2], path[3]) if path else False
 
     # Returns path corresponding to URL or False if it does not exist
     @staticmethod
@@ -106,16 +106,65 @@ class Path:
             parent = path
 
 class Request:
-    def __init__(self, id, protocol, path_id, params, method, data):
+    def __init__(self, id, protocol, path_id, params, method):
         self.id = id
         self.protocol = protocol
         self.path = Path.getPath(path_id)
         self.params = params
         self.method = method
-        self.data = data
         self.headers = Header.getHeaders(self)
-        self.cookies = Cookie.getCookie(self)
-    
+        self.cookies = Cookie.getCookies(self)
+        self.data = Data.getRequestData(self)
+
+    @staticmethod
+    def checkRequest(url, method, headers, cookies, data):
+        path = Path.parseURL(url)
+        if not path:
+            return False
+        protocol = urlparse(url).scheme
+        params = urlparse(url).query if urlparse(url).query != '' else False
+
+        db = DB.getConnection()
+
+        # CHECK THAT COOKIES, DATA, PARAMETERS OR HEADERS SUCH AS CSRF ARE NOT MAKING US STORE THE SAME REQUEST OVER AND OVER
+            
+
+
+    @staticmethod
+    def getRequest(url, method, headers, cookies, data):
+        path = Path.parseURL(url)
+        if not path:
+            return False
+        protocol = urlparse(url).scheme
+        params = urlparse(url).query if urlparse(url).query != '' else False
+
+        db = DB.getConnection()
+        requests = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ?', [protocol, path.id, params, method]).fetchall()
+        for request in requests:
+            r = Request(request[0], request[1], request[2], request[3], request[4])
+            if r.headers == headers and r.cookies == cookies and r.data == data:
+                return r
+
+        return False
+
+    @staticmethod
+    def insertRequest(url, method, headers, cookies, data):
+        if Request.checkRequest(url, method, headers, cookies, data):
+            return False
+
+        db = DB.getConnection()
+        db.query('INSERT INTO requests (protocol, path, params, method) VALUES (?,?,?,?)', [urlparse(url).scheme, Path.parseURL(url).id, urlparse(url).query if urlparse(url).query != '' else False, method])
+        request = Request.getRequest(url, method, [], [], [])
+
+        if method != 'POST':
+            data = []
+
+        for element in headers + cookies + data:
+            element.link(request)
+
+        # Gets again the request in order to update headers, cookies and data from databse
+        return Request.getRequest(url, method, headers, cookies, data)
+  
 class Response:
     def __init__(self, hash, mimeType, body):
         self.hash = hash
@@ -123,12 +172,15 @@ class Response:
         self.body = body
         self.headers = Header.getHeaders(self)
         self.scripts = Script.getScripts(self)
-
+    
 class Header:
     def __init__(self, id, key, value):
         self.id = id
         self.key = key
         self.value = value
+
+    def __eq__(self, other):
+        return self.id == other.id
 
     def __str__(self):
         return self.key + ": " + self.value
@@ -205,6 +257,9 @@ class Cookie:
         self.sameparty = sameparty
         self.priority = priority
 
+    def __eq__(self, other):
+        return self.id == other.id
+
     # Returns script or False if it does not exist   
     @staticmethod 
     def getCookie(name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority):
@@ -212,7 +267,7 @@ class Cookie:
             return False
         
         db = DB.getConnection()
-        result = db.query('SELECT * FROM scripts WHERE name = ? AND value = ? AND domain = ? AND path = ? AND expires = ? AND size = ? AND httponly = ? AND secure = ? AND samesite = ? AND sameparty = ? AND priority = ?', [name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority]).fetchone()
+        result = db.query('SELECT * FROM cookies WHERE name = ? AND value = ? AND domain = ? AND path = ? AND expires = ? AND size = ? AND httponly = ? AND secure = ? AND samesite = ? AND sameparty = ? AND priority = ?', [name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority]).fetchone()
         if not result:
             return False
         return Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9], result[10], result[11])
@@ -232,23 +287,84 @@ class Cookie:
 
         return result
 
-    # Inserts cookie if not already inserted, links it to the corresponding request and returns the cookie
+    # Inserts cookie if not already inserted, returns it
     @staticmethod
-    def insertCookie(name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority, request):
-        if not isinstance(request, Request):
-            return False
-
+    def insertCookie(name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority):
         if not Domain.checkDomain(cookie_domain):
             return False
 
         db = DB.getConnection()
         cookie = Cookie.getCookie(name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority)
-        if not cookie:
-            id = db.query('INSERT INTO cookies (name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority) VALUES (?,?,?,?,?,?,?,?,?,?,?, ?)', [name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority]).lastrowid
-            cookie = Cookie(id, name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority)
-        db.query('INSERT INTO request_cookies (request, cookie) VALUES (?,?)', [request.id, cookie.id])
+        if cookie:
+            return False
+        
+        id = db.query('INSERT INTO cookies (name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority) VALUES (?,?,?,?,?,?,?,?,?,?,?)', [name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority]).lastrowid
+        return Cookie(id, name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority)
 
-        return cookie 
+    # Links the cookie to the specified request. If request is not a request instance, returns False
+    def link(self, request):
+        db = DB.getConnection()
+
+        if not isinstance(request, Request):
+            return False
+
+        db.query('INSERT INTO request_cookies (request, cookie) VALUES (?,?)', [request.id, self.id])
+        return True
+
+class Data:
+    def __init__(self, id, key, value):
+        self.id = id
+        self.key = key
+        self.value = value
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def __str__(self):
+        return self.key + "=" + self.value
+
+    @staticmethod
+    def getData(key, value):
+        db = DB.getConnection()
+        result = db.query('SELECT * FROM data WHERE key = ? AND value = ? ', [key, value]).fetchone()
+        if not result:
+            return False
+        
+        return Data(result[0], result[1], result[2])
+
+    @staticmethod
+    def getRequestData(request):
+        if not isinstance(request, Request):
+            return False
+
+        db = DB.getConnection()
+        data = db.query('SELECT id, key, value FROM data INNER JOIN request_data ON id = data WHERE request = ?', [request.id]).fetchall()
+
+        result = []
+        for d in data:
+            result.append(Data(d[0], d[1], d[2]))
+
+        return result
+
+    @staticmethod
+    def insertData(key, value):
+        db = DB.getConnection()
+        data = Data.getData(key, value)
+        if data:
+            return False
+
+        id = db.query('INSERT INTO data (key, value) VALUES (?,?)', [key, value]).lastrowid
+        return Data(id, key, value)
+
+    # Links the data to the specified request. If request is not a request instance, returns False
+    def link(self, request):
+        db = DB.getConnection()
+
+        if not isinstance(request, Request):
+            return False
+        
+        db.query('INSERT INTO request_data (request, data) VALUES (?,?)', [request.id, self.id])
+        return True
 
 class Script:
     def __init__(self, hash, content, path_id):
@@ -292,9 +408,9 @@ class Script:
         if not isinstance(response, Response):
             return False
 
-        # If path does not belong to the scope (stored domains)
         if url is not None:
             path = Path.insertAllPaths(url)
+            # If path does not belong to the scope (stored domains)
             if not path:
                 return False
             path = path.id
@@ -304,7 +420,7 @@ class Script:
         db = DB.getConnection()
         script = Script.getScript(url, content)
         if not script:
-            # Cannot use lastrowid since scripts table does not have INTEGER PRIMARY KEY
+            # Cannot use lastrowid since scripts table does not have INTEGER PRIMARY KEY but TEXT PRIMARY KEY (hash)
             db.query('INSERT INTO scripts (hash, path, content) VALUES (?,?,?)', [Script.__getHash(url, content), path, content])
             script = Script.getScript(url, content)
         db.query('INSERT INTO response_scripts (response, script) VALUES (?,?)', [response.hash, script.hash])
