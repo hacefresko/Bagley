@@ -106,15 +106,15 @@ class Path:
             parent = path
 
 class Request:
-    def __init__(self, id, protocol, path_id, params, method):
+    def __init__(self, id, protocol, path_id, params, method, data):
         self.id = id
         self.protocol = protocol
         self.path = Path.getPath(path_id)
         self.params = params
         self.method = method
+        self.data = data
         self.headers = Header.getHeaders(self)
         self.cookies = Cookie.getCookies(self)
-        self.data = Data.getRequestData(self)
 
     @staticmethod
     def checkRequest(url, method, headers, cookies, data):
@@ -123,6 +123,7 @@ class Request:
             return False
         protocol = urlparse(url).scheme
         params = urlparse(url).query if urlparse(url).query != '' else False
+        data = data if (data is not None and method == 'POST') else False
 
         db = DB.getConnection()
 
@@ -137,29 +138,34 @@ class Request:
             return False
         protocol = urlparse(url).scheme
         params = urlparse(url).query if urlparse(url).query != '' else False
+        data = data if (data is not None and method == 'POST') else False
 
         db = DB.getConnection()
-        requests = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ?', [protocol, path.id, params, method]).fetchall()
-        for request in requests:
-            r = Request(request[0], request[1], request[2], request[3], request[4])
-            if r.headers == headers and r.cookies == cookies and r.data == data:
-                return r
-
-        return False
+        request = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path.id, params, method, data]).fetchone()
+        if not request:
+            return False
+        return Request(request[0], request[1], request[2], request[3], request[4], request[5])
 
     @staticmethod
     def insertRequest(url, method, headers, cookies, data):
         if Request.checkRequest(url, method, headers, cookies, data):
             return False
 
+        path = Path.parseURL(url)
+        if not path:
+            return False
+        protocol = urlparse(url).scheme
+        params = urlparse(url).query if urlparse(url).query != '' else False
+        data = data if (data is not None and method == 'POST') else False
+
         db = DB.getConnection()
-        db.query('INSERT INTO requests (protocol, path, params, method) VALUES (?,?,?,?)', [urlparse(url).scheme, Path.parseURL(url).id, urlparse(url).query if urlparse(url).query != '' else False, method])
+        db.query('INSERT INTO requests (protocol, path, params, method, data) VALUES (?,?,?,?, ?)', [protocol, path.id, params, method, data])
         request = Request.getRequest(url, method, [], [], [])
 
         if method != 'POST':
             data = []
 
-        for element in headers + cookies + data:
+        for element in headers + cookies:
             element.link(request)
 
         # Gets again the request in order to update headers, cookies and data from databse
@@ -309,61 +315,6 @@ class Cookie:
             return False
 
         db.query('INSERT INTO request_cookies (request, cookie) VALUES (?,?)', [request.id, self.id])
-        return True
-
-class Data:
-    def __init__(self, id, key, value):
-        self.id = id
-        self.key = key
-        self.value = value
-
-    def __eq__(self, other):
-        return self.id == other.id
-
-    def __str__(self):
-        return self.key + "=" + self.value
-
-    @staticmethod
-    def getData(key, value):
-        db = DB.getConnection()
-        result = db.query('SELECT * FROM data WHERE key = ? AND value = ? ', [key, value]).fetchone()
-        if not result:
-            return False
-        
-        return Data(result[0], result[1], result[2])
-
-    @staticmethod
-    def getRequestData(request):
-        if not isinstance(request, Request):
-            return False
-
-        db = DB.getConnection()
-        data = db.query('SELECT id, key, value FROM data INNER JOIN request_data ON id = data WHERE request = ?', [request.id]).fetchall()
-
-        result = []
-        for d in data:
-            result.append(Data(d[0], d[1], d[2]))
-
-        return result
-
-    @staticmethod
-    def insertData(key, value):
-        db = DB.getConnection()
-        data = Data.getData(key, value)
-        if data:
-            return False
-
-        id = db.query('INSERT INTO data (key, value) VALUES (?,?)', [key, value]).lastrowid
-        return Data(id, key, value)
-
-    # Links the data to the specified request. If request is not a request instance, returns False
-    def link(self, request):
-        db = DB.getConnection()
-
-        if not isinstance(request, Request):
-            return False
-        
-        db.query('INSERT INTO request_data (request, data) VALUES (?,?)', [request.id, self.id])
         return True
 
 class Script:
