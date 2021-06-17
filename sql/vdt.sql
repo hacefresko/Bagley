@@ -11,6 +11,7 @@ DROP TABLE scripts;
 DROP TABLE request_headers;
 DROP TABLE request_cookies;
 DROP TABLE response_headers;
+DROP TABLE response_cookies;
 DROP TABLE response_scripts;
 
 CREATE TABLE domains (
@@ -101,6 +102,14 @@ CREATE TABLE response_headers (
     header INTEGER NOT NULL,
     FOREIGN KEY (response) REFERENCES responses(hash),
     FOREIGN KEY (header) REFERENCES headers(id)
+);
+
+-- Cookies sent by response in Set-Cookie headers
+CREATE TABLE response_cookies (
+    response TEXT NOT NULL,
+    cookie INTEGER NOT NULL,
+    FOREIGN KEY (response) REFERENCES responses(hash),
+    FOREIGN KEY (cookie) REFERENCES cookies(id)
 );
 
 CREATE TABLE response_scripts (

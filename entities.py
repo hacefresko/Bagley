@@ -191,13 +191,20 @@ class Header:
     def __str__(self):
         return self.key + ": " + self.value
 
+    # Returns a formatted tupple with key and value
+    @staticmethod
+    def parseHeader(key, value):
+        key = key.lower()
+        # Format date and cookie so we don't save all dates and cookies (cookies will be saved apart)
+        if key == 'date' or key == 'cookie' or key == 'set-cookie':
+            value = '1337'
+        return (key, value)
+
     # Returns header or False if it does not exist  
     @staticmethod
     def getHeader(key, value):
+        key, value = Header.parseHeader(key, value)
         db = DB.getConnection()
-        # Format date and cookie so we don't save all dates and cookies (cookies will be saved apart)
-        if key == 'Date' or key == 'Cookie':
-            value = '1337'
         result = db.query('SELECT * FROM headers WHERE key = ? AND value = ?', [key, value]).fetchone()
         if not result:
             return False
@@ -225,12 +232,10 @@ class Header:
     # Inserts header if not inserted and returns it
     @staticmethod
     def insertHeader(key, value):
-        db = DB.getConnection()
-        # Format date and cookie so we don't save all dates and cookies (cookies will be saved apart)
-        if key == 'Date' or key == 'Cookie':
-            value = '1337'
+        key, value = Header.parseHeader(key, value)
         header = Header.getHeader(key, value)
         if not header:
+            db = DB.getConnection()
             id = db.query('INSERT INTO headers (key, value) VALUES (?,?)', [key, value]).lastrowid
             header = Header(id, key, value)
         return header
@@ -307,15 +312,18 @@ class Cookie:
         id = db.query('INSERT INTO cookies (name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority) VALUES (?,?,?,?,?,?,?,?,?,?,?)', [name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority]).lastrowid
         return Cookie(id, name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority)
 
-    # Links the cookie to the specified request. If request is not a request instance, returns False
-    def link(self, request):
+    # Links the cookie to the specified target. If target is not a request nor a response, returns False
+    def link(self, target):
         db = DB.getConnection()
 
-        if not isinstance(request, Request):
+        if isinstance(target, Request):
+            db.query('INSERT INTO request_cookies (request, cookie) VALUES (?,?)', [target.id, self.id])
+            return True
+        elif isinstance(target, Response):
+            db.query('INSERT INTO response_cookies (response, cookie) VALUES (?,?)', [target.hash, self.id])
+            return True
+        else:
             return False
-
-        db.query('INSERT INTO request_cookies (request, cookie) VALUES (?,?)', [request.id, self.id])
-        return True
 
 class Script:
     def __init__(self, hash, content, path_id):

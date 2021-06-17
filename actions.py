@@ -19,7 +19,23 @@ class Crawler (threading.Thread):
             
             domain = line.split(' ')[0]
 
-            if not 
+            if not Domain.checkDomain(domain):
+                Domain.insertDomain(domain)
+
+            try:
+                protocol = 'http'
+                initial_request = requests.get(protocol + '://' + domain,  allow_redirects=False)
+                if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
+                    protocol = 'https'
+
+                self.__crawl()
+            except Exception as e:
+                print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + domain, e))
+                continue
+            finally:
+                print("[+] Finished crawling %s" % domain)
+
+
 
 class Sqlmap (threading.Thread):
     def __init__(self):
