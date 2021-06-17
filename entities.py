@@ -1,6 +1,6 @@
 from database import DB
 from urllib.parse import urlparse, urlunparse
-import hashlib
+import hashlib, json
 
 class Domain:
     # Returns True if both domains are equal or if one belongs to a range of subdomains of other, else False
@@ -55,15 +55,6 @@ class Path:
         return result 
     
      # Returns path if path specified by id exists else False
-    
-    @staticmethod
-    def __getPathById(id):
-        db = DB.getConnection()
-        result = db.query('SELECT * FROM paths WHERE id = ?', [id]).fetchone()
-        if result:
-            return Path(result[0], result[1], result[2], result[3])
-        else:
-            return False
 
     # Returns path if path specified by element, parent and domain exists else False
     @staticmethod
@@ -76,6 +67,11 @@ class Path:
     @staticmethod
     def __parseURL(url):
         result = {}
+
+        # Support for domains followed by path, without protocol
+        if urlparse(url)[1] == '':
+            url = 'http://' + url
+
         # If there is no path but params, adds "/"
         if not urlparse(url).path and urlparse(url).query:
             url_to_parse = list(urlparse(url))
@@ -100,7 +96,7 @@ class Path:
         while child.parent != '0':
             if child.element == path.element:
                 return True
-            child = Path.__getPathById(child.parent)
+            child = Path.getPath(child.parent)
         return False
         
     # Returns path corresponding to id or False if it does not exist
@@ -139,9 +135,9 @@ class Path:
         for i, element in enumerate(parsedURL['elements']):
             path = Path.__getPath(element, parent, parsedURL['domain'])
             if not path:
-                path = db.query('INSERT INTO paths (element, parent, domain) VALUES (?,?,?)', [element, parent, parsedURL['domain']]).lastrowid
+                path = Path.getPath(db.query('INSERT INTO paths (element, parent, domain) VALUES (?,?,?)', [element, parent, parsedURL['domain']]).lastrowid)
             if i == len(parsedURL['elements']) - 1:
-                return Path(path, element, parent, parsedURL['domain'])
+                return path
             parent = path.id
 
 class Request:
@@ -155,8 +151,31 @@ class Request:
         self.headers = Header.getHeaders(self)
         self.cookies = Cookie.getCookies(self)
 
+    # Substitute all values by newValue inside data. Admits json and text url formats
     @staticmethod
-    def checkRequest(url, method, headers, cookies, data):
+    def __substituteParamsValue(data, newValue):
+        def replace(json_data, newValue):
+            for k,v in json_data.items():
+                if isinstance(v, dict):
+                    json_data.update({k:replace(v, newValue)})
+                else:
+                    json_data.update({k:newValue})
+            return json_data
+
+
+        new_data = ''
+        try:
+            new_data = json.dumps(replace(json.loads(data), newValue))
+        except:
+            for p in data.split('&'):
+                new_data += p.split('=')[0]
+                new_data += '=' + newValue + '&'
+            new_data = new_data[:-1]
+        finally:
+            return new_data
+
+    @staticmethod
+    def checkRequest(url, method, data):
         path = Path.parseURL(url)
         if not path:
             return False
@@ -166,12 +185,21 @@ class Request:
 
         db = DB.getConnection()
 
-        # CHECK THAT COOKIES, DATA, PARAMETERS OR HEADERS SUCH AS CSRF ARE NOT MAKING US STORE THE SAME REQUEST OVER AND OVER
-            
+        if params or data:
+            if params and data:
+                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ? AND data LIKE ?', [protocol, path, method, Request.__substituteParamsValue(params, '%'), Request.__substituteParamsValue(data, '%')]).fetchall()
+            elif data:
+                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND data LIKE ?', [protocol, path, method, Request.__substituteParamsValue(data, '%')]).fetchall()
+            elif params:
+                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ?', [protocol, path, method, Request.__substituteParamsValue(params, '%')]).fetchall()
 
+            if len(result) > 10:
+                return True
+
+        return True if db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path, params, method, data]).fetchone() else False
 
     @staticmethod
-    def getRequest(url, method, headers, cookies, data):
+    def getRequest(url, method, data):
         path = Path.parseURL(url)
         if not path:
             return False
@@ -187,28 +215,25 @@ class Request:
 
     @staticmethod
     def insertRequest(url, method, headers, cookies, data):
-        if Request.checkRequest(url, method, headers, cookies, data):
+        if Request.checkRequest(url, method, data):
             return False
-
-        path = Path.parseURL(url)
+        path = Path.insertAllPaths(url)
         if not path:
             return False
+
         protocol = urlparse(url).scheme
         params = urlparse(url).query if urlparse(url).query != '' else False
         data = data if (data is not None and method == 'POST') else False
 
         db = DB.getConnection()
         db.query('INSERT INTO requests (protocol, path, params, method, data) VALUES (?,?,?,?, ?)', [protocol, path.id, params, method, data])
-        request = Request.getRequest(url, method, [], [], [])
-
-        if method != 'POST':
-            data = []
+        request = Request.getRequest(url, method, data)
 
         for element in headers + cookies:
             element.link(request)
 
         # Gets again the request in order to update headers, cookies and data from databse
-        return Request.getRequest(url, method, headers, cookies, data)
+        return Request.getRequest(url, method, data)
   
 class Response:
     def __init__(self, hash, mimeType, body):
@@ -310,17 +335,20 @@ class Cookie:
     def __eq__(self, other):
         return self.id == other.id
 
-    # Returns cookie if there is a cookie with name and value whose cookie_path and cookie_domain match with url
+    # Returns cookie if there is a cookie with name and value whose cookie_path and cookie_domain match with url, else False
     @staticmethod
     def getCookie(name, value, url):
         path = Path.parseURL(url)
+        if not path:
+            return False
 
         db = DB.getConnection()
         results = db.query('SELECT * FROM cookies WHERE name = ? AND value = ?', [name, value]).fetchall()
         for result in results:
             cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9], result[10], result[11])
-            # If domain/range of subdomains from cookie and cookie range of paths match with url
-            if Domain.compareDomains(cookie.domain, path.domain) and path.checkParent(Path.parseURL(path.domain + cookie.path)):
+            # If domain/range of subdomains and range of paths  from cookie match with url
+            cookie_path = Path.parseURL(path.domain + cookie.path) if cookie.path != '/' else Path.parseURL(path.domain)
+            if Domain.compareDomains(cookie.domain, path.domain) and path.checkParent(cookie_path):
                 return cookie
         return False
 

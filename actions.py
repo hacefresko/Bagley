@@ -83,10 +83,24 @@ class Crawler (threading.Thread):
             print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
             return
 
-        request = self.driver.requests[1]
-        print(type(request.headers.get('cookie')))
+        request = self.driver.requests[0]
 
-        #Request.insertRequest(parent_url, method, [], self.driver.get_cookies(), data)
+        cookies = []
+        if request.headers.get('cookie'):
+            for cookie in request.headers.get('cookie').split('; '):
+                c = Cookie.getCookie(cookie.split('=')[0], cookie.split('=')[1], parent_url)
+                if c:
+                    cookies.append()
+            del request.headers['cookie']
+
+        headers = []
+        for k,v in request.headers.items():
+            headers.append(Header.insertHeader(k, v))
+
+        request = Request.insertRequest(parent_url, method, headers, cookies, data)
+
+
+
 
     
 
