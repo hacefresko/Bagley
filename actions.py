@@ -1,13 +1,23 @@
-import threading, time, requests, subprocess, sqlite3
+import threading, time, requests, subprocess, sqlite3, json
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from database import DB
 from entities import *
+from seleniumwire import webdriver
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.chrome.options import Options
 
 class Crawler (threading.Thread):
     def __init__(self, scope_file):
         threading.Thread.__init__(self)
         self.scope = scope_file
+
+        # Init selenium driver
+        capabilities = DesiredCapabilities.CHROME.copy()
+        capabilities["goog:loggingPrefs"] = {"performance": "ALL"}
+        opts = Options()
+        opts.headless = True
+        self.driver = webdriver.Chrome(desired_capabilities=capabilities, options = opts)
 
     def run(self):
         db = DB.getConnection()
@@ -28,14 +38,57 @@ class Crawler (threading.Thread):
                 if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
                     protocol = 'https'
 
-                self.__crawl()
+                self.__crawl(protocol + '://' + domain, 'GET', None)
             except Exception as e:
                 print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + domain, e))
                 continue
             finally:
                 print("[+] Finished crawling %s" % domain)
 
+    # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
+    def __post(self, path, params):
+        self.driver.execute_script("""
+        function post(path, params, method='post') {
+            const form = document.createElement('form');
+            form.method = method;
+            form.action = path;
+        
+            for (const key in params) {
+                if (params.hasOwnProperty(key)) {
+                const hiddenField = document.createElement('input');
+                hiddenField.type = 'hidden';
+                hiddenField.name = key;
+                hiddenField.value = params[key];
+        
+                form.appendChild(hiddenField);
+            }
+            }
+        
+            document.body.appendChild(form);
+            form.submit();
+        }
+        
+        post(arguments[1], arguments[0]);
+        """, params, path)
 
+    def __crawl(self, parent_url, method, data):
+        print("[+] Crawling %s [%s]" % (parent_url, method))
+
+        try:
+            if method == 'GET':
+                self.driver.get(parent_url)
+            elif method == 'POST':
+                self.__post(parent_url, data)
+        except Exception as e:
+            print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
+            return
+
+        request = self.driver.requests[1]
+        print(type(request.headers.get('cookie')))
+
+        #Request.insertRequest(parent_url, method, [], self.driver.get_cookies(), data)
+
+    
 
 class Sqlmap (threading.Thread):
     def __init__(self):
@@ -80,4 +133,3 @@ class Sqlmap (threading.Thread):
             if "---" in result.stdout:
                 print("[+] SQL injection found in %s" % request.get('url'))
                 print(result.stdout)
-           

@@ -3,6 +3,20 @@ from urllib.parse import urlparse, urlunparse
 import hashlib
 
 class Domain:
+    # Returns True if both domains are equal or if one belongs to a range of subdomains of other, else False
+    @staticmethod
+    def compareDomains(first, second):
+        if first == second:
+            return True
+        elif first[0] == '.' and second[0] == '.':
+            return True if first in second or second in first else False
+        elif first[0] == '.':
+            return True if first in second or first[1:] == second else False
+        elif second[0] == '.':
+            return True if second in first or second[1:] == first else False
+        else:
+            return False
+
     # Returns True if domain or subdomains exist, else False
     @staticmethod
     def checkDomain(domain):
@@ -40,7 +54,18 @@ class Path:
 
         return result 
     
-    # Returns id of path if path specified by element, parent and domain exists else False
+     # Returns path if path specified by id exists else False
+    
+    @staticmethod
+    def __getPathById(id):
+        db = DB.getConnection()
+        result = db.query('SELECT * FROM paths WHERE id = ?', [id]).fetchone()
+        if result:
+            return Path(result[0], result[1], result[2], result[3])
+        else:
+            return False
+
+    # Returns path if path specified by element, parent and domain exists else False
     @staticmethod
     def __getPath(element, parent, domain):
         db = DB.getConnection()
@@ -64,6 +89,20 @@ class Path:
 
         return result
 
+    # Returns True if path is parent of current Object, else False
+    def checkParent(self, path):
+        if not isinstance(path, Path):
+            return False
+        if self.domain != path.domain:
+            return False
+
+        child = self
+        while child.parent != '0':
+            if child.element == path.element:
+                return True
+            child = Path.__getPathById(child.parent)
+        return False
+        
     # Returns path corresponding to id or False if it does not exist
     @staticmethod
     def getPath(id):
@@ -84,7 +123,7 @@ class Path:
                 return False
             if i == len(parsedURL['elements']) - 1:
                 return path
-            parent = path.parent
+            parent = path.id
 
     # Inserts each path inside the URL if not already inserted and returns last inserted path (last element from URL). If domain doesn't exist, return False
     @staticmethod
@@ -103,7 +142,7 @@ class Path:
                 path = db.query('INSERT INTO paths (element, parent, domain) VALUES (?,?,?)', [element, parent, parsedURL['domain']]).lastrowid
             if i == len(parsedURL['elements']) - 1:
                 return Path(path, element, parent, parsedURL['domain'])
-            parent = path
+            parent = path.id
 
 class Request:
     def __init__(self, id, protocol, path_id, params, method, data):
@@ -271,17 +310,28 @@ class Cookie:
     def __eq__(self, other):
         return self.id == other.id
 
-    # Returns script or False if it does not exist   
+    # Returns cookie if there is a cookie with name and value whose cookie_path and cookie_domain match with url
+    @staticmethod
+    def getCookie(name, value, url):
+        path = Path.parseURL(url)
+
+        db = DB.getConnection()
+        results = db.query('SELECT * FROM cookies WHERE name = ? AND value = ?', [name, value]).fetchall()
+        for result in results:
+            cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9], result[10], result[11])
+            # If domain/range of subdomains from cookie and cookie range of paths match with url
+            if Domain.compareDomains(cookie.domain, path.domain) and path.checkParent(Path.parseURL(path.domain + cookie.path)):
+                return cookie
+        return False
+
+    # Returns True if exists or False if it does not exist   
     @staticmethod 
-    def getCookie(name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority):
+    def checkCookie(name, value, cookie_domain, cookie_path):
         if not Domain.checkDomain(cookie_domain):
             return False
         
         db = DB.getConnection()
-        result = db.query('SELECT * FROM cookies WHERE name = ? AND value = ? AND domain = ? AND path = ? AND expires = ? AND size = ? AND httponly = ? AND secure = ? AND samesite = ? AND sameparty = ? AND priority = ?', [name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority]).fetchone()
-        if not result:
-            return False
-        return Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9], result[10], result[11])
+        return True if db.query('SELECT * FROM cookies WHERE name = ? AND value = ? AND domain = ? AND path = ?', [name, value, cookie_domain, cookie_path]).fetchone() else False
 
     # Returns a list of cookies from the specified request. If request is not a Request object, returns False
     @staticmethod 
@@ -305,7 +355,7 @@ class Cookie:
             return False
 
         db = DB.getConnection()
-        cookie = Cookie.getCookie(name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority)
+        cookie = Cookie.checkCookie(name, value, cookie_domain, cookie_path)
         if cookie:
             return False
         
