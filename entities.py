@@ -174,6 +174,8 @@ class Request:
         finally:
             return new_data
 
+    # Returns True if request exists else False. If there are already some requests with the same path, protocol and method 
+    # but different params/data, it returns True to avoid saving same requests with different CSRFs, session values, etc.
     @staticmethod
     def checkRequest(url, method, data):
         path = Path.parseURL(url)
@@ -198,6 +200,7 @@ class Request:
 
         return True if db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path, params, method, data]).fetchone() else False
 
+    # Returns request if exists else false
     @staticmethod
     def getRequest(url, method, data):
         path = Path.parseURL(url)
@@ -213,6 +216,7 @@ class Request:
             return False
         return Request(request[0], request[1], request[2], request[3], request[4], request[5])
 
+    # Inserts path and request and links headers and cookies. If there are too many requests with different data/params, it returns false.
     @staticmethod
     def insertRequest(url, method, headers, cookies, data):
         if Request.checkRequest(url, method, data):
