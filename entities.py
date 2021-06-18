@@ -44,17 +44,16 @@ class Path:
     def __str__(self):  
         db = DB.getConnection()
         result = ''
-        path = [self.element if self.element else '', self.parent]
+        element = self.element
+        parent = self.parent
 
-        while path[1]:
-            result = "/" + path[0] + result
-            path = db.query('SELECT element, parent FROM paths WHERE id = ?', [path[1]]).fetchone()
+        while parent != 0:
+            result = "/" + (element if element != '0' else '') + result
+            element, parent = db.query('SELECT element, parent FROM paths WHERE id = ?', [parent]).fetchone()
 
         result = self.domain + result
 
         return result 
-    
-     # Returns path if path specified by id exists else False
 
     # Returns path if path specified by element, parent and domain exists else False
     @staticmethod
@@ -151,6 +150,22 @@ class Request:
         self.data = Response.getResponse(response_hash)
         self.headers = Header.getHeaders(self)
         self.cookies = Cookie.getCookies(self)
+
+    def __str__(self):
+        result = "%s %s HTTP/1.1\r\n" % (self.method, urlparse(self.protocol + '://' + str(self.path)).path)
+        result += "Host: %s\r\n" % (self.path.domain)
+        for header in self.headers:
+            result += "%s\r\n" % (str(header))
+        if len(self.cookies) != 0:
+            result += "cookie: "
+            for cookie in self.cookie:
+                result +=  "%s; " % (str(cookie))
+            result += "\r\n"
+
+        if self.data:
+            result += "\r\n%s\r\n" % (self.data)
+
+        return result
 
     # Substitute all values by newValue inside data. Admits json and text url formats
     @staticmethod
@@ -280,7 +295,6 @@ class Response:
     @staticmethod
     def insertResponse(code, body, headers, cookies, request):
         if not isinstance(request, Request):
-            print("lol")
             return False
         if Response.checkResponse(code, body, headers, cookies):
             return False
@@ -389,6 +403,9 @@ class Cookie:
 
     def __eq__(self, other):
         return self.id == other.id
+
+    def __str__(self):
+        return self.name + '=' + self.value
 
     # Returns cookie if there is a cookie with name and value whose cookie_path and cookie_domain match with url, else False
     @staticmethod

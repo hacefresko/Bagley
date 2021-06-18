@@ -18,11 +18,11 @@ CREATE TABLE domains (
     name TEXT PRIMARY KEY
 );
 
--- path 0 means it's the domain
+-- Element 0 means it's empty. Parent 0 means it's the first element, so first will be (domain, 0, 0)
 CREATE TABLE paths (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     element TEXT NOT NULL, 
-    parent INTEGER, 
+    parent INTEGER NOT NULL, 
     domain TEXT NOT NULL,
     FOREIGN KEY (domain) REFERENCES domains(name), 
     FOREIGN KEY (parent) REFERENCES paths(id)

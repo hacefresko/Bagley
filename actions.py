@@ -71,27 +71,15 @@ class Crawler (threading.Thread):
         post(arguments[1], arguments[0]);
         """, params, path)
 
-    def __crawl(self, parent_url, method, data):
-        print("[+] Crawling %s [%s]" % (parent_url, method))
-
-        domain = urlparse(parent_url).netloc
-
-        try:
-            if method == 'GET':
-                self.driver.get(parent_url)
-            elif method == 'POST':
-                self.__post(parent_url, data)
-        except Exception as e:
-            print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
-            return
-
-        request = self.driver.requests[0]
+    # Inserts in the database the request and its response. Returns (request, response)
+    def __processRequest(self, request):
+        url = request.url
         response = request.response
 
         request_cookies = []
         if request.headers.get('cookie'):
             for cookie in request.headers.get('cookie').split('; '):
-                c = Cookie.getCookie(cookie.split('=')[0], cookie.split('=')[1], parent_url)
+                c = Cookie.getCookie(cookie.split('=')[0], cookie.split('=')[1], url)
                 if c:
                     request_cookies.append()
             del request.headers['cookie']
@@ -100,13 +88,13 @@ class Crawler (threading.Thread):
         for k,v in request.headers.items():
             request_headers.append(Header.insertHeader(k, v))
 
-        request = Request.insertRequest(parent_url, method, request_headers, request_cookies, data)
+        request = Request.insertRequest(url, request.method, request_headers, request_cookies, request.body.decode('utf-8'))
 
         response_cookies = []
         if response.headers.get_all('set-cookie'):
             for raw_cookie in response.headers.get_all('set-cookie'):
                 # Default values for cookie attributes
-                cookie = {'expires':'session', 'max-age':'session', 'domain': domain, 'path': '/', 'secure': False, 'httponly': False, 'samesite':'lax'}
+                cookie = {'expires':'session', 'max-age':'session', 'domain': urlparse(url).netloc, 'path': '/', 'secure': False, 'httponly': False, 'samesite':'lax'}
                 for attribute in raw_cookie.split('; '):
                     if len(attribute.split('=')) == 1:
                         cookie.update({attribute: True})
@@ -125,6 +113,22 @@ class Crawler (threading.Thread):
 
         response = Response.insertResponse(response.status_code, response.body.decode('utf-8'), response_headers, response_cookies, request)
 
+        return (request, response)
+
+    def __crawl(self, parent_url, method, data):
+        print("[+] Crawling %s [%s]" % (parent_url, method))
+
+        try:
+            if method == 'GET':
+                self.driver.get(parent_url)
+            elif method == 'POST':
+                self.__post(parent_url, data)
+        except Exception as e:
+            print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
+            return
+
+        request, response = self.__processRequest(self.driver.requests[0])
+        
 
 class Sqlmap (threading.Thread):
     def __init__(self):
