@@ -150,6 +150,7 @@ class Request:
         self.data = data
         self.headers = Header.getHeaders(self)
         self.cookies = Cookie.getCookies(self)
+        self.response = Response.getResponse(self)
 
     # Substitute all values by newValue inside data. Admits json and text url formats
     @staticmethod
@@ -238,15 +239,67 @@ class Request:
 
         # Gets again the request in order to update headers, cookies and data from databse
         return Request.getRequest(url, method, data)
-  
+
 class Response:
-    def __init__(self, hash, mimeType, body):
+    def __init__(self, hash, code, mimeType, body):
         self.hash = hash
+        self.code = code
         self.mimeType = mimeType
         self.body = body
         self.headers = Header.getHeaders(self)
+        self.cookies = Cookie.getCookies(self)
         self.scripts = Script.getScripts(self)
+
+    # Returns response hash
+    @staticmethod
+    def __hashResponse(code, mimetype, body, headers, cookies):
+        to_hash = mimetype + body + str(code)
+        for element in headers + cookies:
+            to_hash += str(element)
+        return hashlib.sha1(to_hash.encode('utf-8')).hexdigest()
+
+    # Returns True if response exists, else False
+    @staticmethod
+    def checkResponse(code, mimetype, body, headers, cookies):
+        if not body:
+            body = False
+
+        db = DB.getConnection()
+        return True if db.query('SELECT * FROM responses WHERE hash = ?', [Response.__hashResponse(code, mimetype, body, headers, cookies)]).fetchone() else False
     
+    # Returns response if exists, else False
+    @staticmethod
+    def getResponse(response_hash):
+        db = DB.getConnection()
+        response = db.query('SELECT * FROM responses WHERE hash = ?', [response_hash]).fetchone()
+        if not response:
+            return False
+        return Response(response[0], response[1], response[2], response[3])
+
+    # Returns response hash if response succesfully inserted. Else, returns False. Also links header + cookies.
+    @staticmethod
+    def insertResponse(code, mimetype, body, headers, cookies, request):
+        if not isinstance(request, Request):
+            return False
+        if Response.checkResponse(code, mimetype, body, headers, cookies):
+            return False
+
+        if not body:
+            body = False
+
+        response_hash = Response.__hashResponse(code, mimetype, body, headers, cookies)
+
+        db = DB.getConnection()
+
+        db.query('INSERT INTO responses (hash, code, mimetype, content) VALUES (?,?,?,?)', [response_hash, code, mimetype, body])
+        db.query('UPDATE requests SET response = ? WHERE id = ?', [response_hash, request.id])
+
+        response = Response.getResponse(response_hash)
+        for element in headers + cookies:
+            element.link(response)
+
+        return Response.getResponse(response_hash)
+
 class Header:
     def __init__(self, id, key, value):
         self.id = id
@@ -365,14 +418,17 @@ class Cookie:
         db = DB.getConnection()
         return True if db.query('SELECT * FROM cookies WHERE name = ? AND value = ? AND domain = ? AND path = ?', [name, value, cookie_domain, cookie_path]).fetchone() else False
 
-    # Returns a list of cookies from the specified request. If request is not a Request object, returns False
+    # Returns a list of cookies for specified target. If target is not a request nor a response, returns False
     @staticmethod 
-    def getCookies(request):
-        if not isinstance(request, Request):
-            return False
-
+    def getCookies(target):
         db = DB.getConnection()
-        cookies = db.query('SELECT id, name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority FROM cookies INNER JOIN request_cookies on id = cookie WHERE request = ?', [request.id]).fetchall()
+    
+        if isinstance(target, Request):
+            cookies = db.query('SELECT id, name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority FROM cookies INNER JOIN request_cookies on id = cookie WHERE request = ?', [target.id]).fetchall()
+        elif isinstance(target, Response):
+            cookies = db.query('SELECT id, name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority FROM cookies INNER JOIN response_cookies on id = cookie WHERE response = ?', [target.id]).fetchall()
+        else:
+            return False
 
         result = []
         for cookie in cookies:

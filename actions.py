@@ -96,7 +96,7 @@ class Crawler (threading.Thread):
         headers = []
         for k,v in request.headers.items():
             headers.append(Header.insertHeader(k, v))
-
+        print(str(headers))
         request = Request.insertRequest(parent_url, method, headers, cookies, data)
 
 

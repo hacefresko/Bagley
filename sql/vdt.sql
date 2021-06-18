@@ -45,7 +45,7 @@ CREATE TABLE requests (
 CREATE TABLE responses (
     hash TEXT PRIMARY KEY,
     code INTEGER NOT NULL,
-    mimeType TEXT,
+    mimetype TEXT,
     content TEXT
 );
 
