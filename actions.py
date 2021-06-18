@@ -8,6 +8,8 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 
 class Crawler (threading.Thread):
+    blacklist_formats = ['.css', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp', '.bmp', '.ico', '.tiff', '.woff2', '.woff']
+
     def __init__(self, scope_file):
         threading.Thread.__init__(self)
         self.scope = scope_file
@@ -17,7 +19,11 @@ class Crawler (threading.Thread):
         capabilities["goog:loggingPrefs"] = {"performance": "ALL"}
         opts = Options()
         opts.headless = True
-        self.driver = webdriver.Chrome(desired_capabilities=capabilities, options = opts)
+        # https://stackoverflow.com/questions/51503437/headless-chrome-web-driver-too-slow-and-unable-to-download-file
+        opts.add_argument('--no-proxy-server')
+        opts.add_argument("--proxy-server='direct://'")
+        opts.add_argument("--proxy-bypass-list=*")
+        self.driver = webdriver.Chrome(desired_capabilities=capabilities, options=opts)
 
     def run(self):
         db = DB.getConnection()
@@ -81,14 +87,16 @@ class Crawler (threading.Thread):
             for cookie in request.headers.get('cookie').split('; '):
                 c = Cookie.getCookie(cookie.split('=')[0], cookie.split('=')[1], url)
                 if c:
-                    request_cookies.append()
+                    request_cookies.append(c)
             del request.headers['cookie']
 
         request_headers = []
         for k,v in request.headers.items():
             request_headers.append(Header.insertHeader(k, v))
 
-        request = Request.insertRequest(url, request.method, request_headers, request_cookies, request.body.decode('utf-8'))
+        request = Request.insertRequest(url, request.method, request_headers, request_cookies, request.body.decode('utf-8', errors='ignore'))
+        if not request:
+            return (False, False)
 
         response_cookies = []
         if response.headers.get_all('set-cookie'):
@@ -111,7 +119,7 @@ class Crawler (threading.Thread):
         for k,v in response.headers.items():
             response_headers.append(Header.insertHeader(k,v))
 
-        response = Response.insertResponse(response.status_code, response.body.decode('utf-8'), response_headers, response_cookies, request)
+        response = Response.insertResponse(response.status_code, response.body.decode('utf-8', errors='ignore'), response_headers, response_cookies, request)
 
         return (request, response)
 
@@ -119,6 +127,8 @@ class Crawler (threading.Thread):
         print("[+] Crawling %s [%s]" % (parent_url, method))
 
         try:
+            # Delete all previous requests so they don't pollute the results
+            del self.driver.requests
             if method == 'GET':
                 self.driver.get(parent_url)
             elif method == 'POST':
@@ -127,7 +137,91 @@ class Crawler (threading.Thread):
             print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
             return
 
-        request, response = self.__processRequest(self.driver.requests[0])
+        request, response = self.__processRequest(next(self.driver.iter_requests(), None))
+
+        # Capture dynamic requests
+        for dynamic_request in self.driver.iter_requests():
+            domain = urlparse(dynamic_request.url).netloc
+            if not Domain.checkDomain(domain):
+                continue
+
+            # If resource is a JS file
+            if dynamic_request.url[-3:] == '.js':
+                content = requests.get(dynamic_request.url).text
+                Script.insertScript(dynamic_request.url, content, response)
+            # If domain is in scope, request has not been done yet and resource is not an image
+            elif not Request.checkRequest(dynamic_request.url, dynamic_request.method, dynamic_request.body.decode('utf-8', errors='ignore')) \
+            and not dynamic_request.url[-4:] in self.blacklist_formats \
+            and not dynamic_request.url[-5:] in self.blacklist_formats \
+            and not dynamic_request.url[-6:] in self.blacklist_formats:
+                print("[+] Logging %s [%s]" % (dynamic_request.url, dynamic_request.method))
+                self.__processRequest(dynamic_request)
+
+        # Parse response body
+        if not response:
+            return
+        parser = BeautifulSoup(response.body, 'html.parser')
+        for element in parser(['a', 'form', 'script']):
+            if element.name == 'a':
+                path = element.get('href')
+                if path is None:
+                    continue
+
+                # Cut the html id selector from url
+                if '#' in path:
+                    path = path[:path.find('#')]
+
+                url = urljoin(parent_url, path)
+                domain = urlparse(url).netloc
+
+                if Domain.checkDomain(domain) and not Request.checkRequest(url, 'GET', None):
+                    self.__crawl(url, 'GET', None)
+                
+            elif element.name == 'form':
+                form_id = element.get('id')
+                method = element.get('method').upper() if element.get('method') else 'GET'
+                action = element.get('action') if element.get('action') is not None else ''
+
+                url = urljoin(parent_url, action)
+                domain = urlparse(url).netloc
+
+                if Domain.checkDomain(domain):
+                    # Parse input, select and textarea (textarea is outside forms, linked by form attribute)
+                    data = ''
+                    textareas = parser('textarea', form=form_id) if form_id is not None else []
+                    for input in element(['input','select']) + textareas:
+                        # Skip submit buttons
+                        if input.get('type') != 'submit' and input.get('name') is not None:
+                            # If value is empty, put '1337'
+                            if input.get('value') is None or input.get('value') == '':
+                                data += input.get('name') + "=1337&"
+                            else:
+                                data += input.get('name') + "=" + input.get('value') + "&"
+                    data = data[:-1]
+                        
+                    # If form method is GET, append data to URL as params and set data to None
+                    if method == 'GET' and len(data) != '':
+                        url += '?' + data
+                        data = None
+
+                    if not Request.checkRequest(url, method, data):
+                        self.__crawl(url, method, data)
+
+            elif element.name == 'script':
+                src = element.get('src')
+                if src is None:
+                    if element.string is None:
+                        continue
+
+                    Script.insertScript(None, element.string, response)
+                else:
+                    src = urljoin(parent_url, src)
+                    domain = urlparse(src).netloc
+                    if not Domain.checkDomain(domain):
+                        continue
+
+                    content = requests.get(src).text
+                    Script.insertScript(src, content, response)
         
 
 class Sqlmap (threading.Thread):

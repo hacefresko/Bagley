@@ -138,8 +138,11 @@ class Path:
             if i == len(parsedURL['elements']) - 1:
                 return path
             parent = path.id
+        return False
 
 class Request:
+    params_blacklist = ['csrf', 'sess']
+
     def __init__(self, id, protocol, path_id, params, method, data, response_hash):
         self.id = id
         self.protocol = protocol
@@ -158,7 +161,7 @@ class Request:
             result += "%s\r\n" % (str(header))
         if len(self.cookies) != 0:
             result += "cookie: "
-            for cookie in self.cookie:
+            for cookie in self.cookies:
                 result +=  "%s; " % (str(cookie))
             result += "\r\n"
 
@@ -167,28 +170,40 @@ class Request:
 
         return result
 
-    # Substitute all values by newValue inside data. Admits json and text url formats
+    # Substitute all values matched by match (case insensitive) by newValue inside data. If match is None, substitute all values.
+    # Admits json and url formats
     @staticmethod
-    def __substituteParamsValue(data, newValue):
-        def replace(json_data, newValue):
+    def __substituteParamsValue(data, match, newValue):
+        def replace(json_data, match, newValue):
             for k,v in json_data.items():
                 if isinstance(v, dict):
-                    json_data.update({k:replace(v, newValue)})
+                    json_data.update({k:replace(v, match, newValue)})
                 else:
-                    json_data.update({k:newValue})
+                    if match is None or match.lower() in k.lower():
+                        json_data.update({k:newValue})
             return json_data
-
 
         new_data = ''
         try:
-            new_data = json.dumps(replace(json.loads(data), newValue))
+            new_data = json.dumps(replace(json.loads(data), match, newValue))
         except:
             for p in data.split('&'):
-                new_data += p.split('=')[0]
-                new_data += '=' + newValue + '&'
+                if match is None or match.lower() in p.split('=')[0].lower():
+                    new_data += p.split('=')[0]
+                    new_data += '=' + newValue + '&'
+                else:
+                    new_data += p
             new_data = new_data[:-1]
         finally:
             return new_data
+
+    # Parses data substituting all keys containing terms in blacklist by those terms
+    @staticmethod
+    def __parseParams(data):
+        for word in Request.params_blacklist:
+            data = Request.__substituteParamsValue(data, word, word)
+
+        return data
 
     # Returns True if request exists else False. If there are already some requests with the same path, protocol and method 
     # but different params/data, it returns True to avoid saving same requests with different CSRFs, session values, etc.
@@ -205,11 +220,11 @@ class Request:
 
         if params or data:
             if params and data:
-                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ? AND data LIKE ?', [protocol, path.id, method, Request.__substituteParamsValue(params, '%'), Request.__substituteParamsValue(data, '%')]).fetchall()
+                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ? AND data LIKE ?', [protocol, path.id, method, Request.__substituteParamsValue(params, None, '%'), Request.__substituteParamsValue(data, None, '%')]).fetchall()
             elif data:
-                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND data LIKE ?', [protocol, path.id, method, Request.__substituteParamsValue(data, '%')]).fetchall()
+                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND data LIKE ?', [protocol, path.id, method, Request.__substituteParamsValue(data, None, '%')]).fetchall()
             elif params:
-                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ?', [protocol, path.id, method, Request.__substituteParamsValue(params, '%')]).fetchall()
+                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ?', [protocol, path.id, method, Request.__substituteParamsValue(params, None, '%')]).fetchall()
 
             if len(result) > 10:
                 return True
@@ -223,8 +238,8 @@ class Request:
         if not path:
             return False
         protocol = urlparse(url).scheme
-        params = urlparse(url).query if urlparse(url).query != '' else False
-        data = data if (data is not None and method == 'POST') else False
+        params = Request.__parseParams(urlparse(url).query) if urlparse(url).query != '' else False
+        data = Request.__parseParams(data) if (data is not None and method == 'POST') else False
 
         db = DB.getConnection()
         request = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path.id, params, method, data]).fetchone()
@@ -236,15 +251,15 @@ class Request:
     # to the same path and method but with different data/params, it returns false.
     @staticmethod
     def insertRequest(url, method, headers, cookies, data):
-        if Request.checkRequest(url, method, data):
-            return False
         path = Path.insertAllPaths(url)
         if not path:
             return False
+        if Request.checkRequest(url, method, data):
+            return False
 
         protocol = urlparse(url).scheme
-        params = urlparse(url).query if urlparse(url).query != '' else False
-        data = data if (data is not None and method == 'POST') else False
+        params = Request.__parseParams(urlparse(url).query) if urlparse(url).query != '' else False
+        data = Request.__parseParams(data) if (data is not None and method == 'POST') else False
 
         db = DB.getConnection()
         db.query('INSERT INTO requests (protocol, path, params, method, data) VALUES (?,?,?,?, ?)', [protocol, path.id, params, method, data])
@@ -268,7 +283,7 @@ class Response:
     # Returns response hash
     @staticmethod
     def __hashResponse(code, body, headers, cookies):
-        to_hash = body + str(code)
+        to_hash = str(body) + str(code)
         for element in headers + cookies:
             to_hash += str(element)
         return hashlib.sha1(to_hash.encode('utf-8')).hexdigest()
@@ -316,6 +331,9 @@ class Response:
         return Response.getResponse(response_hash)
 
 class Header:
+    # Headers whose value won't be stored
+    headers_blacklist = ['date', 'cookie', 'set-cookie', 'content-length']
+
     def __init__(self, id, key, value):
         self.id = id
         self.key = key
@@ -331,7 +349,7 @@ class Header:
     @staticmethod
     def __parseHeader(key, value):
         key = key.lower()
-        if key == 'date' or key == 'cookie' or key == 'set-cookie' or key == 'content-length':
+        if key in Header.headers_blacklist:
             value = '1337'
         return (key, value)
 
@@ -389,6 +407,9 @@ class Header:
             return False
 
 class Cookie:
+    # Common sessionId cookies whose values won't be stored
+    cookies_blacklist = ['PHPSESSID', 'JSESSIONID', 'CFID', 'CFTOKEN', 'ASP.NET_SessionId']
+
     def __init__(self, id, name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite):
         self.id = id
         self.name = name 
@@ -407,22 +428,13 @@ class Cookie:
     def __str__(self):
         return self.name + '=' + self.value
 
-    # Returns cookie if there is a cookie with name and value whose cookie_path and cookie_domain match with url, else False
+    # Returns a formatted tupple with name and value
     @staticmethod
-    def getCookie(name, value, url):
-        path = Path.parseURL(url)
-        if not path:
-            return False
-
-        db = DB.getConnection()
-        results = db.query('SELECT * FROM cookies WHERE name = ? AND value = ?', [name, value]).fetchall()
-        for result in results:
-            cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9])
-            # If domain/range of subdomains and range of paths  from cookie match with url
-            cookie_path = Path.parseURL(path.domain + cookie.path) if cookie.path != '/' else Path.parseURL(path.domain)
-            if Domain.compareDomains(cookie.domain, path.domain) and path.checkParent(cookie_path):
-                return cookie
-        return False
+    def __parseCookie(name, value):
+        name = name.upper()
+        if name in Cookie.cookies_blacklist:
+            value = '1337'
+        return (name, value)
 
     # Returns True if exists or False if it does not exist   
     @staticmethod 
@@ -435,6 +447,25 @@ class Cookie:
         if not cookie:
             return False
         return Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9])
+
+    # Returns cookie if there is a cookie with name and value whose cookie_path and cookie_domain match with url, else False
+    @staticmethod
+    def getCookie(name, value, url):
+        path = Path.parseURL(url)
+        if not path:
+            return False
+
+        name, value = Cookie.__parseCookie(name, value)
+
+        db = DB.getConnection()
+        results = db.query('SELECT * FROM cookies WHERE name = ? AND value = ?', [name, value]).fetchall()
+        for result in results:
+            cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9])
+            # If domain/range of subdomains and range of paths  from cookie match with url
+            cookie_path = Path.parseURL(path.domain + cookie.path) if cookie.path != '/' else Path.parseURL(path.domain)
+            if Domain.compareDomains(cookie.domain, path.domain) and path.checkParent(cookie_path):
+                return cookie
+        return False
 
     # Returns a list of cookies for specified target. If target is not a request nor a response, returns False
     @staticmethod 
@@ -460,6 +491,7 @@ class Cookie:
         if not Domain.checkDomain(cookie_domain):
             return False
 
+        name, value = Cookie.__parseCookie(name, value)
         cookie = Cookie.__getCookie(name, value, cookie_domain, cookie_path)
         if not cookie:
             db = DB.getConnection()
@@ -489,7 +521,7 @@ class Script:
     # Returns hash of the script specified by url and content
     @staticmethod 
     def __getHash(url, content):
-        return hashlib.sha1((url + content).encode('utf-8')).hexdigest()
+        return hashlib.sha1((str(url) + content).encode('utf-8')).hexdigest()
 
     # Returns script by url and content or False if it does not exist   
     @staticmethod 
