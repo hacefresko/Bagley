@@ -45,7 +45,6 @@ CREATE TABLE requests (
 CREATE TABLE responses (
     hash TEXT PRIMARY KEY,
     code INTEGER NOT NULL,
-    mimetype TEXT,
     content TEXT
 );
 
@@ -64,12 +63,10 @@ CREATE TABLE cookies (
     domain TEXT,
     path TEXT,      -- Neither path nor domain are foreign keys since domain can specify a range of subdomains
     expires TEXT,
-    size INTEGER,
+    maxage TEXT,
     httponly BOOL,
     secure BOOL,
-    samesite TEXT,
-    sameparty TEXT,
-    priority TEXT
+    samesite TEXT
 );
 
 CREATE TABLE scripts (

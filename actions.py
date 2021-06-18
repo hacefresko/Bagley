@@ -55,13 +55,13 @@ class Crawler (threading.Thread):
         
             for (const key in params) {
                 if (params.hasOwnProperty(key)) {
-                const hiddenField = document.createElement('input');
-                hiddenField.type = 'hidden';
-                hiddenField.name = key;
-                hiddenField.value = params[key];
-        
-                form.appendChild(hiddenField);
-            }
+                    const hiddenField = document.createElement('input');
+                    hiddenField.type = 'hidden';
+                    hiddenField.name = key;
+                    hiddenField.value = params[key];
+            
+                    form.appendChild(hiddenField);
+                }
             }
         
             document.body.appendChild(form);
@@ -74,6 +74,8 @@ class Crawler (threading.Thread):
     def __crawl(self, parent_url, method, data):
         print("[+] Crawling %s [%s]" % (parent_url, method))
 
+        domain = urlparse(parent_url).netloc
+
         try:
             if method == 'GET':
                 self.driver.get(parent_url)
@@ -84,25 +86,45 @@ class Crawler (threading.Thread):
             return
 
         request = self.driver.requests[0]
+        response = request.response
 
-        cookies = []
+        request_cookies = []
         if request.headers.get('cookie'):
             for cookie in request.headers.get('cookie').split('; '):
                 c = Cookie.getCookie(cookie.split('=')[0], cookie.split('=')[1], parent_url)
                 if c:
-                    cookies.append()
+                    request_cookies.append()
             del request.headers['cookie']
 
-        headers = []
+        request_headers = []
         for k,v in request.headers.items():
-            headers.append(Header.insertHeader(k, v))
-        print(str(headers))
-        request = Request.insertRequest(parent_url, method, headers, cookies, data)
+            request_headers.append(Header.insertHeader(k, v))
 
+        request = Request.insertRequest(parent_url, method, request_headers, request_cookies, data)
 
+        response_cookies = []
+        if response.headers.get_all('set-cookie'):
+            for raw_cookie in response.headers.get_all('set-cookie'):
+                # Default values for cookie attributes
+                cookie = {'expires':'session', 'max-age':'session', 'domain': domain, 'path': '/', 'secure': False, 'httponly': False, 'samesite':'lax'}
+                for attribute in raw_cookie.split('; '):
+                    if len(attribute.split('=')) == 1:
+                        cookie.update({attribute: True})
+                    elif attribute.split('=')[0] in ['expires', 'max-age', 'domain', 'path', 'samesite']:
+                        cookie.update({attribute.split('=')[0]: attribute.split('=')[1]})
+                    else:
+                        cookie.update({'name': attribute.split('=')[0]})
+                        cookie.update({'value': attribute.split('=')[1]})
+                response_cookies.append(Cookie.insertCookie(cookie.get('name'), cookie.get('value'), cookie.get('domain'), cookie.get('path'), cookie.get('expires'), cookie.get('max-age'), cookie.get('httponly'), cookie.get('secure'), cookie.get('samesite')))
 
+            del response.headers['set-cookie']
+        
+        response_headers = []
+        for k,v in response.headers.items():
+            response_headers.append(Header.insertHeader(k,v))
 
-    
+        response = Response.insertResponse(response.status_code, response.body.decode('utf-8'), response_headers, response_cookies, request)
+
 
 class Sqlmap (threading.Thread):
     def __init__(self):

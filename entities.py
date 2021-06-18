@@ -141,16 +141,16 @@ class Path:
             parent = path.id
 
 class Request:
-    def __init__(self, id, protocol, path_id, params, method, data):
+    def __init__(self, id, protocol, path_id, params, method, data, response_hash):
         self.id = id
         self.protocol = protocol
         self.path = Path.getPath(path_id)
         self.params = params
         self.method = method
         self.data = data
+        self.data = Response.getResponse(response_hash)
         self.headers = Header.getHeaders(self)
         self.cookies = Cookie.getCookies(self)
-        self.response = Response.getResponse(self)
 
     # Substitute all values by newValue inside data. Admits json and text url formats
     @staticmethod
@@ -190,16 +190,16 @@ class Request:
 
         if params or data:
             if params and data:
-                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ? AND data LIKE ?', [protocol, path, method, Request.__substituteParamsValue(params, '%'), Request.__substituteParamsValue(data, '%')]).fetchall()
+                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ? AND data LIKE ?', [protocol, path.id, method, Request.__substituteParamsValue(params, '%'), Request.__substituteParamsValue(data, '%')]).fetchall()
             elif data:
-                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND data LIKE ?', [protocol, path, method, Request.__substituteParamsValue(data, '%')]).fetchall()
+                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND data LIKE ?', [protocol, path.id, method, Request.__substituteParamsValue(data, '%')]).fetchall()
             elif params:
-                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ?', [protocol, path, method, Request.__substituteParamsValue(params, '%')]).fetchall()
+                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ?', [protocol, path.id, method, Request.__substituteParamsValue(params, '%')]).fetchall()
 
             if len(result) > 10:
                 return True
 
-        return True if db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path, params, method, data]).fetchone() else False
+        return True if db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path.id, params, method, data]).fetchone() else False
 
     # Returns request if exists else false
     @staticmethod
@@ -215,9 +215,10 @@ class Request:
         request = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path.id, params, method, data]).fetchone()
         if not request:
             return False
-        return Request(request[0], request[1], request[2], request[3], request[4], request[5])
+        return Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])
 
-    # Inserts path and request and links headers and cookies. If there are too many requests with different data/params, it returns false.
+    # Inserts path and request and links headers and cookies. If request is already inserted or there are too many requests 
+    # to the same path and method but with different data/params, it returns false.
     @staticmethod
     def insertRequest(url, method, headers, cookies, data):
         if Request.checkRequest(url, method, data):
@@ -241,10 +242,9 @@ class Request:
         return Request.getRequest(url, method, data)
 
 class Response:
-    def __init__(self, hash, code, mimeType, body):
+    def __init__(self, hash, code, body):
         self.hash = hash
         self.code = code
-        self.mimeType = mimeType
         self.body = body
         self.headers = Header.getHeaders(self)
         self.cookies = Cookie.getCookies(self)
@@ -252,20 +252,20 @@ class Response:
 
     # Returns response hash
     @staticmethod
-    def __hashResponse(code, mimetype, body, headers, cookies):
-        to_hash = mimetype + body + str(code)
+    def __hashResponse(code, body, headers, cookies):
+        to_hash = body + str(code)
         for element in headers + cookies:
             to_hash += str(element)
         return hashlib.sha1(to_hash.encode('utf-8')).hexdigest()
 
     # Returns True if response exists, else False
     @staticmethod
-    def checkResponse(code, mimetype, body, headers, cookies):
+    def checkResponse(code, body, headers, cookies):
         if not body:
             body = False
 
         db = DB.getConnection()
-        return True if db.query('SELECT * FROM responses WHERE hash = ?', [Response.__hashResponse(code, mimetype, body, headers, cookies)]).fetchone() else False
+        return True if db.query('SELECT * FROM responses WHERE hash = ?', [Response.__hashResponse(code, body, headers, cookies)]).fetchone() else False
     
     # Returns response if exists, else False
     @staticmethod
@@ -274,24 +274,25 @@ class Response:
         response = db.query('SELECT * FROM responses WHERE hash = ?', [response_hash]).fetchone()
         if not response:
             return False
-        return Response(response[0], response[1], response[2], response[3])
+        return Response(response[0], response[1], response[2])
 
     # Returns response hash if response succesfully inserted. Else, returns False. Also links header + cookies.
     @staticmethod
-    def insertResponse(code, mimetype, body, headers, cookies, request):
+    def insertResponse(code, body, headers, cookies, request):
         if not isinstance(request, Request):
+            print("lol")
             return False
-        if Response.checkResponse(code, mimetype, body, headers, cookies):
+        if Response.checkResponse(code, body, headers, cookies):
             return False
 
         if not body:
             body = False
 
-        response_hash = Response.__hashResponse(code, mimetype, body, headers, cookies)
+        response_hash = Response.__hashResponse(code, body, headers, cookies)
 
         db = DB.getConnection()
 
-        db.query('INSERT INTO responses (hash, code, mimetype, content) VALUES (?,?,?,?)', [response_hash, code, mimetype, body])
+        db.query('INSERT INTO responses (hash, code, content) VALUES (?,?,?)', [response_hash, code, body])
         db.query('UPDATE requests SET response = ? WHERE id = ?', [response_hash, request.id])
 
         response = Response.getResponse(response_hash)
@@ -314,17 +315,16 @@ class Header:
 
     # Returns a formatted tupple with key and value
     @staticmethod
-    def parseHeader(key, value):
+    def __parseHeader(key, value):
         key = key.lower()
-        # Format date and cookie so we don't save all dates and cookies (cookies will be saved apart)
-        if key == 'date' or key == 'cookie' or key == 'set-cookie':
+        if key == 'date' or key == 'cookie' or key == 'set-cookie' or key == 'content-length':
             value = '1337'
         return (key, value)
 
     # Returns header or False if it does not exist  
     @staticmethod
     def getHeader(key, value):
-        key, value = Header.parseHeader(key, value)
+        key, value = Header.__parseHeader(key, value)
         db = DB.getConnection()
         result = db.query('SELECT * FROM headers WHERE key = ? AND value = ?', [key, value]).fetchone()
         if not result:
@@ -353,7 +353,7 @@ class Header:
     # Inserts header if not inserted and returns it
     @staticmethod
     def insertHeader(key, value):
-        key, value = Header.parseHeader(key, value)
+        key, value = Header.__parseHeader(key, value)
         header = Header.getHeader(key, value)
         if not header:
             db = DB.getConnection()
@@ -375,19 +375,17 @@ class Header:
             return False
 
 class Cookie:
-    def __init__(self, id, name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority):
+    def __init__(self, id, name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite):
         self.id = id
         self.name = name 
         self.domain = cookie_domain
         self.value = value
         self.path = cookie_path
         self.expires = expires
-        self.size = size
+        self.maxage = maxage
         self.httponly = httponly
         self.secure = secure
         self.samesite = samesite
-        self.sameparty = sameparty
-        self.priority = priority
 
     def __eq__(self, other):
         return self.id == other.id
@@ -402,7 +400,7 @@ class Cookie:
         db = DB.getConnection()
         results = db.query('SELECT * FROM cookies WHERE name = ? AND value = ?', [name, value]).fetchall()
         for result in results:
-            cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9], result[10], result[11])
+            cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9])
             # If domain/range of subdomains and range of paths  from cookie match with url
             cookie_path = Path.parseURL(path.domain + cookie.path) if cookie.path != '/' else Path.parseURL(path.domain)
             if Domain.compareDomains(cookie.domain, path.domain) and path.checkParent(cookie_path):
@@ -411,12 +409,15 @@ class Cookie:
 
     # Returns True if exists or False if it does not exist   
     @staticmethod 
-    def checkCookie(name, value, cookie_domain, cookie_path):
-        if not Domain.checkDomain(cookie_domain):
+    def __getCookie(name, value, cookie_domain, cookie_path):
+        if cookie_domain and not Domain.checkDomain(cookie_domain):
             return False
         
         db = DB.getConnection()
-        return True if db.query('SELECT * FROM cookies WHERE name = ? AND value = ? AND domain = ? AND path = ?', [name, value, cookie_domain, cookie_path]).fetchone() else False
+        cookie = db.query('SELECT * FROM cookies WHERE name = ? AND value = ? AND domain = ? AND path = ?', [name, value, cookie_domain, cookie_path]).fetchone()
+        if not cookie:
+            return False
+        return Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9])
 
     # Returns a list of cookies for specified target. If target is not a request nor a response, returns False
     @staticmethod 
@@ -424,31 +425,30 @@ class Cookie:
         db = DB.getConnection()
     
         if isinstance(target, Request):
-            cookies = db.query('SELECT id, name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority FROM cookies INNER JOIN request_cookies on id = cookie WHERE request = ?', [target.id]).fetchall()
+            cookies = db.query('SELECT * FROM cookies INNER JOIN request_cookies on id = cookie WHERE request = ?', [target.id]).fetchall()
         elif isinstance(target, Response):
-            cookies = db.query('SELECT id, name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority FROM cookies INNER JOIN response_cookies on id = cookie WHERE response = ?', [target.id]).fetchall()
+            cookies = db.query('SELECT * FROM cookies INNER JOIN response_cookies on id = cookie WHERE response = ?', [target.hash]).fetchall()
         else:
             return False
 
         result = []
         for cookie in cookies:
-            result.append(Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9], cookie[10], cookie[11]))
+            result.append(Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9]))
 
         return result
 
-    # Inserts cookie if not already inserted, returns it
+    # Inserts cookie if not already inserted and returns it
     @staticmethod
-    def insertCookie(name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority):
+    def insertCookie(name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite):
         if not Domain.checkDomain(cookie_domain):
             return False
 
-        db = DB.getConnection()
-        cookie = Cookie.checkCookie(name, value, cookie_domain, cookie_path)
-        if cookie:
-            return False
-        
-        id = db.query('INSERT INTO cookies (name, value, domain, path, expires, size, httponly, secure, samesite, sameparty, priority) VALUES (?,?,?,?,?,?,?,?,?,?,?)', [name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority]).lastrowid
-        return Cookie(id, name, value, cookie_domain, cookie_path, expires, size, httponly, secure, samesite, sameparty, priority)
+        cookie = Cookie.__getCookie(name, value, cookie_domain, cookie_path)
+        if not cookie:
+            db = DB.getConnection()
+            id = db.query('INSERT INTO cookies (name, value, domain, path, expires, maxage, httponly, secure, samesite) VALUES (?,?,?,?,?,?,?,?,?)', [name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite]).lastrowid
+            cookie = Cookie(id, name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite)
+        return cookie
 
     # Links the cookie to the specified target. If target is not a request nor a response, returns False
     def link(self, target):
