@@ -23,7 +23,7 @@ class Crawler (threading.Thread):
         opts.add_argument('--no-proxy-server')
         opts.add_argument("--proxy-server='direct://'")
         opts.add_argument("--proxy-bypass-list=*")
-        self.driver = webdriver.Chrome(desired_capabilities=capabilities, options=opts)
+        self.driver = webdriver.Chrome(options=opts)
 
     def run(self):
         db = DB.getConnection()
@@ -138,24 +138,7 @@ class Crawler (threading.Thread):
             return
 
         request, response = self.__processRequest(next(self.driver.iter_requests(), None))
-
-        # Capture dynamic requests
-        for dynamic_request in self.driver.iter_requests():
-            domain = urlparse(dynamic_request.url).netloc
-            if not Domain.checkDomain(domain):
-                continue
-
-            # If resource is a JS file
-            if dynamic_request.url[-3:] == '.js':
-                content = requests.get(dynamic_request.url).text
-                Script.insertScript(dynamic_request.url, content, response)
-            # If domain is in scope, request has not been done yet and resource is not an image
-            elif not Request.checkRequest(dynamic_request.url, dynamic_request.method, dynamic_request.body.decode('utf-8', errors='ignore')) \
-            and not dynamic_request.url[-4:] in self.blacklist_formats \
-            and not dynamic_request.url[-5:] in self.blacklist_formats \
-            and not dynamic_request.url[-6:] in self.blacklist_formats:
-                print("[+] Logging %s [%s]" % (dynamic_request.url, dynamic_request.method))
-                self.__processRequest(dynamic_request)
+        dynamic_requests = self.driver.iter_requests()
 
         # Parse response body
         if not response:
@@ -222,7 +205,25 @@ class Crawler (threading.Thread):
 
                     content = requests.get(src).text
                     Script.insertScript(src, content, response)
-        
+
+        # Capture dynamic requests
+        for dynamic_request in dynamic_requests:
+            domain = urlparse(dynamic_request.url).netloc
+            if not Domain.checkDomain(domain):
+                continue
+
+            # If resource is a JS file
+            if dynamic_request.url[-3:] == '.js':
+                content = requests.get(dynamic_request.url).text
+                Script.insertScript(dynamic_request.url, content, response)
+            # If domain is in scope, request has not been done yet and resource is not an image
+            elif not Request.checkRequest(dynamic_request.url, dynamic_request.method, dynamic_request.body.decode('utf-8', errors='ignore')) \
+            and not dynamic_request.url[-4:] in self.blacklist_formats \
+            and not dynamic_request.url[-5:] in self.blacklist_formats \
+            and not dynamic_request.url[-6:] in self.blacklist_formats:
+                print("[+] Logging %s [%s] %s" % (dynamic_request.url, dynamic_request.method, dynamic_request.body.decode('utf-8', errors='ignore')))
+                self.__processRequest(dynamic_request)
+
 
 class Sqlmap (threading.Thread):
     def __init__(self):

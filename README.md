@@ -1,7 +1,7 @@
 # Vulnerability Detection System
 
 ### External requirements
-*   sqlmap
+*   Sqlmap
 *   Chrome
 *   ChromeDriver
 
