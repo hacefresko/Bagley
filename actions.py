@@ -15,8 +15,6 @@ class Crawler (threading.Thread):
         self.scope = scope_file
 
         # Init selenium driver
-        capabilities = DesiredCapabilities.CHROME.copy()
-        capabilities["goog:loggingPrefs"] = {"performance": "ALL"}
         opts = Options()
         opts.headless = True
         # https://stackoverflow.com/questions/51503437/headless-chrome-web-driver-too-slow-and-unable-to-download-file
