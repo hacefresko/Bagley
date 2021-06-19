@@ -196,7 +196,7 @@ class Request:
                     new_data += p.split('=')[0]
                     new_data += '=' + newValue + '&'
                 else:
-                    new_data += p
+                    new_data += p + '&'
             new_data = new_data[:-1]
         finally:
             return new_data
