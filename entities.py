@@ -96,7 +96,7 @@ class Path:
             return False
 
         child = self
-        while child.parent != '0':
+        while child.parent != 0:
             if child.element == path.element:
                 return True
             child = Path.getPath(child.parent)
