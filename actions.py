@@ -95,12 +95,14 @@ class Crawler (threading.Thread):
             request_headers.append(Header.insertHeader(k, v))
 
         request = Request.insertRequest(url, request.method, request_headers, request_cookies, request.body.decode('utf-8', errors='ignore'))
+        
         if not request:
             return (False, False)
 
         response_cookies = []
         if response.headers.get_all('set-cookie'):
             for raw_cookie in response.headers.get_all('set-cookie'):
+                raw_cookie = raw_cookie.lower()
                 # Default values for cookie attributes
                 cookie = {'expires':'session', 'max-age':'session', 'domain': urlparse(url).netloc, 'path': '/', 'secure': False, 'httponly': False, 'samesite':'lax'}
                 for attribute in raw_cookie.split('; '):
@@ -137,13 +139,31 @@ class Crawler (threading.Thread):
             print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
             return
 
-        request, response = self.__processRequest(next(self.driver.iter_requests(), None))
-        dynamic_requests = self.driver.iter_requests()
+        # Capture all requests, where first will be the request made and the rest all the dynamic ones
+        for i, request in enumerate(self.driver.iter_requests()):
+            if i == 0:
+                first_request, first_response = self.__processRequest(request)
+                if not first_request or not first_response:
+                    return
+            else:
+                domain = urlparse(request.url).netloc
+                if not Domain.checkDomain(domain):
+                    continue
 
-        # Parse response body
-        if not response:
-            return
-        parser = BeautifulSoup(response.body, 'html.parser')
+                # If resource is a JS file
+                if request.url[-3:] == '.js':
+                    content = requests.get(request.url).text
+                    Script.insertScript(request.url, content, first_response)
+                # If domain is in scope, request has not been done yet and resource is not an image
+                elif not Request.checkRequest(request.url, request.method, request.body.decode('utf-8', errors='ignore')) \
+                and not request.url[-4:] in self.blacklist_formats \
+                and not request.url[-5:] in self.blacklist_formats \
+                and not request.url[-6:] in self.blacklist_formats:
+                    print("[+] Logging %s [%s] %s" % (request.url, request.method, request.body.decode('utf-8', errors='ignore')))
+                    self.__processRequest(request)
+
+        # Parse first response body
+        parser = BeautifulSoup(first_response.body, 'html.parser')
         for element in parser(['a', 'form', 'script']):
             if element.name == 'a':
                 path = element.get('href')
@@ -196,7 +216,7 @@ class Crawler (threading.Thread):
                     if element.string is None:
                         continue
 
-                    Script.insertScript(None, element.string, response)
+                    Script.insertScript(None, element.string, first_response)
                 else:
                     src = urljoin(parent_url, src)
                     domain = urlparse(src).netloc
@@ -204,25 +224,7 @@ class Crawler (threading.Thread):
                         continue
 
                     content = requests.get(src).text
-                    Script.insertScript(src, content, response)
-
-        # Capture dynamic requests
-        for dynamic_request in dynamic_requests:
-            domain = urlparse(dynamic_request.url).netloc
-            if not Domain.checkDomain(domain):
-                continue
-
-            # If resource is a JS file
-            if dynamic_request.url[-3:] == '.js':
-                content = requests.get(dynamic_request.url).text
-                Script.insertScript(dynamic_request.url, content, response)
-            # If domain is in scope, request has not been done yet and resource is not an image
-            elif not Request.checkRequest(dynamic_request.url, dynamic_request.method, dynamic_request.body.decode('utf-8', errors='ignore')) \
-            and not dynamic_request.url[-4:] in self.blacklist_formats \
-            and not dynamic_request.url[-5:] in self.blacklist_formats \
-            and not dynamic_request.url[-6:] in self.blacklist_formats:
-                print("[+] Logging %s [%s] %s" % (dynamic_request.url, dynamic_request.method, dynamic_request.body.decode('utf-8', errors='ignore')))
-                self.__processRequest(dynamic_request)
+                    Script.insertScript(src, content, first_response)
 
 
 class Sqlmap (threading.Thread):

@@ -70,6 +70,10 @@ class Path:
         # Support for domains followed by path, without protocol
         if urlparse(url)[1] == '':
             url = 'http://' + url
+        
+        # Convert all pathless urls (i.e example.com) into urls with root dir (i.e example.com/)
+        if urlparse(url)[2] == '':
+            url += '/'
 
         # If there is no path but params, adds "/"
         if not urlparse(url).path and urlparse(url).query:
@@ -79,8 +83,8 @@ class Path:
 
         # Get domain
         result['domain'] = urlparse(url)[1]
-        # Get elements and subsitute '' by False
-        result['elements'] = [False if i=='' else i for i in urlparse(url)[2].split('/')]
+        # Get elements after example.com/ and subsitute '' by False
+        result['elements'] = [False if i=='' else i for i in urlparse(url)[2].split('/')[1:]]
 
         return result
 
@@ -214,7 +218,7 @@ class Request:
             return False
         protocol = urlparse(url).scheme
         params = urlparse(url).query if urlparse(url).query != '' else False
-        data = data if (data is not None and method == 'POST') else False
+        data = data if (data is not None and data != '' and method == 'POST') else False
 
         db = DB.getConnection()
 
@@ -262,7 +266,7 @@ class Request:
         data = Request.__parseParams(data) if (data is not None and method == 'POST') else False
 
         db = DB.getConnection()
-        db.query('INSERT INTO requests (protocol, path, params, method, data) VALUES (?,?,?,?, ?)', [protocol, path.id, params, method, data])
+        db.query('INSERT INTO requests (protocol, path, params, method, data) VALUES (?,?,?,?,?)', [protocol, path.id, params, method, data])
         request = Request.getRequest(url, method, data)
 
         for element in headers + cookies:
