@@ -50,7 +50,7 @@ class Path:
         while parent != 0:
             result = "/" + (element if element != '0' else '') + result
             element, parent = db.query('SELECT element, parent FROM paths WHERE id = ?', [parent]).fetchone()
-
+        result = "/" + (element if element != '0' else '') + result
         result = self.domain + result
 
         return result 
@@ -151,9 +151,9 @@ class Request:
         self.id = id
         self.protocol = protocol
         self.path = Path.getPath(path_id)
-        self.params = params
+        self.params = params if params != '0' else False
         self.method = method
-        self.data = data
+        self.data = data if data != '0' else False
         self.response = Response.getResponse(response_hash)
         self.headers = Header.getHeaders(self)
         self.cookies = Cookie.getCookies(self)
@@ -190,10 +190,6 @@ class Request:
             new_data = Utils.substitutePOSTData(content_type, new_data, word, word)
         return new_data
 
-    # Returns a list containing the keys of request parameters
-    def getParamKeys(self):
-        return [param.split('=')[0] for param in self.params.split('&')]
-
     # Returns specified header if request has it, else None
     def getHeader(self, key):
         for header in self.headers:
@@ -213,14 +209,19 @@ class Request:
         data = data if (data is not None and data != '' and method == 'POST') else False
 
         db = DB.getConnection()
-
         if params or data:
-            if params and data:
-                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ? AND data LIKE ?', [protocol, path.id, method, Utils.replaceURLencoded(params, None, '%'), Utils.substitutePOSTData(content_type, data, None, '%')]).fetchall()
-            elif data:
-                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND data LIKE ?', [protocol, path.id, method, Utils.substitutePOSTData(content_type, data, None, '%')]).fetchall()
-            elif params:
-                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ?', [protocol, path.id, method, Utils.replaceURLencoded(params, None, '%')]).fetchall()
+            query = 'SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ?'
+            query_params = [protocol, path.id, method]
+
+            if params:
+                query += ' AND params LIKE ?'
+                query_params.append(Utils.replaceURLencoded(params, None, '%'))
+
+            if data:
+                query += ' AND data LIKE ?'
+                query_params.append(Utils.substitutePOSTData(content_type, data, None, '%'))
+
+            result = db.query(query, query_params).fetchall()
 
             if len(result) > 10:
                 return True
@@ -281,6 +282,29 @@ class Request:
 
         # Gets again the request in order to update headers, cookies and data from databse
         return Request.getRequest(url, method, content_type, data)
+
+    # Returns a list of requests whose params or data keys are the same as the request the function was called on
+    def getSameKeysRequests(self):
+        if not self.params and not self.data:
+            return False
+
+        requests = []
+        query = 'SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ?'
+        query_params = [self.protocol, self.path.id, self.method]
+        if self.params:
+            query += ' AND params LIKE ?'
+            query_params.append(Utils.replaceURLencoded(self.params, None, '%'))
+        if self.data:
+            query += ' AND data LIKE ?'
+            query_params.append(Utils.substitutePOSTData(self.getHeader('content-type'), self.data, None, '%'))
+
+        db = DB.getConnection()
+        result = db.query(query, query_params).fetchall()
+
+        for request in result:
+            requests.append(Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6]))
+        return requests
+        
 
 class Response:
     def __init__(self, hash, code, body):

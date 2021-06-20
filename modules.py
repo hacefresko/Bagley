@@ -36,18 +36,19 @@ class Crawler (threading.Thread):
             if not Domain.checkDomain(domain):
                 Domain.insertDomain(domain)
 
-            try:
+            #try:
                 protocol = 'http'
                 initial_request = requests.get(protocol + '://' + domain,  allow_redirects=False)
                 if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
                     protocol = 'https'
 
                 self.__crawl(protocol + '://' + domain, 'GET', None)
-            except Exception as e:
-                print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + domain, e))
-                continue
-            finally:
-                print("[+] Finished crawling %s" % domain)
+            #except Exception as e:
+            #    print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + domain, e))
+            #    continue
+            #finally:
+            #    print("[+] Finished crawling %s" % domain)
+            print("[+] Finished crawling %s" % domain)
 
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
     def __post(self, path, params):
@@ -78,7 +79,6 @@ class Crawler (threading.Thread):
     # Inserts in the database the request and its response. Returns (request, response)
     def __processRequest(self, request):
         url = request.url
-        response = request.response
 
         request_cookies = []
         if request.headers.get('cookie'):
@@ -96,6 +96,13 @@ class Crawler (threading.Thread):
         
         if not request:
             return (False, False)
+
+        response = request.response
+        if not response:
+            time.sleep(5)
+            response = request.response
+            if not response:
+                return (request, False)
 
         response_cookies = []
         if response.headers.get_all('set-cookie'):
@@ -237,13 +244,11 @@ class Sqlmap (threading.Thread):
                 if not request:
                     time.sleep(2)
                     continue
-                if (not request.params and not request.data):
+                if (not request.params and not request.data) or request.id in tested:
                     id += 1
                     continue
             except sqlite3.OperationalError:
                 continue
-            finally:
-                id += 1
 
             url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
             if request.method == 'POST':
@@ -254,5 +259,8 @@ class Sqlmap (threading.Thread):
             result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
             if "---" in result.stdout:
-                print("[+] SQL injection found in %s" % request.get('url'))
+                print("[+] SQL injection found in %s" % url)
                 print(result.stdout)
+
+            tested = [*[request.id for request in request.getSameKeysRequests()], *tested]
+            id += 1
