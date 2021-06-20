@@ -145,7 +145,7 @@ class Path:
         return False
 
 class Request:
-    params_blacklist = ['csrf', 'sess']
+    params_blacklist = ['csrf', 'sess', 'token']
 
     def __init__(self, id, protocol, path_id, params, method, data, response_hash):
         self.id = id
@@ -154,7 +154,7 @@ class Request:
         self.params = params
         self.method = method
         self.data = data
-        self.data = Response.getResponse(response_hash)
+        self.response = Response.getResponse(response_hash)
         self.headers = Header.getHeaders(self)
         self.cookies = Cookie.getCookies(self)
 
@@ -174,45 +174,37 @@ class Request:
 
         return result
 
-    # Substitute all values matched by match (case insensitive) by newValue inside data. If match is None, substitute all values.
-    # Admits json and url formats
+    # Parses params substituting all keys containing terms in blacklist by those terms
     @staticmethod
-    def __substituteParamsValue(data, match, newValue):
-        def replace(json_data, match, newValue):
-            for k,v in json_data.items():
-                if isinstance(v, dict):
-                    json_data.update({k:replace(v, match, newValue)})
-                else:
-                    if match is None or match.lower() in k.lower():
-                        json_data.update({k:newValue})
-            return json_data
-
-        new_data = ''
-        try:
-            new_data = json.dumps(replace(json.loads(data), match, newValue))
-        except:
-            for p in data.split('&'):
-                if match is None or match.lower() in p.split('=')[0].lower():
-                    new_data += p.split('=')[0]
-                    new_data += '=' + newValue + '&'
-                else:
-                    new_data += p + '&'
-            new_data = new_data[:-1]
-        finally:
-            return new_data
-
-    # Parses data substituting all keys containing terms in blacklist by those terms
-    @staticmethod
-    def __parseParams(data):
+    def __parseParams(params):
+        new_params = params
         for word in Request.params_blacklist:
-            data = Request.__substituteParamsValue(data, word, word)
+            new_params = Utils.replaceURLencoded(new_params, word, word)
+        return new_params
 
-        return data
+    # Tries to parse data substituting all keys containing terms in blacklist by those terms
+    @staticmethod
+    def __parseData(content_type, data):
+        new_data = data
+        for word in Request.params_blacklist:
+            new_data = Utils.substitutePOSTData(content_type, new_data, word, word)
+        return new_data
+
+    # Returns a list containing the keys of request parameters
+    def getParamKeys(self):
+        return [param.split('=')[0] for param in self.params.split('&')]
+
+    # Returns specified header if request has it, else None
+    def getHeader(self, key):
+        for header in self.headers:
+            if header.key == key:
+                return header
+        return None
 
     # Returns True if request exists else False. If there are already some requests with the same path, protocol and method 
     # but different params/data, it returns True to avoid saving same requests with different CSRFs, session values, etc.
     @staticmethod
-    def checkRequest(url, method, data):
+    def checkRequest(url, method, content_type, data):
         path = Path.parseURL(url)
         if not path:
             return False
@@ -224,11 +216,11 @@ class Request:
 
         if params or data:
             if params and data:
-                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ? AND data LIKE ?', [protocol, path.id, method, Request.__substituteParamsValue(params, None, '%'), Request.__substituteParamsValue(data, None, '%')]).fetchall()
+                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ? AND data LIKE ?', [protocol, path.id, method, Utils.replaceURLencoded(params, None, '%'), Utils.substitutePOSTData(content_type, data, None, '%')]).fetchall()
             elif data:
-                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND data LIKE ?', [protocol, path.id, method, Request.__substituteParamsValue(data, None, '%')]).fetchall()
+                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND data LIKE ?', [protocol, path.id, method, Utils.substitutePOSTData(content_type, data, None, '%')]).fetchall()
             elif params:
-                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ?', [protocol, path.id, method, Request.__substituteParamsValue(params, None, '%')]).fetchall()
+                result = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ? AND params LIKE ?', [protocol, path.id, method, Utils.replaceURLencoded(params, None, '%')]).fetchall()
 
             if len(result) > 10:
                 return True
@@ -237,16 +229,25 @@ class Request:
 
     # Returns request if exists else false
     @staticmethod
-    def getRequest(url, method, data):
+    def getRequest(url, method, content_type, data):
         path = Path.parseURL(url)
         if not path:
             return False
         protocol = urlparse(url).scheme
         params = Request.__parseParams(urlparse(url).query) if urlparse(url).query != '' else False
-        data = Request.__parseParams(data) if (data is not None and method == 'POST') else False
+        data = Request.__parseData(content_type, data) if (data is not None and method == 'POST') else False
 
         db = DB.getConnection()
         request = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path.id, params, method, data]).fetchone()
+        if not request:
+            return False
+        return Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])
+
+    # Returns request if exists else false
+    @staticmethod
+    def getRequestById(request_id):
+        db = DB.getConnection()
+        request = db.query('SELECT * FROM requests WHERE id = ?', [request_id]).fetchone()
         if not request:
             return False
         return Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])
@@ -258,22 +259,28 @@ class Request:
         path = Path.insertAllPaths(url)
         if not path:
             return False
-        if Request.checkRequest(url, method, data):
+
+        content_type = None
+        for header in headers:
+            if header.key == 'content-type':
+                content_type = header.value
+
+        if Request.checkRequest(url, method, content_type, data):
             return False
 
         protocol = urlparse(url).scheme
         params = Request.__parseParams(urlparse(url).query) if urlparse(url).query != '' else False
-        data = Request.__parseParams(data) if (data is not None and method == 'POST') else False
+        data = Request.__parseData(content_type, data) if (method == 'POST' and data is not None) else False
 
         db = DB.getConnection()
         db.query('INSERT INTO requests (protocol, path, params, method, data) VALUES (?,?,?,?,?)', [protocol, path.id, params, method, data])
-        request = Request.getRequest(url, method, data)
+        request = Request.getRequest(url, method, content_type, data)
 
         for element in headers + cookies:
             element.link(request)
 
         # Gets again the request in order to update headers, cookies and data from databse
-        return Request.getRequest(url, method, data)
+        return Request.getRequest(url, method, content_type, data)
 
 class Response:
     def __init__(self, hash, code, body):
@@ -576,3 +583,73 @@ class Script:
         db.query('INSERT INTO response_scripts (response, script) VALUES (?,?)', [response.hash, script.hash])
 
         return script
+
+class Utils:
+    @staticmethod
+    def replaceURLencoded(data, match, newValue):
+        new_data = ''
+        for p in data.split('&'):
+            if len(p.split('=')) == 1:
+                return None
+            elif match is None or match.lower() in p.split('=')[0].lower():
+                new_data += p.split('=')[0]
+                new_data += '=' + newValue + '&'
+            else:
+                new_data += p + '&'
+        return new_data[:-1]
+
+    @staticmethod
+    def replaceJSON(data, match, newValue):
+        for k,v in data.items():
+            if isinstance(v, dict):
+                data.update({k:Utils.replaceJSON(v, match, newValue)})
+            else:
+                if match is None or match.lower() in k.lower():
+                    data.update({k:newValue})
+        return data
+
+    # Substitutes all values whose keys match with match parameter to newValue. If match is None, it will substitute all values.
+    # It uses content_type header to know what type of POST data is, so it can be more precise
+    # For multipart/form-data, it also changes the boundary to boundary_substitute the first time it is applied
+    # If an exception occurs, a copy of the original data is returned
+    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
+    @staticmethod
+    def substitutePOSTData(content_type, data, match, newValue):
+        boundary_substitute = 'BOUNDARY'
+        if not content_type:
+            try:
+                return json.dumps(Utils.replaceJSON(json.loads(data), match, newValue))
+            except:
+                return  Utils.replaceURLencoded(data, match, newValue)
+        try:
+            if 'multipart/form-data' in content_type:
+                # If data has already been parsed so boundary has changed
+                if '--'+boundary_substitute in data:
+                    boundary = '--'+boundary_substitute
+                else:
+                    boundary = '--' + content_type.split('; ')[1].split('=')[1]
+                new_data = '--'+boundary_substitute
+                for fragment in data.split(boundary)[1:-1]:
+                    name = fragment.split('\r\n')[1].split('; ')[1].split('=')[1].strip('"')
+                    content = fragment.split('\r\n')[3]
+
+                    try:
+                        new_content = json.dumps(Utils.replaceJSON(json.loads(content), match, newValue))
+                    except:
+                        new_content = Utils.replaceURLencoded(content, match, newValue)
+                    
+                    if not new_content:
+                        if match.lower() in name.lower() or match is None:
+                            new_content = newValue
+                        else:
+                            new_content = content
+                    
+                    new_data += fragment.split('name="')[0] + 'name="' + name + '"; ' + "; ".join(fragment.split('\r\n')[1].split('; ')[2:]) + '\r\n' + new_content + '\r\n--'+boundary_substitute
+                new_data += '--'
+                return new_data
+            elif 'application/json' in content_type:
+                return json.dumps(Utils.replaceJSON(json.loads(data), match, newValue))
+            elif 'application/x-www-form-urlencoded' in content_type:
+                return Utils.replaceURLencoded(data, match, newValue)
+        except Exception as e:
+            return data

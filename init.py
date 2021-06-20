@@ -1,5 +1,5 @@
 import os, signal, datetime, getopt, sys, time
-from actions import *
+from modules import *
 
 # Called when Ctrl+C
 def sigint_handler(sig, frame):
@@ -10,20 +10,22 @@ def sigint_handler(sig, frame):
     quit()
 signal.signal(signal.SIGINT, sigint_handler)
 
-try:
-    opts, args = getopt.getopt(sys.argv[1:], 'D:')
+#try:
+#    opts, args = getopt.getopt(sys.argv[1:], 'D:')
+#
+#    for opt, arg in opts:
+#        if opt == '-D':
+#            scope_file_name = arg
+#            scope_found = True
+#
+#    if not scope_found or scope_file_name == '':
+#        raise Exception
+#            
+#except Exception:
+#    print(os.path.basename(__file__) + ' -D <scope file>')
+#    exit()
 
-    for opt, arg in opts:
-        if opt == '-D':
-            scope_file_name = arg
-            scope_found = True
-
-    if not scope_found or scope_file_name == '':
-        raise Exception
-            
-except Exception:
-    print(os.path.basename(__file__) + ' -D <scope file>')
-    exit()
+scope_file_name = 'domains.txt'
 
 print("[+] Starting time: %s" % datetime.datetime.now())
 print("[+] Scope file: %s" % scope_file_name)

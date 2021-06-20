@@ -153,11 +153,11 @@ class Crawler (threading.Thread):
                     content = requests.get(request.url).text
                     Script.insertScript(request.url, content, first_response)
                 # If domain is in scope, request has not been done yet and resource is not an image
-                elif not Request.checkRequest(request.url, request.method, request.body.decode('utf-8', errors='ignore')) \
+                elif not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')) \
                 and not request.url[-4:] in self.blacklist_formats \
                 and not request.url[-5:] in self.blacklist_formats \
                 and not request.url[-6:] in self.blacklist_formats:
-                    print("[+] Logging %s [%s] %s" % (request.url, request.method, request.body.decode('utf-8', errors='ignore')))
+                    print("[+] Logging %s [%s]" % (request.url, request.method))
                     self.__processRequest(request)
 
         # Parse first response body
@@ -175,7 +175,7 @@ class Crawler (threading.Thread):
                 url = urljoin(parent_url, path)
                 domain = urlparse(url).netloc
 
-                if Domain.checkDomain(domain) and not Request.checkRequest(url, 'GET', None):
+                if Domain.checkDomain(domain) and not Request.checkRequest(url, 'GET', None, None):
                     self.__crawl(url, 'GET', None)
                 
             elif element.name == 'form':
@@ -205,7 +205,7 @@ class Crawler (threading.Thread):
                         url += '?' + data
                         data = None
 
-                    if not Request.checkRequest(url, method, data):
+                    if not Request.checkRequest(url, method, None, data):
                         self.__crawl(url, method, data)
 
             elif element.name == 'script':
@@ -224,44 +224,32 @@ class Crawler (threading.Thread):
                     content = requests.get(src).text
                     Script.insertScript(src, content, first_response)
 
-
 class Sqlmap (threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
     
     def run(self):
-        self.db = DB.VDT_DB()
-        try:
-            self.db.connect()
-        except:
-            print('[x] Couldn\'t connect to the database')
-
-
-        requests_to_skip = []
+        tested = []
         id = 1
         while True:
             try:
-                if id in requests_to_skip:
-                    id += 1
-                    continue
-                request = self.db.getRequest(id)
-                if request is None:
+                request = Request.getRequestById(id)
+                if not request:
                     time.sleep(2)
                     continue
-                if len(request.get('url').split('?')) < 2 and request.get('data') is None:
+                if (not request.params and not request.data):
                     id += 1
                     continue
-                # Merge both lists
-                requests_to_skip = [*self.db.getRequestWithSameKeys(id), *requests_to_skip]
             except sqlite3.OperationalError:
                 continue
+            finally:
+                id += 1
 
-            id += 1
-
-            if request.get('method') == 'POST':
-                command = ['sqlmap', '-v', '0', '--flush-session', '--batch', '-u',  request.get("url"), '--data', request.get("data")]
+            url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
+            if request.method == 'POST':
+                command = ['sqlmap', '-v', '0', '--flush-session', '--batch', '-u',  url, '--data', request.data]
             else:
-                command = ['sqlmap', '-v', '0', '--flush-session', '--batch', '-u',  request.get("url")]
+                command = ['sqlmap', '-v', '0', '--flush-session', '--batch', '-u',  url]
 
             result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
