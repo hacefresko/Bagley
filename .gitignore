@@ -5,3 +5,4 @@ test.*
 __pycache__/
 domains.txt
 .DS_Store
+.vscode
