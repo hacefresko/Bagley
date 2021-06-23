@@ -201,17 +201,21 @@ class Request:
 
         return result
 
-    # Parses params substituting all keys containing terms in blacklist by those terms
+    # Parses params substituting all keys containing terms in blacklist by those terms. Returns False if params does not exist
     @staticmethod
     def __parseParams(params):
+        if not params:
+            return False
         new_params = params
         for word in Request.params_blacklist:
             new_params = Utils.replaceURLencoded(new_params, word, word)
         return new_params
 
-    # Tries to parse data substituting all keys containing terms in blacklist by those terms
+    # Tries to parse data substituting all keys containing terms in blacklist by those terms. Returns False if data does not exist
     @staticmethod
     def __parseData(content_type, data):
+        if not data:
+            return False
         new_data = data
         for word in Request.params_blacklist:
             new_data = Utils.substitutePOSTData(content_type, new_data, word, word)
@@ -232,8 +236,8 @@ class Request:
         if not path:
             return False
         protocol = urlparse(url).scheme
-        params = urlparse(url).query if urlparse(url).query != '' else False
-        data = data if (data is not None and data != '' and method == 'POST') else False
+        params = urlparse(url).query if urlparse(url).query else False
+        data = data if (data is not None and data and method == 'POST') else False
 
         db = DB.getConnection()
         if params or data:
@@ -262,8 +266,8 @@ class Request:
         if not path:
             return False
         protocol = urlparse(url).scheme
-        params = Request.__parseParams(urlparse(url).query) if urlparse(url).query != '' else False
-        data = Request.__parseData(content_type, data) if (data is not None and method == 'POST') else False
+        params = Request.__parseParams(urlparse(url).query)
+        data = Request.__parseData(content_type, data) if method == 'POST' else False
 
         db = DB.getConnection()
         request = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path.id, params, method, data]).fetchone()
@@ -297,8 +301,8 @@ class Request:
             return False
 
         protocol = urlparse(url).scheme
-        params = Request.__parseParams(urlparse(url).query) if urlparse(url).query != '' else False
-        data = Request.__parseData(content_type, data) if (method == 'POST' and data is not None) else False
+        params = Request.__parseParams(urlparse(url).query)
+        data = Request.__parseData(content_type, data) if method == 'POST' else False
 
         db = DB.getConnection()
         db.query('INSERT INTO requests (protocol, path, params, method, data) VALUES (?,?,?,?,?)', [protocol, path.id, params, method, data])
@@ -622,6 +626,8 @@ class Script:
 class Utils:
     @staticmethod
     def replaceURLencoded(data, match, newValue):
+        if not data:
+            return False
         new_data = ''
         for p in data.split('&'):
             if len(p.split('=')) == 1:
@@ -651,6 +657,9 @@ class Utils:
     @staticmethod
     def substitutePOSTData(content_type, data, match, newValue):
         boundary_substitute = 'BOUNDARY'
+
+        if not data:
+            return False
         
         if not content_type:
             try:

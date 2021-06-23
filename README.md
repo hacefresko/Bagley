@@ -1,6 +1,6 @@
 # Web Vulnerability Detection Tool
 
-### Modules
+### Available modules
 *   Crawler
 *   Sqlmap
 
