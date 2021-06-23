@@ -22,13 +22,19 @@ class Domain:
     def checkDomain(domain):
         if not domain:
             return False
+
+        if len(domain.split('.')) > 2:
+            parent_domain = '.'.join(domain.split('.')[1:])
             
         db = DB.getConnection()
-        # If a group of subdomains is specified like .example.com
-        if domain[0] == '.':
-            return True if db.query('SELECT name FROM domains WHERE name = ? OR name LIKE ?', [domain[1:], '%' + domain]).fetchone() else False
-        else:
-            return True if db.query('SELECT name FROM domains WHERE name = ?', [domain]).fetchone() else False
+
+        if db.query('SELECT name FROM domains WHERE name LIKE ?', ['%' + domain]).fetchone():
+            return True
+        
+        if parent_domain and db.query('SELECT name FROM domains WHERE name LIKE ?', ['%' + parent_domain]).fetchone():
+            return True
+
+        return False
 
     # Inserts domain if not already inserted
     @staticmethod

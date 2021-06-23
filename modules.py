@@ -25,16 +25,25 @@ class Crawler (threading.Thread):
 
     def run(self):
         db = DB.getConnection()
+        self.__insertDomains()
         while True:
             line = self.scope.readline()
             if not line:
                 time.sleep(5)
                 continue
-            
-            domain = line.split(' ')[0]
-
+            try:
+                entry = json.loads(line)
+            except:
+                time.sleep(5)
+                continue
+            domain = entry.get('domain')
+            if not domain:
+                time.sleep(5)
+                continue
             if not Domain.checkDomain(domain):
                 Domain.insertDomain(domain)
+            if domain[0] == '.':
+                domain = domain[1:]
 
             try:
                 protocol = 'http'
@@ -44,12 +53,24 @@ class Crawler (threading.Thread):
 
                 print("[+] Started crawling %s" % domain)
 
-                self.__crawl(protocol + '://' + domain, 'GET', None)
+            self.__crawl(protocol + '://' + domain, 'GET', None)
             except Exception as e:
                 print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + domain, e))
                 continue
             finally:
                 print("[+] Finished crawling %s" % domain)
+
+    def __insertDomains(self):
+        for line in self.scope.readlines():
+            try:
+                entry = json.loads(line)
+            except:
+                continue
+            domain = entry.get('domain')
+            if not domain:
+                continue
+            Domain.insertDomain(domain)
+        self.scope.seek(0)
 
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
     def __post(self, path, params):
