@@ -53,7 +53,7 @@ class Crawler (threading.Thread):
 
                 print("[+] Started crawling %s" % domain)
 
-            self.__crawl(protocol + '://' + domain, 'GET', None)
+                self.__crawl(protocol + '://' + domain, 'GET', None)
             except Exception as e:
                 print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + domain, e))
                 continue
