@@ -1,4 +1,4 @@
-# Web Vulnerability Detection System
+# Web Vulnerability Detection Tool
 
 ### Modules
 *   Crawler
