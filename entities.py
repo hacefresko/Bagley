@@ -20,6 +20,9 @@ class Domain:
     # Returns True if domain or subdomains exist, else False
     @staticmethod
     def checkDomain(domain):
+        if not domain:
+            return False
+            
         db = DB.getConnection()
         # If a group of subdomains is specified like .example.com
         if domain[0] == '.':
