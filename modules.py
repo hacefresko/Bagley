@@ -36,19 +36,20 @@ class Crawler (threading.Thread):
             if not Domain.checkDomain(domain):
                 Domain.insertDomain(domain)
 
-            #try:
+            try:
                 protocol = 'http'
                 initial_request = requests.get(protocol + '://' + domain,  allow_redirects=False)
                 if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
                     protocol = 'https'
 
+                print("[+] Started crawling %s" % domain)
+
                 self.__crawl(protocol + '://' + domain, 'GET', None)
-            #except Exception as e:
-            #    print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + domain, e))
-            #    continue
-            #finally:
-            #    print("[+] Finished crawling %s" % domain)
-            print("[+] Finished crawling %s" % domain)
+            except Exception as e:
+                print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + domain, e))
+                continue
+            finally:
+                print("[+] Finished crawling %s" % domain)
 
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
     def __post(self, path, params):
@@ -92,9 +93,9 @@ class Crawler (threading.Thread):
         for k,v in request.headers.items():
             request_headers.append(Header.insertHeader(k, v))
 
-        request = Request.insertRequest(url, request.method, request_headers, request_cookies, request.body.decode('utf-8', errors='ignore'))
+        processed_request = Request.insertRequest(url, request.method, request_headers, request_cookies, request.body.decode('utf-8', errors='ignore'))
         
-        if not request:
+        if not processed_request:
             return (False, False)
 
         response = request.response
@@ -102,7 +103,7 @@ class Crawler (threading.Thread):
             time.sleep(5)
             response = request.response
             if not response:
-                return (request, False)
+                return (processed_request, False)
 
         response_cookies = []
         if response.headers.get_all('set-cookie'):
@@ -126,9 +127,9 @@ class Crawler (threading.Thread):
         for k,v in response.headers.items():
             response_headers.append(Header.insertHeader(k,v))
 
-        response = Response.insertResponse(response.status_code, response.body.decode('utf-8', errors='ignore'), response_headers, response_cookies, request)
+        processed_response = Response.insertResponse(response.status_code, response.body.decode('utf-8', errors='ignore'), response_headers, response_cookies, processed_request)
 
-        return (request, response)
+        return (processed_request, processed_response)
 
     def __crawl(self, parent_url, method, data):
         print("[+] Crawling %s [%s]" % (parent_url, method))
@@ -164,7 +165,7 @@ class Crawler (threading.Thread):
                 and not request.url[-4:] in self.blacklist_formats \
                 and not request.url[-5:] in self.blacklist_formats \
                 and not request.url[-6:] in self.blacklist_formats:
-                    print("[+] Logging %s [%s]" % (request.url, request.method))
+                    print("[+] Made dynamic request to %s [%s]" % (request.url, request.method))
                     self.__processRequest(request)
 
         # Parse first response body

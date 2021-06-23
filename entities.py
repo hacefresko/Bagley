@@ -155,8 +155,8 @@ class Request:
         self.method = method
         self.data = data if data != '0' else False
         self.response = Response.getResponse(response_hash)
-        self.headers = Header.getHeaders(self)
-        self.cookies = Cookie.getCookies(self)
+        self.headers = self.__getHeaders()
+        self.cookies = self.__getCookies()
 
     def __str__(self):
         result = "%s %s HTTP/1.1\r\n" % (self.method, urlparse(self.protocol + '://' + str(self.path)).path)
@@ -171,6 +171,30 @@ class Request:
 
         if self.data:
             result += "\r\n%s\r\n" % (self.data)
+
+        return result
+
+    # Returns the list of headers of the request
+    def __getHeaders(self):
+        db = DB.getConnection()
+    
+        headers = db.query('SELECT id, key, value FROM headers INNER JOIN request_headers on id = header WHERE request = ?', [self.id]).fetchall()
+
+        result = []
+        for header in headers:
+            result.append(Header(header[0], header[1], header[2]))
+
+        return result
+
+    # Returns the list of cookies of the request
+    def __getCookies(self):
+        db = DB.getConnection()
+    
+        cookies = db.query('SELECT * FROM cookies INNER JOIN request_cookies on id = cookie WHERE request = ?', [self.id]).fetchall()
+
+        result = []
+        for cookie in cookies:
+            result.append(Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9]))
 
         return result
 
@@ -311,9 +335,9 @@ class Response:
         self.hash = hash
         self.code = code
         self.body = body
-        self.headers = Header.getHeaders(self)
-        self.cookies = Cookie.getCookies(self)
-        self.scripts = Script.getScripts(self)
+        self.headers = self.__getHeaders()
+        self.cookies = self.__getCookies()
+        self.scripts = self.__getScripts()
 
     # Returns response hash
     @staticmethod
@@ -322,6 +346,41 @@ class Response:
         for element in headers + cookies:
             to_hash += str(element)
         return hashlib.sha1(to_hash.encode('utf-8')).hexdigest()
+
+    # Returns the list of headers of the response
+    def __getHeaders(self):
+        db = DB.getConnection()
+    
+        headers = db.query('SELECT id, key, value FROM headers INNER JOIN response_headers on id = header WHERE response = ?', [self.hash]).fetchall()
+
+        result = []
+        for header in headers:
+            result.append(Header(header[0], header[1], header[2]))
+
+        return result
+
+    # Returns the list of cookies of the response
+    def __getCookies(self):
+        db = DB.getConnection()
+    
+        cookies = db.query('SELECT * FROM cookies INNER JOIN response_cookies on id = cookie WHERE response = ?', [self.hash]).fetchall()
+
+        result = []
+        for cookie in cookies:
+            result.append(Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9]))
+
+        return result
+
+    # Returns the list of scripts of the response
+    def __getScripts(self):
+        db = DB.getConnection()
+        scripts = db.query('SELECT hash, content, path FROM scripts INNER JOIN response_scripts on hash = script WHERE response = ?', [self.hash]).fetchall()
+
+        result = []
+        for script in scripts:
+            result.append(Script(script[0], script[1], script[2]))
+
+        return result
 
     # Returns True if response exists, else False
     @staticmethod
@@ -398,24 +457,6 @@ class Header:
             return False
         
         return Header(result[0], result[1], result[2])
-
-    # Returns a list of headers for specified target. If target is not a request nor a response, returns False
-    @staticmethod
-    def getHeaders(target):
-        db = DB.getConnection()
-    
-        if isinstance(target, Request):
-            headers = db.query('SELECT id, key, value FROM headers INNER JOIN request_headers on id = header WHERE request = ?', [target.id]).fetchall()
-        elif isinstance(target, Response):
-            headers = db.query('SELECT id, key, value FROM headers INNER JOIN response_headers on id = header WHERE response = ?', [target.hash]).fetchall()
-        else:
-            return False
-
-        result = []
-        for header in headers:
-            result.append(Header(header[0], header[1], header[2]))
-
-        return result
 
     # Inserts header if not inserted and returns it
     @staticmethod
@@ -502,24 +543,6 @@ class Cookie:
                 return cookie
         return False
 
-    # Returns a list of cookies for specified target. If target is not a request nor a response, returns False
-    @staticmethod 
-    def getCookies(target):
-        db = DB.getConnection()
-    
-        if isinstance(target, Request):
-            cookies = db.query('SELECT * FROM cookies INNER JOIN request_cookies on id = cookie WHERE request = ?', [target.id]).fetchall()
-        elif isinstance(target, Response):
-            cookies = db.query('SELECT * FROM cookies INNER JOIN response_cookies on id = cookie WHERE response = ?', [target.hash]).fetchall()
-        else:
-            return False
-
-        result = []
-        for cookie in cookies:
-            result.append(Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9]))
-
-        return result
-
     # Inserts cookie if not already inserted and returns it
     @staticmethod
     def insertCookie(name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite):
@@ -567,21 +590,6 @@ class Script:
         if not result:
             return False
         return Script(result[0], result[1], result[2])
-
-    # Returns a list of scripts from the specified response. If response is not a Response object, returns False   
-    @staticmethod 
-    def getScripts(response):
-        if not isinstance(response, Response):
-            return False
-
-        db = DB.getConnection()
-        scripts = db.query('SELECT hash, content, path FROM scripts INNER JOIN response_scripts on hash = script WHERE response = ?', [response.hash]).fetchall()
-
-        result = []
-        for script in scripts:
-            result.append(Script(script[0], script[1], script[2]))
-
-        return result
 
     # Inserts script if not already inserted, links it to the corresponding response if exists and returns it
     @staticmethod 

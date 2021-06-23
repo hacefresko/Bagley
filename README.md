@@ -1,4 +1,8 @@
-# Vulnerability Detection System
+# Web Vulnerability Detection System
+
+### Modules
+*   Crawler
+*   Sqlmap
 
 ### External requirements
 *   Sqlmap
