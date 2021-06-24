@@ -23,6 +23,7 @@ class Domain:
         if not domain:
             return False
 
+        parent_domain = None
         if len(domain.split('.')) > 2:
             parent_domain = '.'.join(domain.split('.')[1:])
             
