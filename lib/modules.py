@@ -35,6 +35,8 @@ class Crawler (threading.Thread):
             except:
                 time.sleep(5)
                 continue
+
+            # Get domain
             domain = entry.get('domain')
             if not domain:
                 time.sleep(5)
@@ -44,6 +46,9 @@ class Crawler (threading.Thread):
             if domain[0] == '.':
                 domain = domain[1:]
 
+            headers = entry.get('headers')
+            cookies = entry.get('cookies')
+
             try:
                 protocol = 'http'
                 initial_request = requests.get(protocol + '://' + domain,  allow_redirects=False)
@@ -51,8 +56,17 @@ class Crawler (threading.Thread):
                     protocol = 'https'
 
                 print("[+] Started crawling %s" % domain)
+                
+                if headers:
+                    print("[+] Headers used:")
+                    for k,v in headers.items():
+                        print(" %s: %s" % (k,v))
+                if cookies:
+                    print("[+] Cookies used:")
+                    for k,v in cookies.items():
+                        print(" %s=%s" % (k,v))
 
-                self.__crawl(protocol + '://' + domain, 'GET', None)
+                self.__crawl(protocol + '://' + domain, 'GET', None, headers)
             except Exception as e:
                 print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + domain, e))
                 continue
@@ -151,8 +165,19 @@ class Crawler (threading.Thread):
 
         return (processed_request, processed_response)
 
-    def __crawl(self, parent_url, method, data):
-        print("[+] Crawling %s [%s]" % (parent_url, method))
+    def __crawl(self, parent_url, method, data, headers):
+        print(" Crawling %s [%s]" % (parent_url, method))
+
+        if headers:
+            # Create and set a request interceptor to change headers
+            def interceptor(request):
+                for k,v in headers.items():
+                    try:
+                        del request.headers[k]
+                    except:
+                        pass
+                    request.headers[k] = v
+            self.driver.request_interceptor = interceptor
 
         try:
             # Delete all previous requests so they don't pollute the results
@@ -185,7 +210,7 @@ class Crawler (threading.Thread):
                 and not request.url[-4:] in self.blacklist_formats \
                 and not request.url[-5:] in self.blacklist_formats \
                 and not request.url[-6:] in self.blacklist_formats:
-                    print("[+] Made dynamic request to %s [%s]" % (request.url, request.method))
+                    print(" Made dynamic request to %s [%s]" % (request.url, request.method))
                     self.__processRequest(request)
 
         # Parse first response body
@@ -204,7 +229,7 @@ class Crawler (threading.Thread):
                 domain = urlparse(url).netloc
 
                 if Domain.checkDomain(domain) and not Request.checkRequest(url, 'GET', None, None):
-                    self.__crawl(url, 'GET', None)
+                    self.__crawl(url, 'GET', None, headers)
                 
             elif element.name == 'form':
                 form_id = element.get('id')
@@ -236,7 +261,7 @@ class Crawler (threading.Thread):
                         data = None
 
                     if not Request.checkRequest(url, method, None, data):
-                        self.__crawl(url, method, data)
+                        self.__crawl(url, method, data, headers)
 
             elif element.name == 'script':
                 src = element.get('src')

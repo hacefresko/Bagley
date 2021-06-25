@@ -11,10 +11,10 @@ def sigint_handler(sig, frame):
 signal.signal(signal.SIGINT, sigint_handler)
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'D:')
+    opts, args = getopt.getopt(sys.argv[1:], 'T:')
 
     for opt, arg in opts:
-        if opt == '-D':
+        if opt == '-T':
             scope_file_name = arg
             scope_found = True
 
@@ -22,16 +22,16 @@ try:
         raise Exception
             
 except Exception:
-    print(os.path.basename(__file__) + ' -D <scope file>')
+    print(os.path.basename(__file__) + ' -T <targets file>')
     exit()
 
 print("[+] Starting time: %s" % datetime.datetime.now())
-print("[+] Scope file: %s" % scope_file_name)
+print("[+] Targets file: %s" % scope_file_name)
 
 try:
     scope_file = open(scope_file_name, 'r')
 except FileNotFoundError:
-    print('[x] Scope file not found')
+    print('[x] Targets file not found')
     exit()
 
 crawler = Crawler(scope_file)
