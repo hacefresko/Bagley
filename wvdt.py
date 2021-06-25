@@ -1,5 +1,5 @@
 import os, signal, datetime, getopt, sys, time
-from modules import *
+from lib.modules import *
 
 # Called when Ctrl+C
 def sigint_handler(sig, frame):

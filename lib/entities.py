@@ -1,6 +1,7 @@
-from database import DB
-from urllib.parse import urlparse, urlunparse
 import hashlib, json
+from urllib.parse import urlparse, urlunparse
+
+from lib.database import DB
 
 class Domain:
     # Returns True if both domains are equal or if one belongs to a range of subdomains of other, else False

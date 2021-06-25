@@ -1,11 +1,11 @@
 import threading, time, requests, subprocess, sqlite3, json
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
-from database import DB
-from entities import *
 from seleniumwire import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
+
+from lib.entities import *
 
 class Crawler (threading.Thread):
     blacklist_formats = ['.css', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp', '.bmp', '.ico', '.tiff', '.woff2', '.woff']
@@ -24,7 +24,6 @@ class Crawler (threading.Thread):
         self.driver = webdriver.Chrome(options=opts)
 
     def run(self):
-        db = DB.getConnection()
         self.__insertDomains()
         while True:
             line = self.scope.readline()
