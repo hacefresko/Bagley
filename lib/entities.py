@@ -3,6 +3,13 @@ from urllib.parse import urlparse, urlunparse
 
 from lib.database import DB
 
+# Common session cookies whose values won't be stored
+COOKIES_BLACKLIST = ['PHPSESSID', 'JSESSIONID', 'CFID', 'CFTOKEN', 'ASP.NET_SessionId']
+# Terms that will be searched inside params, data and cookie keys not to store them
+PARAMS_BLACKLIST = ['csrf', 'sess', 'token']
+# Headers whose value won't be stored
+HEADERS_BLACKLIST = ['date', 'cookie', 'set-cookie', 'content-length']
+
 class Domain:
     # Returns True if both domains are equal or if one belongs to a range of subdomains of other, else False
     @staticmethod
@@ -107,10 +114,13 @@ class Path:
             return False
 
         child = self
+        if child.parent == path.parent:
+            return True
         while child.parent != 0:
-            if child.element == path.element:
-                return True
             child = Path.getPath(child.parent)
+            if child.parent == path.parent:
+                return True
+
         return False
         
     # Returns path corresponding to id or False if it does not exist
@@ -135,9 +145,10 @@ class Path:
                 return path
             parent = path.id
 
-    # Inserts each path inside the URL if not already inserted and returns last inserted path (last element from URL). If domain doesn't exist, return False
+    # Inserts each path inside the URL if not already inserted and returns last inserted path (last element from URL).
+    # If domain doesn't exist, return False
     @staticmethod
-    def insertAllPaths(url):
+    def insertPath(url):
         db = DB.getConnection()
         parsedURL = Path.__parseURL(url)
 
@@ -156,8 +167,6 @@ class Path:
         return False
 
 class Request:
-    params_blacklist = ['csrf', 'sess', 'token']
-
     def __init__(self, id, protocol, path_id, params, method, data, response_hash):
         self.id = id
         self.protocol = protocol
@@ -215,7 +224,7 @@ class Request:
         if not params:
             return False
         new_params = params
-        for word in Request.params_blacklist:
+        for word in Request.PARAMS_BLACKLIST:
             new_params = Utils.replaceURLencoded(new_params, word, word)
         return new_params
 
@@ -225,7 +234,7 @@ class Request:
         if not data:
             return False
         new_data = data
-        for word in Request.params_blacklist:
+        for word in Request.PARAMS_BLACKLIST:
             new_data = Utils.substitutePOSTData(content_type, new_data, word, word)
         return new_data
 
@@ -292,11 +301,12 @@ class Request:
             return False
         return Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])
 
-    # Inserts path and request and links headers and cookies. If request is already inserted or there are too many requests 
+    # Inserts request and links headers and cookies. If request is already inserted or there are too many requests 
     # to the same path and method but with different data/params, it returns false.
+    # Path corresponding to url must already be inserted
     @staticmethod
     def insertRequest(url, method, headers, cookies, data):
-        path = Path.insertAllPaths(url)
+        path = Path.parseURL(url)
         if not path:
             return False
 
@@ -343,7 +353,6 @@ class Request:
         for request in result:
             requests.append(Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6]))
         return requests
-        
 
 class Response:
     def __init__(self, hash, code, body):
@@ -440,9 +449,6 @@ class Response:
         return Response.getResponse(response_hash)
 
 class Header:
-    # Headers whose value won't be stored
-    headers_blacklist = ['date', 'cookie', 'set-cookie', 'content-length']
-
     def __init__(self, id, key, value):
         self.id = id
         self.key = key
@@ -458,7 +464,7 @@ class Header:
     @staticmethod
     def __parseHeader(key, value):
         key = key.lower()
-        if key in Header.headers_blacklist:
+        if key in Header.HEADERS_BLACKLIST:
             value = '1337'
         return (key, value)
 
@@ -498,9 +504,6 @@ class Header:
             return False
 
 class Cookie:
-    # Common sessionId cookies whose values won't be stored
-    cookies_blacklist = ['PHPSESSID', 'JSESSIONID', 'CFID', 'CFTOKEN', 'ASP.NET_SessionId']
-
     def __init__(self, id, name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite):
         self.id = id
         self.name = name 
@@ -522,8 +525,8 @@ class Cookie:
     # Returns a formatted tupple with name and value
     @staticmethod
     def __parseCookie(name, value):
-        name = name.upper()
-        if name in Cookie.cookies_blacklist:
+        name = name.lower()
+        if name in Cookie.COOKIES_BLACKLIST:
             value = '1337'
         return (name, value)
 
@@ -613,7 +616,7 @@ class Script:
             return False
 
         if url is not None:
-            path = Path.insertAllPaths(url)
+            path = Path.insertPath(url)
             # If path does not belong to the scope (stored domains)
             if not path:
                 return False

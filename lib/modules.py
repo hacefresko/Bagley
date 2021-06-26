@@ -7,9 +7,10 @@ from selenium.webdriver.chrome.options import Options
 
 from lib.entities import *
 
-class Crawler (threading.Thread):
-    blacklist_formats = ['.css', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp', '.bmp', '.ico', '.tiff', '.woff2', '.woff']
+# Formats that won't be stored
+FORMATS_BLACKLIST = ['.css', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp', '.bmp', '.ico', '.tiff', '.woff2', '.woff']
 
+class Crawler (threading.Thread):
     def __init__(self, scope_file):
         threading.Thread.__init__(self)
         self.scope = scope_file
@@ -33,6 +34,7 @@ class Crawler (threading.Thread):
             try:
                 entry = json.loads(line)
             except:
+                print("[x] Target couldn't be parsed")
                 time.sleep(5)
                 continue
 
@@ -60,13 +62,21 @@ class Crawler (threading.Thread):
                 if headers:
                     print("[+] Headers used:")
                     for k,v in headers.items():
-                        print(" %s: %s" % (k,v))
+                        print("%s: %s" % (k,v))
+                    print()
                 if cookies:
                     print("[+] Cookies used:")
-                    for k,v in cookies.items():
-                        print(" %s=%s" % (k,v))
+                    for cookie in cookies:
+                        # Cookies specified by user must be inserted because when getting the cookies from the 
+                        # equest, they are taken from the database and never inserted: all the info needed to 
+                        # insert them is given in the set-cookie header from the response which sets them, 
+                        # so a cookie will never be sent in a request without a response setting it, except that 
+                        # it's specified by the user
+                        Cookie.insertCookie(cookie.get('name'), cookie.get('value'), cookie.get('domain'), '/', None, None, None, None, None)
+                        print(cookie)
+                    print()
 
-                self.__crawl(protocol + '://' + domain, 'GET', None, headers)
+                self.__crawl(protocol + '://' + domain, 'GET', None, headers, cookies)
             except Exception as e:
                 print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + domain, e))
                 continue
@@ -88,7 +98,7 @@ class Crawler (threading.Thread):
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
     def __post(self, path, params):
         self.driver.execute_script("""
-        function post(path, params, method='post') {
+        function post(path, params, method='post', headers, cookies) {
             const form = document.createElement('form');
             form.method = method;
             form.action = path;
@@ -114,6 +124,7 @@ class Crawler (threading.Thread):
     # Inserts in the database the request and its response. Returns (request, response)
     def __processRequest(self, request):
         url = request.url
+        Path.insertPath(url)
 
         request_cookies = []
         if request.headers.get('cookie'):
@@ -142,16 +153,15 @@ class Crawler (threading.Thread):
         response_cookies = []
         if response.headers.get_all('set-cookie'):
             for raw_cookie in response.headers.get_all('set-cookie'):
-                raw_cookie = raw_cookie.lower()
                 # Default values for cookie attributes
                 cookie = {'expires':'session', 'max-age':'session', 'domain': urlparse(url).netloc, 'path': '/', 'secure': False, 'httponly': False, 'samesite':'lax'}
                 for attribute in raw_cookie.split('; '):
                     if len(attribute.split('=')) == 1:
-                        cookie.update({attribute: True})
-                    elif attribute.split('=')[0] in ['expires', 'max-age', 'domain', 'path', 'samesite']:
-                        cookie.update({attribute.split('=')[0]: attribute.split('=')[1]})
+                        cookie.update({attribute.lower(): True})
+                    elif attribute.split('=')[0].lower() in ['expires', 'max-age', 'domain', 'path', 'samesite']:
+                        cookie.update({attribute.split('=')[0].lower(): attribute.split('=')[1]})
                     else:
-                        cookie.update({'name': attribute.split('=')[0]})
+                        cookie.update({'name': attribute.split('=')[0].lower()})
                         cookie.update({'value': attribute.split('=')[1]})
                 response_cookies.append(Cookie.insertCookie(cookie.get('name'), cookie.get('value'), cookie.get('domain'), cookie.get('path'), cookie.get('expires'), cookie.get('max-age'), cookie.get('httponly'), cookie.get('secure'), cookie.get('samesite')))
 
@@ -165,8 +175,11 @@ class Crawler (threading.Thread):
 
         return (processed_request, processed_response)
 
-    def __crawl(self, parent_url, method, data, headers):
-        print(" Crawling %s [%s]" % (parent_url, method))
+    def __crawl(self, parent_url, method, data, headers, cookies):
+        print("Crawling %s [%s]" % (parent_url, method))
+
+        # Delete all previous requests so they don't pollute the results
+        del self.driver.requests
 
         if headers:
             # Create and set a request interceptor to change headers
@@ -180,8 +193,13 @@ class Crawler (threading.Thread):
             self.driver.request_interceptor = interceptor
 
         try:
-            # Delete all previous requests so they don't pollute the results
-            del self.driver.requests
+            for cookie in cookies:
+                self.driver.add_cookie({"name" : cookie.get('name'), "value" : cookie.get('value'), "domain": cookie.get("domain")})
+        except:
+            # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
+            print("%s is a cookie-averse document" % parent_url)
+
+        try:
             if method == 'GET':
                 self.driver.get(parent_url)
             elif method == 'POST':
@@ -207,10 +225,10 @@ class Crawler (threading.Thread):
                     Script.insertScript(request.url, content, first_response)
                 # If domain is in scope, request has not been done yet and resource is not an image
                 elif not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')) \
-                and not request.url[-4:] in self.blacklist_formats \
-                and not request.url[-5:] in self.blacklist_formats \
-                and not request.url[-6:] in self.blacklist_formats:
-                    print(" Made dynamic request to %s [%s]" % (request.url, request.method))
+                and not request.url[-4:] in self.FORMATS_BLACKLIST \
+                and not request.url[-5:] in self.FORMATS_BLACKLIST \
+                and not request.url[-6:] in self.FORMATS_BLACKLIST:
+                    print("Made dynamic request to %s [%s]" % (request.url, request.method))
                     self.__processRequest(request)
 
         # Parse first response body
@@ -229,7 +247,7 @@ class Crawler (threading.Thread):
                 domain = urlparse(url).netloc
 
                 if Domain.checkDomain(domain) and not Request.checkRequest(url, 'GET', None, None):
-                    self.__crawl(url, 'GET', None, headers)
+                    self.__crawl(url, 'GET', None, headers, cookies)
                 
             elif element.name == 'form':
                 form_id = element.get('id')
@@ -261,7 +279,7 @@ class Crawler (threading.Thread):
                         data = None
 
                     if not Request.checkRequest(url, method, None, data):
-                        self.__crawl(url, method, data, headers)
+                        self.__crawl(url, method, data, headers, cookies)
 
             elif element.name == 'script':
                 src = element.get('src')
