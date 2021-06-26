@@ -522,6 +522,9 @@ class Cookie:
         name = name.lower()
         if name in lib.config.COOKIES_BLACKLIST:
             value = '1337'
+        for term in lib.config.PARAMS_BLACKLIST:
+            if term in name:
+                value = term
         return (name, value)
 
     # Returns True if exists or False if it does not exist   
