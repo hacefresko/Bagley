@@ -15,7 +15,7 @@ This way, the application can be launched as a daemon waiting for targets to be 
 Target options:
 *   domain \[required\]: Specifies the domain or group of subdomains (i.e .example.com) that will be added to the scope. All domains inside the scope will be scanned. If a path with a domain which is out of the scope is referenced, it will be ignored and won't be scanned. If a group of subdomains is specified, the scan will start with the parent domain specified and all referenced subdomains inside the specified group will be scanned (i.e if .example.com is specified, scan will start with example.com and any path with a domain such as api.example.com will be scanned)
 *   headers: Specifies the key and value of the headers that will be added to all requests when crawling the specified target.
-*   cookies: Specifies the name, value and domain of the cookies that will be sent with every request to the target. '/' will be used as path, else will be None.
+*   cookies: Specifies the name, value and domain of the cookies that will be sent with every request to the target. '/' will be used as path, everything else will be None.
 
 ### Example of targets file
     {"domain":"api.example.com", "headers": {"Referer": "google.com", "Accept-Encoding": "gzip, deflate, br"}}
