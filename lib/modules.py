@@ -5,10 +5,8 @@ from seleniumwire import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 
+import lib.config
 from lib.entities import *
-
-# Formats that won't be stored
-FORMATS_BLACKLIST = ['.css', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp', '.bmp', '.ico', '.tiff', '.woff2', '.woff']
 
 class Crawler (threading.Thread):
     def __init__(self, scope_file):
@@ -225,9 +223,9 @@ class Crawler (threading.Thread):
                     Script.insertScript(request.url, content, first_response)
                 # If domain is in scope, request has not been done yet and resource is not an image
                 elif not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')) \
-                and not request.url[-4:] in self.FORMATS_BLACKLIST \
-                and not request.url[-5:] in self.FORMATS_BLACKLIST \
-                and not request.url[-6:] in self.FORMATS_BLACKLIST:
+                and not request.url[-4:] in lib.config.FORMATS_BLACKLIST \
+                and not request.url[-5:] in lib.config.FORMATS_BLACKLIST \
+                and not request.url[-6:] in lib.config.FORMATS_BLACKLIST:
                     print("Made dynamic request to %s [%s]" % (request.url, request.method))
                     self.__processRequest(request)
 

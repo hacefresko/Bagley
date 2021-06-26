@@ -1,14 +1,8 @@
 import hashlib, json
 from urllib.parse import urlparse, urlunparse
 
+import lib.config
 from lib.database import DB
-
-# Common session cookies whose values won't be stored
-COOKIES_BLACKLIST = ['PHPSESSID', 'JSESSIONID', 'CFID', 'CFTOKEN', 'ASP.NET_SessionId']
-# Terms that will be searched inside params, data and cookie keys not to store them
-PARAMS_BLACKLIST = ['csrf', 'sess', 'token']
-# Headers whose value won't be stored
-HEADERS_BLACKLIST = ['date', 'cookie', 'set-cookie', 'content-length']
 
 class Domain:
     # Returns True if both domains are equal or if one belongs to a range of subdomains of other, else False
@@ -224,7 +218,7 @@ class Request:
         if not params:
             return False
         new_params = params
-        for word in Request.PARAMS_BLACKLIST:
+        for word in lib.config.PARAMS_BLACKLIST:
             new_params = Utils.replaceURLencoded(new_params, word, word)
         return new_params
 
@@ -234,7 +228,7 @@ class Request:
         if not data:
             return False
         new_data = data
-        for word in Request.PARAMS_BLACKLIST:
+        for word in lib.config.PARAMS_BLACKLIST:
             new_data = Utils.substitutePOSTData(content_type, new_data, word, word)
         return new_data
 
@@ -464,7 +458,7 @@ class Header:
     @staticmethod
     def __parseHeader(key, value):
         key = key.lower()
-        if key in Header.HEADERS_BLACKLIST:
+        if key in lib.config.HEADERS_BLACKLIST:
             value = '1337'
         return (key, value)
 
@@ -526,7 +520,7 @@ class Cookie:
     @staticmethod
     def __parseCookie(name, value):
         name = name.lower()
-        if name in Cookie.COOKIES_BLACKLIST:
+        if name in lib.config.COOKIES_BLACKLIST:
             value = '1337'
         return (name, value)
 
