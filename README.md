@@ -2,6 +2,12 @@
 
 ## Usage
 
+In order to create the database, execute:
+
+    sqlite3 wvdt.db < sql/wvdt.db
+    
+If you want to use another name for the database, it must be changed in database.py
+
 File specifying targets must be provided with parameter -T. It must contain one target per line, in JSON format. The application will iterate over the targets inside the file and will scan all of them one by one. Once it's done, it will wait for the user to write more targets in the file.
 
 This way, the application can be launched as a daemon waiting for targets to be scanned.
