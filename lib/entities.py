@@ -27,14 +27,15 @@ class Domain:
 
         parent_domain = None
         if len(domain.split('.')) > 2:
-            parent_domain = '.'.join(domain.split('.')[1:])
+            parent_domain = '.'.join(domain.split('.')[-2:])
             
         db = DB.getConnection()
 
         if db.query('SELECT name FROM domains WHERE name LIKE ?', ['%' + domain]).fetchone():
             return True
         
-        if parent_domain and db.query('SELECT name FROM domains WHERE name LIKE ?', ['%' + parent_domain]).fetchone():
+        # Check if domain is in a set of subdomains inside the database
+        if parent_domain and db.query('SELECT name FROM domains WHERE name LIKE ?', ['.' + parent_domain]).fetchone():
             return True
 
         return False
@@ -441,6 +442,13 @@ class Response:
             element.link(response)
 
         return Response.getResponse(response_hash)
+
+    # Returns specified header if request has it, else None
+    def getHeader(self, key):
+        for header in self.headers:
+            if header.key == key:
+                return header
+        return None
 
 class Header:
     def __init__(self, id, key, value):

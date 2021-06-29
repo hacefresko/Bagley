@@ -190,12 +190,13 @@ class Crawler (threading.Thread):
                     request.headers[k] = v
             self.driver.request_interceptor = interceptor
 
-        try:
-            for cookie in cookies:
-                self.driver.add_cookie({"name" : cookie.get('name'), "value" : cookie.get('value'), "domain": cookie.get("domain")})
-        except:
-            # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
-            print("%s is a cookie-averse document" % parent_url)
+        if cookies:
+            try:
+                for cookie in cookies:
+                    self.driver.add_cookie({"name" : cookie.get('name'), "value" : cookie.get('value'), "domain": cookie.get("domain")})
+            except:
+                # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
+                print("%s is a cookie-averse document" % parent_url)
 
         try:
             if method == 'GET':
@@ -212,6 +213,28 @@ class Crawler (threading.Thread):
                 first_request, first_response = self.__processRequest(request)
                 if not first_request or not first_response:
                     return
+
+                code = first_response.code
+
+                # Follow redirect if 3xx response is received
+                if code//100 == 3:
+                    redirect_to = first_response.getHeader('location').value
+                    if not redirect_to:
+                        print("Received %d but location header is not present" % code)
+                        return
+
+                    if code != 307 and code != 308:
+                        method = 'GET'
+                        data = None
+
+                    if Domain.checkDomain(urlparse(redirect_to).netloc) and not Request.checkRequest(redirect_to, method, None, data):
+                        print("Following redirection %d to %s [%s]" % (code, redirect_to, method))
+                        self.__crawl(redirect_to, method, data, headers, cookies)
+                        return
+                    else:
+                        print("Got redirection %d but %s not in scope" % (code, redirect_to))
+                        return
+
             else:
                 domain = urlparse(request.url).netloc
                 if not Domain.checkDomain(domain):
