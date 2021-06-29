@@ -10,22 +10,20 @@ def sigint_handler(sig, frame):
     quit()
 signal.signal(signal.SIGINT, sigint_handler)
 
-#try:
-#    opts, args = getopt.getopt(sys.argv[1:], 'T:')
-#
-#    for opt, arg in opts:
-#        if opt == '-T':
-#            scope_file_name = arg
-#            scope_found = True
-#
-#    if not scope_found or scope_file_name == '':
-#        raise Exception
-#            
-#except Exception:
-#    print(os.path.basename(__file__) + ' -T <targets file>')
-#    exit()
+try:
+    opts, args = getopt.getopt(sys.argv[1:], 'T:')
 
-scope_file_name = 'targets.txt'
+    for opt, arg in opts:
+        if opt == '-T':
+            scope_file_name = arg
+            scope_found = True
+
+    if not scope_found or scope_file_name == '':
+        raise Exception
+            
+except Exception:
+    print(os.path.basename(__file__) + ' -T <targets file>')
+    exit()
 
 print("[+] Starting time: %s" % datetime.datetime.now())
 print("[+] Targets file: %s" % scope_file_name)
