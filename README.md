@@ -25,10 +25,10 @@ Target options:
 
 ## Available modules
 *   Crawler: Crawler capable of following redirects, rendering JavaScript and logging dynamic requests
-*   Sqlmap: Wrapper for sqlmap
+*   Sqlmap: Wrapper for [sqlmap](https://github.com/sqlmapproject/sqlmap)
 
 ## External requirements
-*   Sqlmap
+*   [Sqlmap](https://github.com/sqlmapproject/sqlmap)
 *   Chrome
 *   ChromeDriver
 
