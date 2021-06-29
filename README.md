@@ -24,7 +24,7 @@ Target options:
     {"domain":".example.com"}
 
 ## Available modules
-*   Crawler: Crawler capable of logging dynamic requests
+*   Crawler: Crawler capable of following redirects, rendering JavaScript and logging dynamic requests
 *   Sqlmap: Wrapper for sqlmap
 
 ## External requirements
