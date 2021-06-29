@@ -1,4 +1,4 @@
-# Web Vulnerability Detection Tool
+# Bagley
 
 ## Usage
 
