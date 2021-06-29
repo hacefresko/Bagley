@@ -4,7 +4,7 @@
 
 In order to create the database, execute:
 
-    sqlite3 wvdt.db < sql/wvdt.db
+    sqlite3 bagley.db < sql/bagley.db
     
 If you want to use another name for the database, it must be changed in database.py
 

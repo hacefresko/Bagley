@@ -1,7 +1,7 @@
 import sqlite3, requests, hashlib, time
 from urllib.parse import urlparse, urlunparse
 
-DB_NAME = 'wvdt.db'
+DB_NAME = 'bagley.db'
 
 class DB:
     __db = None
