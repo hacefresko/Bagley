@@ -1,5 +1,8 @@
 # Bagley
 
+
+![logo](/git%20resources/logo.png)
+
 ## Usage
 
 In order to create the database, execute:
