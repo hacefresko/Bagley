@@ -32,8 +32,8 @@ Target options:
 
 ## External requirements
 *   [Sqlmap](https://github.com/sqlmapproject/sqlmap)
-*   Chrome
-*   ChromeDriver
+*   [Chrome](https://www.google.com/chrome/)
+*   [ChromeDriver](https://chromedriver.chromium.org/downloads)
 
 ## Useful documentation
 *   [MDN HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP)
