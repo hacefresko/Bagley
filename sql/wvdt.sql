@@ -2,6 +2,7 @@ PRAGMA foreign_keys=OFF;
 BEGIN TRANSACTION;
 
 DROP TABLE domains;
+DROP TABLE out_of_scope;
 DROP TABLE paths;
 DROP TABLE requests;
 DROP TABLE responses;
@@ -15,6 +16,10 @@ DROP TABLE response_cookies;
 DROP TABLE response_scripts;
 
 CREATE TABLE domains (
+    name TEXT PRIMARY KEY
+);
+
+CREATE TABLE out_of_scope (
     name TEXT PRIMARY KEY
 );
 

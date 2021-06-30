@@ -25,17 +25,18 @@ class Domain:
         if not domain:
             return False
 
-        parent_domain = None
-        if len(domain.split('.')) > 2:
-            parent_domain = '.'.join(domain.split('.')[-2:])
-            
         db = DB.getConnection()
 
-        if db.query('SELECT name FROM domains WHERE name LIKE ?', ['%' + domain]).fetchone():
+        # Check if domain is out of scope
+        if db.query('SELECT name FROM out_of_scope WHERE name LIKE ?', [domain]).fetchone():
+            return False
+
+        # Check if domain is in database
+        if db.query('SELECT name FROM domains WHERE name LIKE ?', [domain]).fetchone():
             return True
         
-        # Check if domain is in a set of subdomains inside the database
-        if parent_domain and db.query('SELECT name FROM domains WHERE name LIKE ?', ['.' + parent_domain]).fetchone():
+        # Check if parent domain is in a set of subdomains inside the database
+        if len(domain.split('.')) > 2 and db.query('SELECT name FROM domains WHERE name LIKE ?', ['.' + '.'.join(domain.split('.')[-2:])]).fetchone():
             return True
 
         return False
@@ -46,6 +47,14 @@ class Domain:
         db = DB.getConnection()
         if not Domain.checkDomain(domain):
             db.query('INSERT INTO domains (name) VALUES (?)', [domain])
+
+    # Inserts an out of scope domain if not already inserted
+    @staticmethod
+    def insertOutOfScopeDomain(domain):
+        db = DB.getConnection()
+        if not Domain.checkDomain(domain):
+            db.query('INSERT INTO out_of_scope (name) VALUES (?)', [domain])
+
 
 class Path:
     def __init__(self, id, element, parent, domain):

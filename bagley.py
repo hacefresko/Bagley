@@ -10,8 +10,7 @@ def sigint_handler(sig, frame):
     quit()
 signal.signal(signal.SIGINT, sigint_handler)
 
-def title():
-    return '''
+title = '''
 
                   @@@*=*@@@
                @@@%+ =*= +%@@@
@@ -38,9 +37,9 @@ def title():
               @@@@@* =*= *@@@@@
                   @@@*=*@@@
 
-    '''
+'''
 
-print(title())
+print(title)
 
 try:
     opts, args = getopt.getopt(sys.argv[1:], 'T:')

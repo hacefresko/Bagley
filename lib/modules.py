@@ -43,7 +43,14 @@ class Crawler (threading.Thread):
                 continue
             if not Domain.checkDomain(domain):
                 Domain.insertDomain(domain)
+
             if domain[0] == '.':
+                # Insert out of scope domains
+                excluded = entry.get('excluded')
+                for e in excluded:
+                    Domain.insertOutOfScopeDomain(e)
+
+                # Formats domain so crawler starts at example.com instead of .example.com
                 domain = domain[1:]
 
             headers = entry.get('headers')
@@ -87,10 +94,17 @@ class Crawler (threading.Thread):
                 entry = json.loads(line)
             except:
                 continue
+
             domain = entry.get('domain')
             if not domain:
                 continue
             Domain.insertDomain(domain)
+            
+            if domain[0] == '.':
+                excluded = entry.get('excluded')
+                for e in excluded:
+                    Domain.insertOutOfScopeDomain(e)
+
         self.scope.seek(0)
 
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium

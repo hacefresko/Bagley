@@ -16,7 +16,9 @@ File specifying targets must be provided with parameter -T. It must contain one 
 This way, the application can be launched as a daemon waiting for targets to be scanned.
 
 Target options:
-*   domain \[required\]: Specifies the domain or group of subdomains (i.e .example.com) that will be added to the scope. All domains inside the scope will be scanned. If a path with a domain which is out of the scope is referenced, it will be ignored and won't be scanned. If a group of subdomains is specified, the scan will start with the parent domain specified and all referenced subdomains inside the specified group will be scanned (i.e if .example.com is specified, scan will start with example.com and any path with a domain such as api.example.com will be scanned)
+*   domain \[required\]: Adds a domain or group of subdomains (i.e .example.com) to the scope. Only domains inside the scope will be scanned. If a group of subdomains is specified, the scan will start with the parent domain specified and all referenced subdomains inside the specified group will be scanned (i.e if .example.com is specified, scan will start with example.com and any path with a domain such as api.example.com will be scanned).
+
+*   excluded: Explicitely specifies a list of domain to be out of scope. This way, a group of subdomains can be specified with some of its subdomains being out of scope. It's only valid when specifying a group of subdomains.
 
 *   headers: Specifies the key and value of the headers that will be added to all requests when crawling the specified target.
 
