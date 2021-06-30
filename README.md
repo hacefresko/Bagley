@@ -1,7 +1,7 @@
 # Bagley
 
 
-![logo](/git%20resources/logo.png)
+<img src="/git%20resources/logo.png" width="350">
 
 ## Usage
 
