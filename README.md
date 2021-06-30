@@ -1,7 +1,7 @@
 # Bagley
 
 
-![logo](/git%20resources/logo.png)
+<img src="/git%20resources/logo.png" width="350">
 
 ## Usage
 
@@ -34,8 +34,8 @@ Target options:
 
 ## External requirements
 *   [Sqlmap](https://github.com/sqlmapproject/sqlmap)
-*   Chrome
-*   ChromeDriver
+*   [Chrome](https://www.google.com/chrome/)
+*   [ChromeDriver](https://chromedriver.chromium.org/downloads)
 
 ## Useful documentation
 *   [MDN HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP)
