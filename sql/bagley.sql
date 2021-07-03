@@ -9,6 +9,8 @@ DROP TABLE responses;
 DROP TABLE headers;
 DROP TABLE cookies;
 DROP TABLE scripts;
+DROP TABLE domain_headers;
+DROP TABLE domain_cookies;
 DROP TABLE request_headers;
 DROP TABLE request_cookies;
 DROP TABLE response_headers;
@@ -16,7 +18,8 @@ DROP TABLE response_cookies;
 DROP TABLE response_scripts;
 
 CREATE TABLE domains (
-    name TEXT PRIMARY KEY
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT
 );
 
 CREATE TABLE out_of_scope (
@@ -28,8 +31,8 @@ CREATE TABLE paths (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     element TEXT NOT NULL, 
     parent INTEGER NOT NULL, 
-    domain TEXT NOT NULL,
-    FOREIGN KEY (domain) REFERENCES domains(name), 
+    domain INTEGER NOT NULL,
+    FOREIGN KEY (domain) REFERENCES domains(id), 
     FOREIGN KEY (parent) REFERENCES paths(id)
 );
 
@@ -79,6 +82,24 @@ CREATE TABLE scripts (
     path INTEGER NOT NULL,
     content TEXT NOT NULL,
     FOREIGN KEY (path) REFERENCES paths(id)
+);
+
+
+
+-- Headers sent in all request made to that domain
+CREATE TABLE domain_headers (
+    domain INTEGER PRIMARY KEY,
+    header INTEGER NOT NULL,
+    FOREIGN KEY (domain) REFERENCES domains(id),
+    FOREIGN KEY (header) REFERENCES headers(id)
+);
+
+-- Cookies sent in all request made to that domain
+CREATE TABLE domain_cookies (
+    domain INTEGER PRIMARY KEY,
+    cookie INTEGER NOT NULL,
+    FOREIGN KEY (domain) REFERENCES domains(id),
+    FOREIGN KEY (cookie) REFERENCES cookies(id)
 );
 
 

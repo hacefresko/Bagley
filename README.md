@@ -1,6 +1,5 @@
 # Bagley
 
-
 <img src="/git%20resources/logo.png" width="350">
 
 ## Usage
@@ -30,7 +29,7 @@ Target options:
 
 ## Available modules
 *   Crawler: Crawler capable of following redirects, rendering JavaScript and logging dynamic requests
-*   Sqlmap: Wrapper for [sqlmap](https://github.com/sqlmapproject/sqlmap)
+*   SqlInjection: Wrapper for [sqlmap](https://github.com/sqlmapproject/sqlmap)
 
 ## External requirements
 *   [Sqlmap](https://github.com/sqlmapproject/sqlmap)

@@ -23,89 +23,33 @@ class Crawler (threading.Thread):
         self.driver = webdriver.Chrome(options=opts)
 
     def run(self):
-        self.__insertDomains()
-        while True:
-            line = self.scope.readline()
-            if not line:
-                time.sleep(5)
-                continue
+        for domain in Domain.getDomains():
+            name = domain.name if domain.name[0] != '.' else domain.name[1:]
             try:
-                entry = json.loads(line)
-            except:
-                print("[x] Target couldn't be parsed")
-                time.sleep(5)
-                continue
+                print("[+] Started crawling %s" % name)
 
-            # Get domain
-            domain = entry.get('domain')
-            if not domain:
-                time.sleep(5)
-                continue
-            if not Domain.checkDomain(domain):
-                Domain.insertDomain(domain)
-
-            if domain[0] == '.':
-                # Insert out of scope domains
-                excluded = entry.get('excluded')
-                for e in excluded:
-                    Domain.insertOutOfScopeDomain(e)
-
-                # Formats domain so crawler starts at example.com instead of .example.com
-                domain = domain[1:]
-
-            headers = entry.get('headers')
-            cookies = entry.get('cookies')
-
-            try:
                 protocol = 'http'
-                initial_request = requests.get(protocol + '://' + domain,  allow_redirects=False)
+                initial_request = requests.get(protocol + '://' + name,  allow_redirects=False)
                 if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
                     protocol = 'https'
-
-                print("[+] Started crawling %s" % domain)
                 
-                if headers:
+                if domain.headers:
                     print("[+] Headers used:")
-                    for k,v in headers.items():
-                        print("%s: %s" % (k,v))
+                    for header in domain.headers:
+                        print(header)
                     print()
-                if cookies:
+                if domain.cookies:
                     print("[+] Cookies used:")
-                    for cookie in cookies:
-                        # Cookies specified by user must be inserted because when getting the cookies from the 
-                        # equest, they are taken from the database and never inserted: all the info needed to 
-                        # insert them is given in the set-cookie header from the response which sets them, 
-                        # so a cookie will never be sent in a request without a response setting it, except that 
-                        # it's specified by the user
-                        Cookie.insertCookie(cookie.get('name'), cookie.get('value'), cookie.get('domain'), '/', None, None, None, None, None)
+                    for cookie in domain.cookies:
                         print(cookie)
                     print()
 
-                self.__crawl(protocol + '://' + domain, 'GET', None, headers, cookies)
+                self.__crawl(protocol + '://' + name, 'GET', None, domain.headers, domain.cookies)
             except Exception as e:
-                print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + domain, e))
+                print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + name, e))
                 continue
             finally:
-                print("[+] Finished crawling %s" % domain)
-
-    def __insertDomains(self):
-        for line in self.scope.readlines():
-            try:
-                entry = json.loads(line)
-            except:
-                continue
-
-            domain = entry.get('domain')
-            if not domain:
-                continue
-            Domain.insertDomain(domain)
-            
-            if domain[0] == '.':
-                excluded = entry.get('excluded')
-                for e in excluded:
-                    Domain.insertOutOfScopeDomain(e)
-
-        self.scope.seek(0)
+                print("[+] Finished crawling %s" % name)
 
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
     def __post(self, path, params):
@@ -196,18 +140,18 @@ class Crawler (threading.Thread):
         if headers:
             # Create and set a request interceptor to change headers
             def interceptor(request):
-                for k,v in headers.items():
+                for header in headers:
                     try:
-                        del request.headers[k]
+                        del request.headers[header.key]
                     except:
                         pass
-                    request.headers[k] = v
+                    request.headers[k] = header.value
             self.driver.request_interceptor = interceptor
 
         if cookies:
             try:
                 for cookie in cookies:
-                    self.driver.add_cookie({"name" : cookie.get('name'), "value" : cookie.get('value'), "domain": cookie.get("domain")})
+                    self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain": cookie.domain})
             except:
                 # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
                 print("%s is a cookie-averse document" % parent_url)
@@ -241,7 +185,7 @@ class Crawler (threading.Thread):
                         method = 'GET'
                         data = None
 
-                    if Domain.checkDomain(urlparse(redirect_to).netloc) and not Request.checkRequest(redirect_to, method, None, data):
+                    if Domain.checkScope(urlparse(redirect_to).netloc) and not Request.checkRequest(redirect_to, method, None, data):
                         print("Following redirection %d to %s [%s]" % (code, redirect_to, method))
                         self.__crawl(redirect_to, method, data, headers, cookies)
                         return
@@ -251,7 +195,7 @@ class Crawler (threading.Thread):
 
             else:
                 domain = urlparse(request.url).netloc
-                if not Domain.checkDomain(domain):
+                if not Domain.checkScope(domain):
                     continue
 
                 # If resource is a JS file
@@ -281,7 +225,7 @@ class Crawler (threading.Thread):
                 url = urljoin(parent_url, path)
                 domain = urlparse(url).netloc
 
-                if Domain.checkDomain(domain) and not Request.checkRequest(url, 'GET', None, None):
+                if Domain.checkScope(domain) and not Request.checkRequest(url, 'GET', None, None):
                     self.__crawl(url, 'GET', None, headers, cookies)
                 
             elif element.name == 'form':
@@ -292,7 +236,7 @@ class Crawler (threading.Thread):
                 url = urljoin(parent_url, action)
                 domain = urlparse(url).netloc
 
-                if Domain.checkDomain(domain):
+                if Domain.checkScope(domain):
                     # Parse input, select and textarea (textarea is outside forms, linked by form attribute)
                     data = ''
                     textareas = parser('textarea', form=form_id) if form_id is not None else []
@@ -326,27 +270,21 @@ class Crawler (threading.Thread):
                 else:
                     src = urljoin(parent_url, src)
                     domain = urlparse(src).netloc
-                    if not Domain.checkDomain(domain):
+                    if not Domain.checkScope(domain):
                         continue
 
                     content = requests.get(src).text
                     Script.insertScript(src, content, first_response)
 
-class Sqlmap (threading.Thread):
+class SqlInjection (threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
     
     def run(self):
         tested = []
-        id = 1
-        while True:
+        for request in Request.getRequests():
             try:
-                request = Request.getRequestById(id)
-                if not request:
-                    time.sleep(2)
-                    continue
                 if (not request.params and not request.data) or request.id in tested:
-                    id += 1
                     continue
             except sqlite3.OperationalError:
                 continue
@@ -364,4 +302,8 @@ class Sqlmap (threading.Thread):
                 print(result.stdout)
 
             tested = [*[request.id for request in request.getSameKeysRequests()], *tested]
-            id += 1
+
+class Fuzzer (threading.Thread):
+    def __init__(self, seclists_dir):
+        threading.Thread.__init__(self)
+        self.seclists = seclists_dir

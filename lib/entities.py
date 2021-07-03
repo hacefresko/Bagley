@@ -3,8 +3,53 @@ from urllib.parse import urlparse, urlunparse
 
 import lib.config
 from lib.database import DB
+import time
 
 class Domain:
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
+        self.headers = self.__getHeaders()
+        self.cookies = self.__getCookies()
+
+    # Returns the list of headers of the domain
+    def __getHeaders(self):
+        db = DB.getConnection()
+    
+        headers = db.query('SELECT id, key, value FROM headers INNER JOIN domain_headers on id = header WHERE domain = ?', [self.id]).fetchall()
+
+        result = []
+        for header in headers:
+            result.append(Header(header[0], header[1], header[2]))
+
+        return result
+
+    # Returns the list of cookies of the domain
+    def __getCookies(self):
+        db = DB.getConnection()
+    
+        cookies = db.query('SELECT * FROM cookies INNER JOIN domain_cookies on id = cookie WHERE domain_cookies.domain = ?', [self.id]).fetchall()
+
+        result = []
+        for cookie in cookies:
+            result.append(Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9]))
+
+        return result
+
+    # Yields domains one by one infintitely, waiting for more domains to get inserted when there are no more
+    @staticmethod
+    def getDomains():
+        id = 1
+        db = DB.getConnection()
+        while True:
+            domain = db.query('SELECT * FROM domains WHERE id = ?', [id]).fetchone()
+            if not domain:
+                time.sleep(2)
+                continue
+            id += 1
+            yield Domain(domain[0], domain[1])
+
+
     # Returns True if both domains are equal or if one belongs to a range of subdomains of other, else False
     @staticmethod
     def compareDomains(first, second):
@@ -19,9 +64,16 @@ class Domain:
         else:
             return False
 
-    # Returns True if domain or subdomains exist, else False
+    # Returns True if domain exists in database (either inside or outside the scope)
     @staticmethod
     def checkDomain(domain):
+        db = DB.getConnection()
+        return True if (db.query('SELECT name FROM domains WHERE name LIKE ?', [domain]).fetchone() or db.query('SELECT name FROM out_of_scope WHERE name LIKE ?', [domain]).fetchone()) else False
+
+
+    # Returns True if domain is inside the scope
+    @staticmethod
+    def checkScope(domain):
         if not domain:
             return False
 
@@ -43,12 +95,15 @@ class Domain:
 
     # Inserts domain if not already inserted
     @staticmethod
-    def insertDomain(domain):
+    def insertDomain(domain, headers, cookies):
         db = DB.getConnection()
         if not Domain.checkDomain(domain):
-            db.query('INSERT INTO domains (name) VALUES (?)', [domain])
+            d = Domain(db.query('INSERT INTO domains (name) VALUES (?)', [domain]).lastrowid, domain)
+        for element in headers + cookies:
+            element.link(d)
+        
 
-    # Inserts an out of scope domain if not already inserted
+    # Inserts an out of scope domain if not already inserted neither in scope nor out
     @staticmethod
     def insertOutOfScopeDomain(domain):
         db = DB.getConnection()
@@ -156,7 +211,7 @@ class Path:
         db = DB.getConnection()
         parsedURL = Path.__parseURL(url)
 
-        if not Domain.checkDomain(parsedURL['domain']):
+        if not Domain.checkScope(parsedURL['domain']):
             return False
 
         # Iterate over each domain/file from URL
@@ -250,7 +305,7 @@ class Request:
         return None
 
     # Returns True if request exists else False. If there are already some requests with the same path, protocol and method 
-    # but different params/data, it returns True to avoid saving same requests with different CSRFs, session values, etc.
+    # but different params/data with same key, it returns True to avoid saving same requests with different CSRFs, session values, etc.
     @staticmethod
     def checkRequest(url, method, content_type, data):
         path = Path.parseURL(url)
@@ -296,17 +351,21 @@ class Request:
             return False
         return Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])
 
-    # Returns request if exists else false
+    # Yields requests one by one infintitely, waiting for more requests to get inserted when there are no more
     @staticmethod
-    def getRequestById(request_id):
+    def getRequests():
+        id = 1
         db = DB.getConnection()
-        request = db.query('SELECT * FROM requests WHERE id = ?', [request_id]).fetchone()
-        if not request:
-            return False
-        return Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])
+        while True:
+            request = db.query('SELECT * FROM requests WHERE id = ?', [id]).fetchone()
+            if not request:
+                time.sleep(2)
+                continue
+            id += 1
+            yield Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])
 
     # Inserts request and links headers and cookies. If request is already inserted or there are too many requests 
-    # to the same path and method but with different data/params, it returns false.
+    # to the same path and method but with different data/params values for the same keys, it returns false.
     # Path corresponding to url must already be inserted
     @staticmethod
     def insertRequest(url, method, headers, cookies, data):
@@ -511,6 +570,8 @@ class Header:
         elif isinstance(target, Response):
             db.query('INSERT INTO response_headers (response, header) VALUES (?,?)', [target.hash, self.id])
             return True
+        elif isinstance(target, Domain):
+            db.query('INSERT INTO domain_headers(domain, header) VALUES (?,?)', [target.name, self.id])
         else:
             return False
 
@@ -547,7 +608,7 @@ class Cookie:
     # Returns True if exists or False if it does not exist   
     @staticmethod 
     def __getCookie(name, value, cookie_domain, cookie_path):
-        if cookie_domain and not Domain.checkDomain(cookie_domain):
+        if cookie_domain and not Domain.checkScope(cookie_domain):
             return False
         
         db = DB.getConnection()
@@ -578,7 +639,7 @@ class Cookie:
     # Inserts cookie if not already inserted and returns it
     @staticmethod
     def insertCookie(name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite):
-        if not Domain.checkDomain(cookie_domain):
+        if not Domain.checkScope(cookie_domain):
             return False
 
         name, value = Cookie.__parseCookie(name, value)
@@ -599,6 +660,8 @@ class Cookie:
         elif isinstance(target, Response):
             db.query('INSERT INTO response_cookies (response, cookie) VALUES (?,?)', [target.hash, self.id])
             return True
+        elif isinstance(target, Domain):
+            db.query('INSERT INTO domain_cookies(domain, cookie) VALUES (?,?)', [target.name, self.id])
         else:
             return False
 
