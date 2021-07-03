@@ -283,10 +283,7 @@ class SqlInjection (threading.Thread):
     def run(self):
         tested = []
         for request in Request.getRequests():
-            try:
-                if (not request.params and not request.data) or request.id in tested:
-                    continue
-            except sqlite3.OperationalError:
+            if (not request.params and not request.data) or request.id in tested:
                 continue
 
             url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
