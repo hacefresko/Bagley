@@ -12,6 +12,12 @@ class Domain:
         self.headers = self.__getHeaders()
         self.cookies = self.__getCookies()
 
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def __str__(self):
+        return self.name
+
     # Returns the list of headers of the domain
     def __getHeaders(self):
         db = DB.getConnection()
@@ -36,19 +42,23 @@ class Domain:
 
         return result
 
-    # Yields domains one by one infintitely, waiting for more domains to get inserted when there are no more
+    # Returns domain identified by id or False if it does not exist
     @staticmethod
-    def getDomains():
-        id = 1
+    def getDomainById(id):
         db = DB.getConnection()
-        while True:
-            domain = db.query('SELECT * FROM domains WHERE id = ?', [id]).fetchone()
-            if not domain:
-                time.sleep(2)
-                continue
-            id += 1
-            yield Domain(domain[0], domain[1])
+        domain = db.query('SELECT * FROM domains WHERE id = ?', [id]).fetchone()
+        if not domain:
+            return False
+        return Domain(domain[0], domain[1])
 
+    # Returns domain identified by the domain name or False if it does not exist
+    @staticmethod
+    def getDomain(domain_name):
+        db = DB.getConnection()
+        domain = db.query('SELECT * FROM domains WHERE name = ?', [domain_name]).fetchone()
+        if not domain:
+            return False
+        return Domain(domain[0], domain[1])
 
     # Returns True if both domains are equal or if one belongs to a range of subdomains of other, else False
     @staticmethod
@@ -70,8 +80,7 @@ class Domain:
         db = DB.getConnection()
         return True if (db.query('SELECT name FROM domains WHERE name LIKE ?', [domain]).fetchone() or db.query('SELECT name FROM out_of_scope WHERE name LIKE ?', [domain]).fetchone()) else False
 
-
-    # Returns True if domain is inside the scope
+    # Returns True if domain is inside the scope, else False.
     @staticmethod
     def checkScope(domain):
         if not domain:
@@ -83,8 +92,8 @@ class Domain:
         if db.query('SELECT name FROM out_of_scope WHERE name LIKE ?', [domain]).fetchone():
             return False
 
-        # Check if domain is in database
-        if db.query('SELECT name FROM domains WHERE name LIKE ?', [domain]).fetchone():
+        # Check if domain is in database (%domain so example.com is in scope in .example.com was specified)
+        if db.query('SELECT name FROM domains WHERE name LIKE ?', ['%' + domain]).fetchone():
             return True
         
         # Check if parent domain is in a set of subdomains inside the database
@@ -95,13 +104,16 @@ class Domain:
 
     # Inserts domain if not already inserted
     @staticmethod
-    def insertDomain(domain, headers, cookies):
+    def insertDomain(domain_name, headers, cookies):
         db = DB.getConnection()
-        if not Domain.checkDomain(domain):
-            d = Domain(db.query('INSERT INTO domains (name) VALUES (?)', [domain]).lastrowid, domain)
+        if Domain.checkDomain(domain_name):
+            return Domain.getDomain(domain_name)
+
+        domain = Domain(db.query('INSERT INTO domains (name) VALUES (?)', [domain_name]).lastrowid, domain_name)
         for element in headers + cookies:
-            element.link(d)
+            element.link(domain)
         
+        return domain
 
     # Inserts an out of scope domain if not already inserted neither in scope nor out
     @staticmethod
@@ -110,33 +122,38 @@ class Domain:
         if not Domain.checkDomain(domain):
             db.query('INSERT INTO out_of_scope (name) VALUES (?)', [domain])
 
-
 class Path:
     def __init__(self, id, element, parent, domain):
         self.id = id
         self.element = element
-        self.parent = parent
-        self.domain = domain
+        self.parent = Path.getPath(parent)
+        self.domain = Domain.getDomainById(domain)
+
+    def __eq__(self, other):
+        if not other:
+            return False
+        return self.id == other.id
 
     def __str__(self):  
         db = DB.getConnection()
         result = ''
         element = self.element
-        parent = self.parent
+        parent_id = self.parent.id
 
-        while parent != 0:
+        while parent_id != 0:
             result = "/" + (element if element != '0' else '') + result
-            element, parent = db.query('SELECT element, parent FROM paths WHERE id = ?', [parent]).fetchone()
+            element, parent_id = db.query('SELECT element, parent FROM paths WHERE id = ?', [parent_id]).fetchone()
         result = "/" + (element if element != '0' else '') + result
-        result = self.domain + result
+        result = str(self.domain) + result
 
         return result 
 
     # Returns path if path specified by element, parent and domain exists else False
     @staticmethod
     def __getPath(element, parent, domain):
+        parent_id = parent.id if parent else False
         db = DB.getConnection()
-        path = db.query('SELECT * FROM paths WHERE element = ? AND parent = ? AND domain = ?', [element, parent, domain]).fetchone()
+        path = db.query('SELECT * FROM paths WHERE element = ? AND parent = ? AND domain = ?', [element, parent_id, domain.id]).fetchone()
         return Path(path[0], path[1], path[2], path[3]) if path else False
 
     # Returns a dict with domain and a list elements with each element from the URL. URL must have protocol, domain and elements in order to get parsed correctly.
@@ -175,8 +192,8 @@ class Path:
         child = self
         if child.parent == path.parent:
             return True
-        while child.parent != 0:
-            child = Path.getPath(child.parent)
+        while child.parent:
+            child = Path.getPath(child.parent.id)
             if child.parent == path.parent:
                 return True
 
@@ -189,40 +206,46 @@ class Path:
         path = db.query('SELECT id, element, parent, domain FROM paths WHERE id = ?', [id]).fetchone()
         return Path(path[0], path[1], path[2], path[3]) if path else False
 
-    # Returns path corresponding to URL or False if it does not exist
+    # Returns path corresponding to URL or False if it does not exist in the database
     @staticmethod
     def parseURL(url):
         parsedURL = Path.__parseURL(url)
 
-        # Iterate over each domain/file from URL
-        parent = False
-        for i, element in enumerate(parsedURL['elements']):
-            path = Path.__getPath(element, parent, parsedURL['domain'])
-            if not path:
-                return False
-            if i == len(parsedURL['elements']) - 1:
-                return path
-            parent = path.id
-
-    # Inserts each path inside the URL if not already inserted and returns last inserted path (last element from URL).
-    # If domain doesn't exist, return False
-    @staticmethod
-    def insertPath(url):
-        db = DB.getConnection()
-        parsedURL = Path.__parseURL(url)
-
-        if not Domain.checkScope(parsedURL['domain']):
+        domain = Domain.getDomain(parsedURL['domain'])
+        if not domain:
             return False
 
         # Iterate over each domain/file from URL
         parent = False
         for i, element in enumerate(parsedURL['elements']):
-            path = Path.__getPath(element, parent, parsedURL['domain'])
+            path = Path.__getPath(element, parent, domain)
             if not path:
-                path = Path.getPath(db.query('INSERT INTO paths (element, parent, domain) VALUES (?,?,?)', [element, parent, parsedURL['domain']]).lastrowid)
+                return False
             if i == len(parsedURL['elements']) - 1:
                 return path
-            parent = path.id
+            parent = path
+
+    # Inserts each path inside the URL if not already inserted and returns last inserted path (last element from URL).
+    # If domain is not in scope, returns False. If domain is in scope but not in database, inserts it
+    @staticmethod
+    def insertPath(url, headers, cookies):
+        db = DB.getConnection()
+        parsedURL = Path.__parseURL(url)
+
+        if not Domain.checkScope(parsedURL['domain']):
+            return False
+        
+        domain = Domain.insertDomain(parsedURL['domain'], headers, cookies)
+
+        # Iterate over each domain/file from URL
+        parent = False
+        for i, element in enumerate(parsedURL['elements']):
+            path = Path.__getPath(element, parent, domain)
+            if not path:
+                path = Path.getPath(db.query('INSERT INTO paths (element, parent, domain) VALUES (?,?,?)', [element, parent.id if parent else False, domain.id]).lastrowid)
+            if i == len(parsedURL['elements']) - 1:
+                return path
+            parent = path
         return False
 
 class Request:
@@ -239,7 +262,7 @@ class Request:
 
     def __str__(self):
         result = "%s %s HTTP/1.1\r\n" % (self.method, urlparse(self.protocol + '://' + str(self.path)).path)
-        result += "Host: %s\r\n" % (self.path.domain)
+        result += "Host: %s\r\n" % (self.path.domain.name)
         for header in self.headers:
             result += "%s\r\n" % (str(header))
         if len(self.cookies) != 0:
@@ -631,8 +654,8 @@ class Cookie:
         for result in results:
             cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9])
             # If domain/range of subdomains and range of paths  from cookie match with url
-            cookie_path = Path.parseURL(path.domain + cookie.path) if cookie.path != '/' else Path.parseURL(path.domain)
-            if Domain.compareDomains(cookie.domain, path.domain) and path.checkParent(cookie_path):
+            cookie_path = Path.parseURL(path.domain.name + cookie.path) if cookie.path != '/' else Path.parseURL(path.domain.name)
+            if Domain.compareDomains(cookie.domain, path.domain.name) and path.checkParent(cookie_path):
                 return cookie
         return False
 
@@ -688,12 +711,12 @@ class Script:
 
     # Inserts script if not already inserted, links it to the corresponding response if exists and returns it
     @staticmethod 
-    def insertScript(url, content, response):
+    def insertScript(url, headers, cookies, content, response):
         if not isinstance(response, Response):
             return False
 
         if url is not None:
-            path = Path.insertPath(url)
+            path = Path.insertPath(url, headers, cookies)
             # If path does not belong to the scope (stored domains)
             if not path:
                 return False

@@ -9,9 +9,11 @@ import lib.config
 from lib.entities import *
 
 class Crawler (threading.Thread):
-    def __init__(self, scope_file):
+    def __init__(self):
         threading.Thread.__init__(self)
-        self.scope = scope_file
+
+        # Init queue for other modules to send urls to crawl
+        self.queue = []
 
         # Init selenium driver
         opts = Options()
@@ -22,34 +24,60 @@ class Crawler (threading.Thread):
         opts.add_argument("--proxy-bypass-list=*")
         self.driver = webdriver.Chrome(options=opts)
 
-    def run(self):
-        for domain in Domain.getDomains():
-            name = domain.name if domain.name[0] != '.' else domain.name[1:]
-            try:
-                print("[+] Started crawling %s" % name)
+    def addToQueue(self, url):
+        self.queue.append(url)
 
-                protocol = 'http'
-                initial_request = requests.get(protocol + '://' + name,  allow_redirects=False)
-                if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
-                    protocol = 'https'
-                
+    def run(self):
+        id = 1
+        while True:
+            # Try to get url from queue. If queue is empty, try to get domain from database. If it's also
+            # empty, sleeps for 5 seconds and starts again
+            if len(self.queue) > 0:
+                url = self.queue.pop(0)
+                domain = Path.parseURL(url).domain
+                if not domain:
+                    raise Exception
+            else:
+                domain = Domain.getDomainById(id)
+                if not domain:
+                    time.sleep(5)
+                    continue
+                domain_name = domain.name if domain.name[0] != '.' else domain.name[1:]
+
+                url = 'http://' + domain_name
+                try:
+                    initial_request = requests.get(url,  allow_redirects=False)
+                    if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
+                        url = 'https://' + domain_name
+                except Exception as e:
+                    print("[x] Cannot request %s: %s" % (url, e))
+                    id += 1
+                    continue
+
+            try:    
+                print("[+] Started crawling %s" % url)
+                headers = []
                 if domain.headers:
                     print("[+] Headers used:")
                     for header in domain.headers:
+                        headers.append(header)
                         print(header)
                     print()
+                cookies = []
                 if domain.cookies:
                     print("[+] Cookies used:")
                     for cookie in domain.cookies:
+                        cookies.append(cookie)
                         print(cookie)
                     print()
 
-                self.__crawl(protocol + '://' + name, 'GET', None, domain.headers, domain.cookies)
+                self.__crawl(url, 'GET', None, headers, cookies)
             except Exception as e:
-                print('[x] Exception ocurred when crawling %s: %s' % (protocol + '://' + name, e))
-                continue
+                print('[x] Exception ocurred when crawling %s: %s' % (url, e))
             finally:
-                print("[+] Finished crawling %s" % name)
+                print("[+] Finished crawling %s" % url)
+                id += 1
+                continue
 
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
     def __post(self, path, params):
@@ -77,10 +105,11 @@ class Crawler (threading.Thread):
         post(arguments[1], arguments[0]);
         """, params, path)
 
-    # Inserts in the database the request and its response. Returns (request, response)
-    def __processRequest(self, request):
+    # Inserts in the database the request and its response. Returns (request, response). Headers and cookies params
+    # are the extra headers and cookies that were added to the request
+    def __processRequest(self, request, headers, cookies):
         url = request.url
-        Path.insertPath(url)
+        Path.insertPath(url, headers, cookies)
 
         request_cookies = []
         if request.headers.get('cookie'):
@@ -134,13 +163,15 @@ class Crawler (threading.Thread):
     def __crawl(self, parent_url, method, data, headers, cookies):
         print("Crawling %s [%s]" % (parent_url, method))
 
+        domain = Path.insertPath(parent_url, headers, cookies).domain
+
         # Delete all previous requests so they don't pollute the results
         del self.driver.requests
 
-        if headers:
-            # Create and set a request interceptor to change headers
+        # Add headers associated to domain to request via a request interceptor
+        if domain.headers:
             def interceptor(request):
-                for header in headers:
+                for header in domain.headers:
                     try:
                         del request.headers[header.key]
                     except:
@@ -148,9 +179,10 @@ class Crawler (threading.Thread):
                     request.headers[k] = header.value
             self.driver.request_interceptor = interceptor
 
-        if cookies:
+        # Add cookies associated to damain to request
+        if domain.cookies:
             try:
-                for cookie in cookies:
+                for cookie in domain.cookies:
                     self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain": cookie.domain})
             except:
                 # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
@@ -168,7 +200,7 @@ class Crawler (threading.Thread):
         # Capture all requests, where first will be the request made and the rest all the dynamic ones
         for i, request in enumerate(self.driver.iter_requests()):
             if i == 0:
-                first_request, first_response = self.__processRequest(request)
+                first_request, first_response = self.__processRequest(request, headers, cookies)
                 if not first_request or not first_response:
                     return
 
@@ -201,14 +233,14 @@ class Crawler (threading.Thread):
                 # If resource is a JS file
                 if request.url[-3:] == '.js':
                     content = requests.get(request.url).text
-                    Script.insertScript(request.url, content, first_response)
+                    Script.insertScript(request.url, headers, cookies, content, first_response)
                 # If domain is in scope, request has not been done yet and resource is not an image
                 elif not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')) \
                 and not request.url[-4:] in lib.config.FORMATS_BLACKLIST \
                 and not request.url[-5:] in lib.config.FORMATS_BLACKLIST \
                 and not request.url[-6:] in lib.config.FORMATS_BLACKLIST:
                     print("Made dynamic request to %s [%s]" % (request.url, request.method))
-                    self.__processRequest(request)
+                    self.__processRequest(request, headers, cookies)
 
         # Parse first response body
         parser = BeautifulSoup(first_response.body, 'html.parser')
@@ -266,7 +298,7 @@ class Crawler (threading.Thread):
                     if element.string is None:
                         continue
 
-                    Script.insertScript(None, element.string, first_response)
+                    Script.insertScript(None, None, None, element.string, first_response)
                 else:
                     src = urljoin(parent_url, src)
                     domain = urlparse(src).netloc
@@ -274,7 +306,7 @@ class Crawler (threading.Thread):
                         continue
 
                     content = requests.get(src).text
-                    Script.insertScript(src, content, first_response)
+                    Script.insertScript(src, headers, cookies, content, first_response)
 
 class SqlInjection (threading.Thread):
     def __init__(self):
