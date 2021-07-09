@@ -246,10 +246,7 @@ class Crawler (threading.Thread):
                     content = requests.get(request.url).text
                     Script.insertScript(request.url, headers, cookies, content, first_response)
                 # If domain is in scope, request has not been done yet and resource is not an image
-                elif not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')) \
-                and not request.url[-4:] in lib.config.FORMATS_BLACKLIST \
-                and not request.url[-5:] in lib.config.FORMATS_BLACKLIST \
-                and not request.url[-6:] in lib.config.FORMATS_BLACKLIST:
+                elif not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')):
                     print("Made dynamic request to %s [%s]" % (request.url, request.method))
                     self.__processRequest(request, headers, cookies)
 
