@@ -24,6 +24,9 @@ class Crawler (threading.Thread):
         opts.add_argument("--proxy-bypass-list=*")
         self.driver = webdriver.Chrome(options=opts)
 
+        # Set timeout to 10
+        self.driver.set_page_load_timeout(10)
+
     def addToQueue(self, url):
         self.queue.append(url)
 
@@ -36,7 +39,7 @@ class Crawler (threading.Thread):
                 url = self.queue.pop(0)
                 domain = Path.parseURL(url).domain
                 if not domain:
-                    raise Exception
+                    continue
             else:
                 domain = Domain.getDomainById(id)
                 if not domain:
@@ -44,11 +47,15 @@ class Crawler (threading.Thread):
                     continue
                 domain_name = domain.name if domain.name[0] != '.' else domain.name[1:]
 
-                url = 'http://' + domain_name
+                url = 'http://' + domain_name + '/'
                 try:
                     initial_request = requests.get(url,  allow_redirects=False)
                     if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
-                        url = 'https://' + domain_name
+                        url = 'https://' + domain_name + '/'
+                    elif not initial_request.ok:
+                        print("[+] Got %d for %s" % (initial_request.status_code, url))
+                        url = 'https://' + domain_name + '/'
+                        requests.get(url,  allow_redirects=False)
                 except Exception as e:
                     print("[x] Cannot request %s: %s" % (url, e))
                     id += 1
@@ -333,6 +340,6 @@ class SqlInjection (threading.Thread):
             tested = [*[request.id for request in request.getSameKeysRequests()], *tested]
 
 class Fuzzer (threading.Thread):
-    def __init__(self, seclists_dir):
+    def __init__(self, crawler):
         threading.Thread.__init__(self)
-        self.seclists = seclists_dir
+        self.crawler = crawler
