@@ -4,6 +4,7 @@ from urllib.parse import urlparse, urlunparse
 import lib.config
 from lib.database import DB
 import time
+import pathlib
 
 class Domain:
     def __init__(self, id, name):
@@ -329,11 +330,15 @@ class Request:
 
     # Returns True if request exists else False. If there are already some requests with the same path, protocol and method 
     # but different params/data with same key, it returns True to avoid saving same requests with different CSRFs, session values, etc.
+    # If requested file extension belongs is in lib.config.FORMATS_BLACKLIST, returns False
     @staticmethod
     def checkRequest(url, method, content_type, data):
+        if pathlib.Path(url).suffix in lib.config.FORMATS_BLACKLIST:
+            return False
         path = Path.parseURL(url)
         if not path:
             return False
+
         protocol = urlparse(url).scheme
         params = urlparse(url).query if urlparse(url).query else False
         data = data if (data is not None and data and method == 'POST') else False
