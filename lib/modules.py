@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.options import Options
 
 import lib.config
 from lib.entities import *
+import traceback
 
 class Crawler (threading.Thread):
     def __init__(self):
@@ -24,8 +25,8 @@ class Crawler (threading.Thread):
         opts.add_argument("--proxy-bypass-list=*")
         self.driver = webdriver.Chrome(options=opts)
 
-        # Set timeout to 10
-        self.driver.set_page_load_timeout(10)
+        # Set timeout
+        self.driver.set_page_load_timeout(lib.config.TIMEOUT)
 
     def addToQueue(self, url):
         self.queue.append(url)
@@ -57,7 +58,8 @@ class Crawler (threading.Thread):
                         url = 'https://' + domain_name + '/'
                         requests.get(url,  allow_redirects=False)
                 except Exception as e:
-                    print("[x] Cannot request %s: %s" % (url, e))
+                    print("[x] Cannot request %s" % (url))
+                    traceback.print_tb(e.__traceback__)
                     id += 1
                     continue
 
@@ -80,7 +82,8 @@ class Crawler (threading.Thread):
 
                 self.__crawl(url, 'GET', None, headers, cookies)
             except Exception as e:
-                print('[x] Exception ocurred when crawling %s: %s' % (url, e))
+                print('[x] Exception ocurred when crawling %s' % (url))
+                traceback.print_tb(e.__traceback__)
             finally:
                 print("[+] Finished crawling %s" % url)
                 id += 1
@@ -201,7 +204,8 @@ class Crawler (threading.Thread):
             elif method == 'POST':
                 self.__post(parent_url, data)
         except Exception as e:
-            print('[x] Exception ocurred when requesting %s: %s' % (parent_url, e))
+            print('[x] Exception ocurred when requesting %s' % (parent_url))
+            traceback.print_tb(e.__traceback__)
             return
 
         # Capture all requests, where first will be the request made and the rest all the dynamic ones
