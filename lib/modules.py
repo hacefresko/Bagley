@@ -32,7 +32,8 @@ class Crawler (threading.Thread):
         self.queue.append(url)
 
     def run(self):
-        id = 1
+        # Generator for domains
+        domains = Domain.getDomains()
         while True:
             # Try to get url from queue. If queue is empty, try to get domain from database. If it's also
             # empty, sleeps for 5 seconds and starts again
@@ -42,7 +43,7 @@ class Crawler (threading.Thread):
                 if not domain:
                     continue
             else:
-                domain = Domain.getDomainById(id)
+                domain = next(domains)
                 if not domain:
                     time.sleep(5)
                     continue
@@ -60,7 +61,6 @@ class Crawler (threading.Thread):
                 except Exception as e:
                     print("[x] Cannot request %s" % (url))
                     traceback.print_tb(e.__traceback__)
-                    id += 1
                     continue
 
             try:    
@@ -316,6 +316,29 @@ class Crawler (threading.Thread):
                     content = requests.get(src).text
                     Script.insertScript(src, headers, cookies, content, first_response)
 
+class Fuzzer (threading.Thread):
+    def __init__(self, crawler):
+        threading.Thread.__init__(self)
+        self.crawler = crawler
+
+    def run(self):
+        directories = Path.getDirectories()
+        domains = Domain.getDomains()
+        while True:
+            directory = next(directories)
+            if directory:
+                print("[+] Fuzzing %s" % directory)
+            else:
+                domain = next(domains)
+                if domain:
+                    print("[+] Fuzzing %s" % domain)
+                else:
+                    time.sleep(5)
+                    continue
+
+            
+            
+
 class SqlInjection (threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -323,6 +346,9 @@ class SqlInjection (threading.Thread):
     def run(self):
         tested = []
         for request in Request.getRequests():
+            if not request:
+                time.sleep(5)
+                continue
             if (not request.params and not request.data) or request.id in tested:
                 continue
 
@@ -339,8 +365,3 @@ class SqlInjection (threading.Thread):
                 print(result.stdout)
 
             tested = [*[request.id for request in request.getSameKeysRequests()], *tested]
-
-class Fuzzer (threading.Thread):
-    def __init__(self, crawler):
-        threading.Thread.__init__(self)
-        self.crawler = crawler

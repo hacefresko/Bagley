@@ -61,6 +61,19 @@ class Domain:
             return False
         return Domain(domain[0], domain[1])
 
+    # Yields domains or False if there are no requests. It continues infinetly until program stops
+    @staticmethod
+    def getDomains():
+        id = 1
+        db = DB.getConnection()
+        while True:
+            domain = db.query('SELECT * FROM domains WHERE id = ?', [id]).fetchone()
+            if not domain:
+                yield False
+                continue
+            id += 1
+            yield Domain(domain[0], domain[1])
+
     # Returns True if both domains are equal or if one belongs to a range of subdomains of other, else False
     @staticmethod
     def compareDomains(first, second):
@@ -206,6 +219,19 @@ class Path:
         db = DB.getConnection()
         path = db.query('SELECT id, element, parent, domain FROM paths WHERE id = ?', [id]).fetchone()
         return Path(path[0], path[1], path[2], path[3]) if path else False
+
+    # Yields paths corresponding to directories or False if there are no requests. It continues infinetly until program stops
+    @staticmethod
+    def getDirectories():
+        id = 1
+        db = DB.getConnection()
+        while True:
+            path = db.query('SELECT * FROM paths WHERE element = 0 AND id > ? LIMIT 1', [id]).fetchone()
+            if not path:
+                yield False
+                continue
+            id = path[0]
+            yield Path(path[0], path[1], path[2], path[3])
 
     # Returns path corresponding to URL or False if it does not exist in the database
     @staticmethod
@@ -379,7 +405,7 @@ class Request:
             return False
         return Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])
 
-    # Yields requests one by one infintitely, waiting for more requests to get inserted when there are no more
+    # Yields requests or False if there are no requests. It continues infinetly until program stops
     @staticmethod
     def getRequests():
         id = 1
@@ -387,7 +413,7 @@ class Request:
         while True:
             request = db.query('SELECT * FROM requests WHERE id = ?', [id]).fetchone()
             if not request:
-                time.sleep(2)
+                yield False
                 continue
             id += 1
             yield Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])

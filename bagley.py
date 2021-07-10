@@ -57,7 +57,7 @@ except Exception:
     exit()
 
 print("[+] Starting time: %s" % datetime.datetime.now())
-print("[+] Targets file: %s" % scope_file_name)
+print("[+] Parsing targets file: %s" % scope_file_name)
 
 try:
     scope_file = open(scope_file_name, 'r')
@@ -71,6 +71,9 @@ crawler.start()
 
 sqli = SqlInjection()
 sqli.start()
+
+fuzzer = Fuzzer(crawler)
+fuzzer.start()
 
 # Parse targets file
 while True:
