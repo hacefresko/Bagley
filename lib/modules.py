@@ -321,23 +321,43 @@ class Fuzzer (threading.Thread):
         threading.Thread.__init__(self)
         self.crawler = crawler
 
+    @staticmethod
+    def __processResult(result):
+        if result.returncode != 0:
+            return
+
     def run(self):
         directories = Path.getDirectories()
         domains = Domain.getDomains()
         while True:
             directory = next(directories)
             if directory:
-                print("[+] Fuzzing %s" % directory)
+                print("[+] Fuzzing path %s" % directory)
+
+                command = ['gobuster', 'dir', '-q', '-w', lib.config.DIR_FUZZING]
+
+                # Add headers
+                for header in directory.domain.headers:
+                    command.append('-H')
+                    command.append("'" + str(header) + "'")
+
+                # Add cookies
+                if directory.domain.cookies:
+                    command.append('-c')
+                    cookies = ''
+                    for cookie in directory.domain.cookies:
+                        cookies += str(cookie) + ' '
+                    command.append(cookies)
+
+                Fuzzer.__processResult(subprocess.run(command + ['-u', 'http://' + str(directory)], capture_output=True, encoding='utf-8'))
+                Fuzzer.__processResult(subprocess.run(command + ['-u', 'https://' + str(directory)], capture_output=True, encoding='utf-8'))
             else:
                 domain = next(domains)
                 if domain:
-                    print("[+] Fuzzing %s" % domain)
+                    print("[+] Fuzzing domain %s" % domain)
                 else:
                     time.sleep(5)
                     continue
-
-            
-            
 
 class SqlInjection (threading.Thread):
     def __init__(self):

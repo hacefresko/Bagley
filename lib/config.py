@@ -14,7 +14,7 @@ PARAMS_BLACKLIST = ['csrf', 'sess', 'token']
 HEADERS_BLACKLIST = ['date', 'cookie', 'set-cookie', 'content-length']
 
 # Directory fuzzing wordlist inside Seclists directory
-DIR_FUZZING = '~/Tools/SecLists//Discovery/Web-Content/big.txt'
+DIR_FUZZING = '/Users/hacefresko/Tools/SecLists//Discovery/Web-Content/big.txt'
 
 # Domain fuzzing wordlist inside Seclists directory
-DOMAIN_FUZZING = '~/Tools/SecLists/Discovery/DNS/subdomains-top1million-20000.txt'
+DOMAIN_FUZZING = '/Users/hacefresko/Tools/SecLists/Discovery/DNS/subdomains-top1million-20000.txt'

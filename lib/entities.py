@@ -1,10 +1,8 @@
-import hashlib, json
+import hashlib, json, time, pathlib
 from urllib.parse import urlparse, urlunparse
 
 import lib.config
 from lib.database import DB
-import time
-import pathlib
 
 class Domain:
     def __init__(self, id, name):

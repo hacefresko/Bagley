@@ -72,7 +72,7 @@ crawler.start()
 sqli = SqlInjection()
 sqli.start()
 
-fuzzer = Fuzzer(crawler)
+fuzzer = Fuzzer(None)
 fuzzer.start()
 
 # Parse targets file
