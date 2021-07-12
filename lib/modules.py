@@ -49,13 +49,13 @@ class Crawler (threading.Thread):
                     continue
                 domain_name = domain.name if domain.name[0] != '.' else domain.name[1:]
 
+                # Figure out what protocol to use
                 url = 'http://' + domain_name + '/'
                 try:
                     initial_request = requests.get(url,  allow_redirects=False)
                     if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
                         url = 'https://' + domain_name + '/'
                     elif not initial_request.ok:
-                        print("[+] Got %d for %s" % (initial_request.status_code, url))
                         url = 'https://' + domain_name + '/'
                         requests.get(url,  allow_redirects=False)
                 except Exception as e:
@@ -86,7 +86,6 @@ class Crawler (threading.Thread):
                 traceback.print_tb(e.__traceback__)
             finally:
                 print("[+] Finished crawling %s" % url)
-                id += 1
                 continue
 
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
@@ -228,7 +227,7 @@ class Crawler (threading.Thread):
                         method = 'GET'
                         data = None
 
-                    if Domain.checkScope(urlparse(redirect_to).netloc) and not Request.checkRequest(redirect_to, method, None, data):
+                    if Domain.checkScope(urlparse(redirect_to).netloc) and Request.checkExtension(redirect_to) and not Request.checkRequest(redirect_to, method, None, data):
                         print("Following redirection %d to %s [%s]" % (code, redirect_to, method))
                         self.__crawl(redirect_to, method, data, headers, cookies)
                         return
@@ -246,7 +245,7 @@ class Crawler (threading.Thread):
                     content = requests.get(request.url).text
                     Script.insertScript(request.url, headers, cookies, content, first_response)
                 # If domain is in scope, request has not been done yet and resource is not an image
-                elif not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')):
+                elif Request.checkExtension(request.url) and not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')):
                     print("Made dynamic request to %s [%s]" % (request.url, request.method))
                     self.__processRequest(request, headers, cookies)
 
@@ -265,7 +264,7 @@ class Crawler (threading.Thread):
                 url = urljoin(parent_url, path)
                 domain = urlparse(url).netloc
 
-                if Domain.checkScope(domain) and not Request.checkRequest(url, 'GET', None, None):
+                if Domain.checkScope(domain) and Request.checkExtension(url) and not Request.checkRequest(url, 'GET', None, None):
                     self.__crawl(url, 'GET', None, headers, cookies)
                 
             elif element.name == 'form':
@@ -297,7 +296,7 @@ class Crawler (threading.Thread):
                         url += '?' + data
                         data = None
 
-                    if not Request.checkRequest(url, method, None, data):
+                    if Request.checkExtension(url) and not Request.checkRequest(url, method, None, data):
                         self.__crawl(url, method, data, headers, cookies)
 
             elif element.name == 'script':

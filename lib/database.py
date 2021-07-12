@@ -1,26 +1,24 @@
-import sqlite3, requests, hashlib, time
-from urllib.parse import urlparse, urlunparse
+import sqlite3, threading
 
 DB_NAME = 'bagley.db'
 
 class DB:
-    __db = None
+    # Dict of tids and their instances
+    __instances = {}
 
-    @staticmethod
-    def getConnection():
-        if DB.__db is None:
-            DB()
-        return DB().__db
+    def __new__(cls):
+        tid = threading.current_thread().ident
 
-    def __init__(self):
-        if self.__db is not None:
-            raise Exception("DB is a singleton")
-        else:
-            self.__connection = sqlite3.connect(DB_NAME)
-            self.__db = self
+        if DB.__instances.get(tid) is None:
+            DB.__instances.update({tid: super(DB, cls).__new__(cls)})
+            DB.__instances.get(tid).__connection = sqlite3.connect(DB_NAME)
+        return DB.__instances.get(tid)
 
     def query(self, query, params):
         cursor = self.__connection.cursor()
         cursor.execute(query, params)
         self.__connection.commit()
         return cursor
+
+    def close(self):
+        self.__connection.close()
