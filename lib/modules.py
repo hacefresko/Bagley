@@ -367,7 +367,7 @@ class SqlInjection (threading.Thread):
             if not request:
                 time.sleep(5)
                 continue
-            if request.response and request.response.code != 200 or (not request.params and not request.data) or request.id in tested:
+            if not request.response or request.response.code != 200 or (not request.params and not request.data) or request.id in tested:
                 continue
 
             url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
