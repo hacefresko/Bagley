@@ -150,7 +150,7 @@ class Path:
         db = DB()
         result = ''
         element = self.element
-        parent_id = self.parent.id
+        parent_id = self.parent.id if self.parent else 0
 
         while parent_id != 0:
             result = "/" + (element if element != '0' else '') + result
@@ -388,7 +388,7 @@ class Request:
     # Returns False if extension is in blacklist from config.py, else True   
     @staticmethod
     def checkExtension(url):
-        return False if pathlib.Path(url).suffix in lib.config.EXTENSIONS_BLACKLIST else True
+        return False if pathlib.Path(url.split('?')[0]).suffix in lib.config.EXTENSIONS_BLACKLIST else True
 
     # Returns request if exists else false
     @staticmethod

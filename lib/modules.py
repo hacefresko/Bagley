@@ -63,29 +63,29 @@ class Crawler (threading.Thread):
                     traceback.print_tb(e.__traceback__)
                     continue
 
-            #try:
-            if Request.checkRequest(url, 'GET', None, None):
+            try:
+                if Request.checkRequest(url, 'GET', None, None):
+                    continue
+
+                print("[+] Started crawling %s" % url)
+                if domain.headers:
+                    print("[+] Headers used:")
+                    for header in domain.headers:
+                        print(header)
+                    print()
+                if domain.cookies:
+                    print("[+] Cookies used:")
+                    for cookie in domain.cookies:
+                        print(cookie)
+                    print()
+
+                self.__crawl(url, 'GET', None, domain.headers, domain.cookies)
+            except Exception as e:
+                print('[x] Exception ocurred when crawling %s' % (url))
+                traceback.print_tb(e.__traceback__)
+            finally:
+                print("[+] Finished crawling %s" % url)
                 continue
-
-            print("[+] Started crawling %s" % url)
-            if domain.headers:
-                print("[+] Headers used:")
-                for header in domain.headers:
-                    print(header)
-                print()
-            if domain.cookies:
-                print("[+] Cookies used:")
-                for cookie in domain.cookies:
-                    print(cookie)
-                print()
-
-            self.__crawl(url, 'GET', None, domain.headers, domain.cookies)
-            #except Exception as e:
-            #    print('[x] Exception ocurred when crawling %s' % (url))
-            #    traceback.print_tb(e.__traceback__)
-            #finally:
-            #    print("[+] Finished crawling %s" % url)
-            #    continue
 
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
     def __post(self, path, params):
@@ -367,14 +367,15 @@ class SqlInjection (threading.Thread):
             if not request:
                 time.sleep(5)
                 continue
-            if (not request.params and not request.data) or request.id in tested:
+            if not request.response or request.response.code != 200 or (not request.params and not request.data) or request.id in tested:
                 continue
 
             url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
-            if request.method == 'POST':
-                command = ['sqlmap', '-v', '0', '--flush-session', '--batch', '-u',  url, '--data', request.data]
-            else:
-                command = ['sqlmap', '-v', '0', '--flush-session', '--batch', '-u',  url]
+            command = ['sqlmap', '-v', '0', '--flush-session', '--batch', '-u',  url]
+
+            if request.method == 'POST' and request.data:
+                command.append("--data")
+                command.append(request.data)
 
             result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
