@@ -63,30 +63,29 @@ class Crawler (threading.Thread):
                     traceback.print_tb(e.__traceback__)
                     continue
 
-            try:    
-                print("[+] Started crawling %s" % url)
-                headers = []
-                if domain.headers:
-                    print("[+] Headers used:")
-                    for header in domain.headers:
-                        headers.append(header)
-                        print(header)
-                    print()
-                cookies = []
-                if domain.cookies:
-                    print("[+] Cookies used:")
-                    for cookie in domain.cookies:
-                        cookies.append(cookie)
-                        print(cookie)
-                    print()
-
-                self.__crawl(url, 'GET', None, headers, cookies)
-            except Exception as e:
-                print('[x] Exception ocurred when crawling %s' % (url))
-                traceback.print_tb(e.__traceback__)
-            finally:
-                print("[+] Finished crawling %s" % url)
+            #try:
+            if Request.checkRequest(url, 'GET', None, None):
                 continue
+
+            print("[+] Started crawling %s" % url)
+            if domain.headers:
+                print("[+] Headers used:")
+                for header in domain.headers:
+                    print(header)
+                print()
+            if domain.cookies:
+                print("[+] Cookies used:")
+                for cookie in domain.cookies:
+                    print(cookie)
+                print()
+
+            self.__crawl(url, 'GET', None, domain.headers, domain.cookies)
+            #except Exception as e:
+            #    print('[x] Exception ocurred when crawling %s' % (url))
+            #    traceback.print_tb(e.__traceback__)
+            #finally:
+            #    print("[+] Finished crawling %s" % url)
+            #    continue
 
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
     def __post(self, path, params):
