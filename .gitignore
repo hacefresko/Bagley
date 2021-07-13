@@ -3,6 +3,6 @@
 *.log
 test.*
 __pycache__/
-targets.txt
+scope.txt
 .DS_Store
 .vscode

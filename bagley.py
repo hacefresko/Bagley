@@ -42,10 +42,10 @@ title = '''
 print(title)
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'T:')
+    opts, args = getopt.getopt(sys.argv[1:], 'S:')
 
     for opt, arg in opts:
-        if opt == '-T':
+        if opt == '-S':
             scope_file_name = arg
             scope_found = True
 
@@ -53,16 +53,16 @@ try:
         raise Exception
             
 except Exception:
-    print('[x] Usage: ' + os.path.basename(__file__) + ' -T <targets file>')
+    print('[x] Usage: ' + os.path.basename(__file__) + ' -S <scope file>')
     exit()
 
 print("[+] Starting time: %s" % datetime.datetime.now())
-print("[+] Parsing targets file: %s" % scope_file_name)
+print("[+] Parsing scope file: %s" % scope_file_name)
 
 try:
     scope_file = open(scope_file_name, 'r')
 except FileNotFoundError:
-    print('[x] Targets file not found')
+    print('[x] Scope file not found')
     exit()
 
 # Init all modules
@@ -75,7 +75,7 @@ sqli.start()
 fuzzer = Fuzzer(crawler)
 fuzzer.start()
 
-# Parse targets file
+# Parse scope file
 while True:
     line = scope_file.readline()
     if not line:
@@ -84,14 +84,12 @@ while True:
     try:
         entry = json.loads(line)
     except:
-        print("[x] Target couldn't be parsed")
-        time.sleep(60)
+        print("[x] Target couldn't be parsed: %s" % line)
         continue
 
     # Get domain
     domain = entry.get('domain')
     if not domain:
-        time.sleep(60)
         continue
     if not Domain.checkDomain(domain):
         print("[+] Target found: %s" % domain)
