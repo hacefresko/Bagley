@@ -1,6 +1,9 @@
 # Timeout for selenium
 TIMEOUT = 120
 
+# Requests per second
+REQ_PER_SEC = 10
+
 # Formats that won't be stored
 EXTENSIONS_BLACKLIST = ['.css', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp', '.bmp', '.ico', '.tiff', '.woff2', '.woff']
 

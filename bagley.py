@@ -69,11 +69,11 @@ except FileNotFoundError:
 crawler = Crawler()
 crawler.start()
 
-sqli = SqlInjection()
-sqli.start()
-
 fuzzer = Fuzzer(crawler)
 fuzzer.start()
+
+sqli = SqlInjection()
+sqli.start()
 
 # Parse scope file
 while True:

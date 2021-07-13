@@ -324,7 +324,9 @@ class Fuzzer (threading.Thread):
         if not Request.checkRequest(url, 'GET', None, None):
             self.crawler.addToQueue(url)
 
-        command = ['gobuster', 'dir', '-q', '-w', lib.config.DIR_FUZZING, '-u', url]
+        delay = str(int((1/lib.config.REQ_PER_SEC) * 1000)) + 'ms'
+
+        command = ['gobuster', 'dir', '-q', '-w', lib.config.DIR_FUZZING, '-u', url, '--delay', delay]
 
         # Add headers
         for header in headers:
@@ -344,7 +346,7 @@ class Fuzzer (threading.Thread):
         if result.returncode != 0:
             return
 
-        for line in result.stdout:
+        for line in result.stdout.splitlines():
             discovered = urljoin(url, line.split(' ')[0])
             print("[+] Path found! Queued %s to crawler" % discovered)
             self.crawler.addToQueue(discovered)
@@ -356,7 +358,7 @@ class Fuzzer (threading.Thread):
         if result.returncode != 0:
             return
 
-        for line in result.stdout:
+        for line in result.stdout.splitlines():
             discovered = line.split('Found: ')[1]
             print('[+] Domain found! Inserted %s to database' % discovered)
             Domain.insertDomain(discovered, None, None)
