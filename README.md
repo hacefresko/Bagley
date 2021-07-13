@@ -2,9 +2,7 @@
 
 <img src="/git%20resources/logo.png" width="350">
 
-Bagley is a tool made for bug bounty enviroments to analize a series of domains looking for vulnerabilities.
-
-It may be deployed as a bot in a server, where targets can be specified via the scope file
+Bagley is a tool made for bug bounty enviroments to analize whole domains looking for vulnerabilities. It may be deployed as a bot in a server, where targets can be specified via the scope file
 
 ## Usage
 
@@ -17,6 +15,10 @@ If you want to use another name for the database, it must be changed in database
 File specifying the scope must be provided with parameter -S. It must contain one target per line, in JSON format. The application will iterate over the targets inside the scope file and will scan all of them one by one. Once it's done, it will wait for the user to write more targets into the file.
 
 This way, the application can be launched as a daemon waiting for targets to be scanned.
+
+Example of usage:
+
+    python3 bagley.py -S scope.txt
 
 Scope options:
 
