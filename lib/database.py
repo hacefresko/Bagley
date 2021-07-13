@@ -4,15 +4,15 @@ DB_NAME = 'bagley.db'
 
 class DB:
     # Dict of tids and their instances
-    __instances = {}
+    __instance = None
 
     def __new__(cls):
-        tid = threading.current_thread().ident
+        if DB.__instance is None:
+            DB.__instance = super(DB, cls).__new__(cls)
+        return DB.__instance
 
-        if DB.__instances.get(tid) is None:
-            DB.__instances.update({tid: super(DB, cls).__new__(cls)})
-            DB.__instances.get(tid).__connection = sqlite3.connect(DB_NAME)
-        return DB.__instances.get(tid)
+    def __init__(self):
+        self.__connection = sqlite3.connect(DB_NAME, check_same_thread=False)
 
     def query(self, query, params):
         cursor = self.__connection.cursor()

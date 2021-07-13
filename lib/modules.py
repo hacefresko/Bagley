@@ -63,10 +63,10 @@ class Crawler (threading.Thread):
                     traceback.print_tb(e.__traceback__)
                     continue
 
-            try:
-                if Request.checkRequest(url, 'GET', None, None):
-                    continue
+            if Request.checkRequest(url, 'GET', None, None):
+                continue
 
+            try:
                 print("[+] Started crawling %s" % url)
                 if domain.headers:
                     print("[+] Headers used:")
