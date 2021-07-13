@@ -206,14 +206,14 @@ class Crawler (threading.Thread):
             traceback.print_tb(e.__traceback__)
             return
 
-        # Capture all requests, where first will be the request made and the rest all the dynamic ones
-        for i, request in enumerate(self.driver.iter_requests()):
-            if i == 0:
+        # Capture all requests. The one requesting parent_url will be the main request. Other ones will be dynamic requests
+        for request in self.driver.iter_requests():
+            if request.url == parent_url:
                 first_request, first_response = self.__processRequest(request, headers, cookies)
                 if not first_request or not first_response:
                     return
 
-                code = first_response.code
+                code = first_response.cod
 
                 # Follow redirect if 3xx response is received
                 if code//100 == 3:
@@ -233,7 +233,6 @@ class Crawler (threading.Thread):
                     else:
                         print("Got redirection %d but %s not in scope" % (code, redirect_to))
                         return
-
             else:
                 domain = urlparse(request.url).netloc
                 if not Domain.checkScope(domain):
