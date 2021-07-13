@@ -213,7 +213,7 @@ class Crawler (threading.Thread):
                 if not first_request or not first_response:
                     return
 
-                code = first_response.cod
+                code = first_response.code
 
                 # Follow redirect if 3xx response is received
                 if code//100 == 3:
@@ -318,10 +318,34 @@ class Fuzzer (threading.Thread):
         threading.Thread.__init__(self)
         self.crawler = crawler
 
-    @staticmethod
-    def __processResult(result):
+    def __fuzzPath(self, url, headers, cookies):
+        if not Request.checkRequest(url, 'GET', None, None):
+            self.crawler.addToQueue(url)
+
+        command = ['gobuster', 'dir', '-q', '-w', lib.config.DIR_FUZZING]
+
+        # Add headers
+        for header in headers:
+            command.append('-H')
+            command.append("'" + str(header) + "'")
+
+        # Add cookies
+        if cookies:
+            command.append('-c')
+            cookies = ''
+            for cookie in cookies:
+                cookies += str(cookie) + ' '
+            command.append(cookies)
+
+        result = subprocess.run(command + ['-u', url], capture_output=True, encoding='utf-8')
+
         if result.returncode != 0:
             return
+
+        for line in result.stdout:
+            discovered = urljoin(url, line.split(' ')[0])
+            print("[+] Found path! Queued %s to crawler" % discovered)
+            self.crawler.addToQueue(discovered)
 
     def run(self):
         directories = Path.getDirectories()
@@ -331,23 +355,8 @@ class Fuzzer (threading.Thread):
             if directory:
                 print("[+] Fuzzing path %s" % directory)
 
-                command = ['gobuster', 'dir', '-q', '-w', lib.config.DIR_FUZZING]
-
-                # Add headers
-                for header in directory.domain.headers:
-                    command.append('-H')
-                    command.append("'" + str(header) + "'")
-
-                # Add cookies
-                if directory.domain.cookies:
-                    command.append('-c')
-                    cookies = ''
-                    for cookie in directory.domain.cookies:
-                        cookies += str(cookie) + ' '
-                    command.append(cookies)
-
-                Fuzzer.__processResult(subprocess.run(command + ['-u', 'http://' + str(directory)], capture_output=True, encoding='utf-8'))
-                Fuzzer.__processResult(subprocess.run(command + ['-u', 'https://' + str(directory)], capture_output=True, encoding='utf-8'))
+                self.__fuzzPath('http://' + str(directory), directory.domain.headers, directory.domain.cookies)
+                self.__fuzzPath('https://' + str(directory), directory.domain.headers, directory.domain.cookies)
             else:
                 domain = next(domains)
                 if domain:
