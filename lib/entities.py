@@ -1,7 +1,8 @@
 import hashlib, json, time, pathlib
 from urllib.parse import urlparse, urlunparse
 
-import lib.config, lib.database
+import lib.config
+from lib.database import DB
 
 class Domain:
     def __init__(self, id, name):
@@ -18,7 +19,9 @@ class Domain:
 
     # Returns the list of headers of the domain
     def __getHeaders(self):
-        headers = lib.database.query_all('SELECT id, key, value FROM headers INNER JOIN domain_headers on id = header WHERE domain = ?', [self.id])
+        db = DB()
+    
+        headers = db.query('SELECT id, key, value FROM headers INNER JOIN domain_headers on id = header WHERE domain = ?', [self.id]).fetchall()
 
         result = []
         for header in headers:
@@ -28,7 +31,9 @@ class Domain:
 
     # Returns the list of cookies of the domain
     def __getCookies(self):
-        cookies = lib.database.query_all('SELECT * FROM cookies INNER JOIN domain_cookies on id = cookie WHERE domain_cookies.domain = ?', [self.id])
+        db = DB()
+    
+        cookies = db.query('SELECT * FROM cookies INNER JOIN domain_cookies on id = cookie WHERE domain_cookies.domain = ?', [self.id]).fetchall()
 
         result = []
         for cookie in cookies:
@@ -39,7 +44,8 @@ class Domain:
     # Returns domain identified by id or False if it does not exist
     @staticmethod
     def getDomainById(id):
-        domain = lib.database.query_one('SELECT * FROM domains WHERE id = ?', [id])
+        db = DB()
+        domain = db.query('SELECT * FROM domains WHERE id = ?', [id]).fetchone()
         if not domain:
             return False
         return Domain(domain[0], domain[1])
@@ -47,7 +53,8 @@ class Domain:
     # Returns domain identified by the domain name or False if it does not exist
     @staticmethod
     def getDomain(domain_name):
-        domain = lib.database.query_one('SELECT * FROM domains WHERE name = ?', [domain_name])
+        db = DB()
+        domain = db.query('SELECT * FROM domains WHERE name = ?', [domain_name]).fetchone()
         if not domain:
             return False
         return Domain(domain[0], domain[1])
@@ -56,8 +63,9 @@ class Domain:
     @staticmethod
     def getDomains():
         id = 1
+        db = DB()
         while True:
-            domain = lib.database.query_one('SELECT * FROM domains WHERE id = ?', [id])
+            domain = db.query('SELECT * FROM domains WHERE id = ?', [id]).fetchone()
             if not domain:
                 yield False
                 continue
@@ -81,7 +89,8 @@ class Domain:
     # Returns True if domain exists in database (either inside or outside the scope)
     @staticmethod
     def checkDomain(domain):
-        return True if (lib.database.query_one('SELECT name FROM domains WHERE name LIKE ?', [domain]) or lib.database.query_one('SELECT name FROM out_of_scope WHERE name LIKE ?', [domain])) else False
+        db = DB()
+        return True if (db.query('SELECT name FROM domains WHERE name LIKE ?', [domain]).fetchone() or db.query('SELECT name FROM out_of_scope WHERE name LIKE ?', [domain]).fetchone()) else False
 
     # Returns True if domain is inside the scope, else False.
     @staticmethod
@@ -89,16 +98,18 @@ class Domain:
         if not domain:
             return False
 
+        db = DB()
+
         # Check if domain is out of scope
-        if lib.database.query_one('SELECT name FROM out_of_scope WHERE name LIKE ?', [domain]):
+        if db.query('SELECT name FROM out_of_scope WHERE name LIKE ?', [domain]).fetchone():
             return False
 
         # Check if domain is in database (%domain so example.com is in scope in .example.com was specified)
-        if lib.database.query_one('SELECT name FROM domains WHERE name LIKE ?', ['%' + domain]):
+        if db.query('SELECT name FROM domains WHERE name LIKE ?', ['%' + domain]).fetchone():
             return True
         
         # Check if parent domain is in a set of subdomains inside the database
-        if len(domain.split('.')) > 2 and lib.database.query_one('SELECT name FROM domains WHERE name LIKE ?', ['.' + '.'.join(domain.split('.')[-2:])]):
+        if len(domain.split('.')) > 2 and db.query('SELECT name FROM domains WHERE name LIKE ?', ['.' + '.'.join(domain.split('.')[-2:])]).fetchone():
             return True
 
         return False
@@ -106,10 +117,11 @@ class Domain:
     # Inserts domain if not already inserted
     @staticmethod
     def insertDomain(domain_name, headers, cookies):
+        db = DB()
         if Domain.checkDomain(domain_name):
             return Domain.getDomain(domain_name)
 
-        domain = Domain(lib.database.execute_and_get_id('INSERT INTO domains (name) VALUES (?)', [domain_name]), domain_name)
+        domain = Domain(db.query('INSERT INTO domains (name) VALUES (?)', [domain_name]).lastrowid, domain_name)
         for element in headers + cookies:
             element.link(domain)
         
@@ -118,8 +130,9 @@ class Domain:
     # Inserts an out of scope domain if not already inserted neither in scope nor out
     @staticmethod
     def insertOutOfScopeDomain(domain):
+        db = DB()
         if not Domain.checkDomain(domain):
-            lib.database.execute('INSERT INTO out_of_scope (name) VALUES (?)', [domain])
+            db.query('INSERT INTO out_of_scope (name) VALUES (?)', [domain])
 
 class Path:
     def __init__(self, id, element, parent, domain):
@@ -133,14 +146,15 @@ class Path:
             return False
         return self.id == other.id
 
-    def __str__(self):
+    def __str__(self):  
+        db = DB()
         result = ''
         element = self.element
         parent_id = self.parent.id if self.parent else 0
 
         while parent_id != 0:
             result = "/" + (element if element != '0' else '') + result
-            element, parent_id = lib.database.query_one('SELECT element, parent FROM paths WHERE id = ?', [parent_id])
+            element, parent_id = db.query('SELECT element, parent FROM paths WHERE id = ?', [parent_id]).fetchone()
         result = "/" + (element if element != '0' else '') + result
         result = str(self.domain) + result
 
@@ -150,7 +164,8 @@ class Path:
     @staticmethod
     def __getPath(element, parent, domain):
         parent_id = parent.id if parent else False
-        path = lib.database.query_one('SELECT * FROM paths WHERE element = ? AND parent = ? AND domain = ?', [element, parent_id, domain.id])
+        db = DB()
+        path = db.query('SELECT * FROM paths WHERE element = ? AND parent = ? AND domain = ?', [element, parent_id, domain.id]).fetchone()
         return Path(path[0], path[1], path[2], path[3]) if path else False
 
     # Returns a dict with domain and a list elements with each element from the URL. URL must have protocol, domain and elements in order to get parsed correctly.
@@ -199,15 +214,17 @@ class Path:
     # Returns path corresponding to id or False if it does not exist
     @staticmethod
     def getPath(id):
-        path = lib.database.query_one('SELECT id, element, parent, domain FROM paths WHERE id = ?', [id])
+        db = DB()
+        path = db.query('SELECT id, element, parent, domain FROM paths WHERE id = ?', [id]).fetchone()
         return Path(path[0], path[1], path[2], path[3]) if path else False
 
     # Yields paths corresponding to directories or False if there are no requests. It continues infinetly until program stops
     @staticmethod
     def getDirectories():
         id = 1
+        db = DB()
         while True:
-            path = lib.database.query_one('SELECT * FROM paths WHERE element = 0 AND id > ? LIMIT 1', [id])
+            path = db.query('SELECT * FROM paths WHERE element = 0 AND id > ? LIMIT 1', [id]).fetchone()
             if not path:
                 yield False
                 continue
@@ -237,6 +254,7 @@ class Path:
     # If domain is not in scope, returns False. If domain is in scope but not in database, inserts it
     @staticmethod
     def insertPath(url, headers, cookies):
+        db = DB()
         parsedURL = Path.__parseURL(url)
 
         if not Domain.checkScope(parsedURL['domain']):
@@ -249,7 +267,7 @@ class Path:
         for i, element in enumerate(parsedURL['elements']):
             path = Path.__getPath(element, parent, domain)
             if not path:
-                path = Path.getPath(lib.database.execute_and_get_id('INSERT INTO paths (element, parent, domain) VALUES (?,?,?)', [element, parent.id if parent else False, domain.id]))
+                path = Path.getPath(db.query('INSERT INTO paths (element, parent, domain) VALUES (?,?,?)', [element, parent.id if parent else False, domain.id]).lastrowid)
             if i == len(parsedURL['elements']) - 1:
                 return path
             parent = path
@@ -285,7 +303,9 @@ class Request:
 
     # Returns the list of headers of the request
     def __getHeaders(self):
-        headers = lib.database.query_all('SELECT id, key, value FROM headers INNER JOIN request_headers on id = header WHERE request = ?', [self.id])
+        db = DB()
+    
+        headers = db.query('SELECT id, key, value FROM headers INNER JOIN request_headers on id = header WHERE request = ?', [self.id]).fetchall()
 
         result = []
         for header in headers:
@@ -295,7 +315,9 @@ class Request:
 
     # Returns the list of cookies of the request
     def __getCookies(self):
-        cookies = lib.database.query_all('SELECT * FROM cookies INNER JOIN request_cookies on id = cookie WHERE request = ?', [self.id])
+        db = DB()
+    
+        cookies = db.query('SELECT * FROM cookies INNER JOIN request_cookies on id = cookie WHERE request = ?', [self.id]).fetchall()
 
         result = []
         for cookie in cookies:
@@ -343,6 +365,7 @@ class Request:
         params = urlparse(url).query if urlparse(url).query else False
         data = data if (data is not None and data and method == 'POST') else False
 
+        db = DB()
         if params or data:
             query = 'SELECT * FROM requests WHERE protocol = ? AND path = ? AND method = ?'
             query_params = [protocol, path.id, method]
@@ -355,18 +378,18 @@ class Request:
                 query += ' AND data LIKE ?'
                 query_params.append(Utils.substitutePOSTData(content_type, data, None, '%'))
 
-            result = lib.database.query_all(query, query_params)
+            result = db.query(query, query_params).fetchall()
 
             if len(result) > 10:
                 return True
 
-        return True if lib.database.query_one('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path.id, params, method, data]) else False
+        return True if db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path.id, params, method, data]).fetchone() else False
 
     # Returns False if extension is in blacklist from config.py, else True   
     @staticmethod
     def checkExtension(url):
         return False if pathlib.Path(url.split('?')[0]).suffix in lib.config.EXTENSIONS_BLACKLIST else True
-
+        
     # Returns request if exists else false
     @staticmethod
     def getRequest(url, method, content_type, data):
@@ -377,8 +400,8 @@ class Request:
         params = Request.__parseParams(urlparse(url).query)
         data = Request.__parseData(content_type, data) if method == 'POST' else False
 
-        request = lib.database.query_one('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path.id, params, method, data])
-
+        db = DB()
+        request = db.query('SELECT * FROM requests WHERE protocol = ? AND path = ? AND params = ? AND method = ? AND data = ?', [protocol, path.id, params, method, data]).fetchone()
         if not request:
             return False
         return Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])
@@ -387,8 +410,9 @@ class Request:
     @staticmethod
     def getRequests():
         id = 1
+        db = DB()
         while True:
-            request = lib.database.query_one('SELECT * FROM requests WHERE id = ?', [id])
+            request = db.query('SELECT * FROM requests WHERE id = ?', [id]).fetchone()
             if not request:
                 yield False
                 continue
@@ -416,7 +440,8 @@ class Request:
         params = Request.__parseParams(urlparse(url).query)
         data = Request.__parseData(content_type, data) if method == 'POST' else False
 
-        lib.database.execute('INSERT INTO requests (protocol, path, params, method, data) VALUES (?,?,?,?,?)', [protocol, path.id, params, method, data])
+        db = DB()
+        db.query('INSERT INTO requests (protocol, path, params, method, data) VALUES (?,?,?,?,?)', [protocol, path.id, params, method, data])
         request = Request.getRequest(url, method, content_type, data)
 
         for element in headers + cookies:
@@ -440,7 +465,8 @@ class Request:
             query += ' AND data LIKE ?'
             query_params.append(Utils.substitutePOSTData(self.getHeader('content-type'), self.data, None, '%'))
 
-        result = lib.database.query_all(query, query_params)
+        db = DB()
+        result = db.query(query, query_params).fetchall()
 
         for request in result:
             requests.append(Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6]))
@@ -465,7 +491,9 @@ class Response:
 
     # Returns the list of headers of the response
     def __getHeaders(self):
-        headers = lib.database.query_all('SELECT id, key, value FROM headers INNER JOIN response_headers on id = header WHERE response = ?', [self.hash])
+        db = DB()
+    
+        headers = db.query('SELECT id, key, value FROM headers INNER JOIN response_headers on id = header WHERE response = ?', [self.hash]).fetchall()
 
         result = []
         for header in headers:
@@ -475,7 +503,9 @@ class Response:
 
     # Returns the list of cookies of the response
     def __getCookies(self):
-        cookies = lib.database.query_all('SELECT * FROM cookies INNER JOIN response_cookies on id = cookie WHERE response = ?', [self.hash])
+        db = DB()
+    
+        cookies = db.query('SELECT * FROM cookies INNER JOIN response_cookies on id = cookie WHERE response = ?', [self.hash]).fetchall()
 
         result = []
         for cookie in cookies:
@@ -485,7 +515,8 @@ class Response:
 
     # Returns the list of scripts of the response
     def __getScripts(self):
-        scripts = lib.database.query_all('SELECT hash, content, path FROM scripts INNER JOIN response_scripts on hash = script WHERE response = ?', [self.hash])
+        db = DB()
+        scripts = db.query('SELECT hash, content, path FROM scripts INNER JOIN response_scripts on hash = script WHERE response = ?', [self.hash]).fetchall()
 
         result = []
         for script in scripts:
@@ -499,12 +530,14 @@ class Response:
         if not body:
             body = False
 
-        return True if lib.database.query_one('SELECT * FROM responses WHERE hash = ?', [Response.__hashResponse(code, body, headers, cookies)]) else False
+        db = DB()
+        return True if db.query('SELECT * FROM responses WHERE hash = ?', [Response.__hashResponse(code, body, headers, cookies)]).fetchone() else False
     
     # Returns response if exists, else False
     @staticmethod
     def getResponse(response_hash):
-        response = lib.database.query_one('SELECT * FROM responses WHERE hash = ?', [response_hash])
+        db = DB()
+        response = db.query('SELECT * FROM responses WHERE hash = ?', [response_hash]).fetchone()
         if not response:
             return False
         return Response(response[0], response[1], response[2])
@@ -522,8 +555,10 @@ class Response:
 
         response_hash = Response.__hashResponse(code, body, headers, cookies)
 
-        lib.database.execute('INSERT INTO responses (hash, code, content) VALUES (?,?,?)', [response_hash, code, body])
-        lib.database.execute('UPDATE requests SET response = ? WHERE id = ?', [response_hash, request.id])
+        db = DB()
+
+        db.query('INSERT INTO responses (hash, code, content) VALUES (?,?,?)', [response_hash, code, body])
+        db.query('UPDATE requests SET response = ? WHERE id = ?', [response_hash, request.id])
 
         response = Response.getResponse(response_hash)
         for element in headers + cookies:
@@ -562,7 +597,8 @@ class Header:
     @staticmethod
     def getHeader(key, value):
         key, value = Header.__parseHeader(key, value)
-        result = lib.database.query_one('SELECT * FROM headers WHERE key = ? AND value = ?', [key, value])
+        db = DB()
+        result = db.query('SELECT * FROM headers WHERE key = ? AND value = ?', [key, value]).fetchone()
         if not result:
             return False
         
@@ -574,20 +610,23 @@ class Header:
         key, value = Header.__parseHeader(key, value)
         header = Header.getHeader(key, value)
         if not header:
-            id = lib.database.execute_and_get_id('INSERT INTO headers (key, value) VALUES (?,?)', [key, value])
+            db = DB()
+            id = db.query('INSERT INTO headers (key, value) VALUES (?,?)', [key, value]).lastrowid
             header = Header(id, key, value)
         return header
 
     # Links the header to the specified target. If target is not a request nor a response, returns False
     def link(self, target):
+        db = DB()
+
         if isinstance(target, Request):
-            lib.database.execute('INSERT INTO request_headers (request, header) VALUES (?,?)', [target.id, self.id])
+            db.query('INSERT INTO request_headers (request, header) VALUES (?,?)', [target.id, self.id])
             return True
         elif isinstance(target, Response):
-            lib.database.execute('INSERT INTO response_headers (response, header) VALUES (?,?)', [target.hash, self.id])
+            db.query('INSERT INTO response_headers (response, header) VALUES (?,?)', [target.hash, self.id])
             return True
         elif isinstance(target, Domain):
-            lib.database.execute('INSERT INTO domain_headers(domain, header) VALUES (?,?)', [target.name, self.id])
+            db.query('INSERT INTO domain_headers(domain, header) VALUES (?,?)', [target.name, self.id])
         else:
             return False
 
@@ -627,7 +666,8 @@ class Cookie:
         if cookie_domain and not Domain.checkScope(cookie_domain):
             return False
         
-        cookie = lib.database.query_one('SELECT * FROM cookies WHERE name = ? AND value = ? AND domain = ? AND path = ?', [name, value, cookie_domain, cookie_path])
+        db = DB()
+        cookie = db.query('SELECT * FROM cookies WHERE name = ? AND value = ? AND domain = ? AND path = ?', [name, value, cookie_domain, cookie_path]).fetchone()
         if not cookie:
             return False
         return Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9])
@@ -641,7 +681,8 @@ class Cookie:
 
         name, value = Cookie.__parseCookie(name, value)
 
-        results = lib.database.query_all('SELECT * FROM cookies WHERE name = ? AND value = ?', [name, value])
+        db = DB()
+        results = db.query('SELECT * FROM cookies WHERE name = ? AND value = ?', [name, value]).fetchall()
         for result in results:
             cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9])
             # If domain/range of subdomains and range of paths  from cookie match with url
@@ -659,20 +700,23 @@ class Cookie:
         name, value = Cookie.__parseCookie(name, value)
         cookie = Cookie.__getCookie(name, value, cookie_domain, cookie_path)
         if not cookie:
-            id = lib.database.execute_and_get_id('INSERT INTO cookies (name, value, domain, path, expires, maxage, httponly, secure, samesite) VALUES (?,?,?,?,?,?,?,?,?)', [name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite])
+            db = DB()
+            id = db.query('INSERT INTO cookies (name, value, domain, path, expires, maxage, httponly, secure, samesite) VALUES (?,?,?,?,?,?,?,?,?)', [name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite]).lastrowid
             cookie = Cookie(id, name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite)
         return cookie
 
     # Links the cookie to the specified target. If target is not a request nor a response, returns False
     def link(self, target):
+        db = DB()
+
         if isinstance(target, Request):
-            lib.database.execute('INSERT INTO request_cookies (request, cookie) VALUES (?,?)', [target.id, self.id])
+            db.query('INSERT INTO request_cookies (request, cookie) VALUES (?,?)', [target.id, self.id])
             return True
         elif isinstance(target, Response):
-            lib.database.execute('INSERT INTO response_cookies (response, cookie) VALUES (?,?)', [target.hash, self.id])
+            db.query('INSERT INTO response_cookies (response, cookie) VALUES (?,?)', [target.hash, self.id])
             return True
         elif isinstance(target, Domain):
-            lib.database.execute('INSERT INTO domain_cookies(domain, cookie) VALUES (?,?)', [target.name, self.id])
+            db.query('INSERT INTO domain_cookies(domain, cookie) VALUES (?,?)', [target.name, self.id])
         else:
             return False
 
@@ -690,7 +734,9 @@ class Script:
     # Returns script by url and content or False if it does not exist   
     @staticmethod 
     def getScript(url, content):
-        result = lib.database.query_one('SELECT * FROM scripts WHERE hash = ?', [Script.__getHash(url, content)])
+        db = DB()
+
+        result = db.query('SELECT * FROM scripts WHERE hash = ?', [Script.__getHash(url, content)]).fetchone()
         if not result:
             return False
         return Script(result[0], result[1], result[2])
@@ -710,12 +756,13 @@ class Script:
         else:
             path = False
 
+        db = DB()
         script = Script.getScript(url, content)
         if not script:
             # Cannot use lastrowid since scripts table does not have INTEGER PRIMARY KEY but TEXT PRIMARY KEY (hash)
-            lib.database.execute('INSERT INTO scripts (hash, path, content) VALUES (?,?,?)', [Script.__getHash(url, content), path, content])
+            db.query('INSERT INTO scripts (hash, path, content) VALUES (?,?,?)', [Script.__getHash(url, content), path, content])
             script = Script.getScript(url, content)
-        lib.database.execute('INSERT INTO response_scripts (response, script) VALUES (?,?)', [response.hash, script.hash])
+        db.query('INSERT INTO response_scripts (response, script) VALUES (?,?)', [response.hash, script.hash])
 
         return script
 

@@ -2,39 +2,23 @@ import sqlite3, threading
 
 DB_NAME = 'bagley.db'
 
-def query_one(query, params):
-    connection = sqlite3.connect(DB_NAME)
-    cursor = connection.cursor()
-    cursor.execute(query, params)
-    connection.commit()
-    result = cursor.fetchone()
-    connection.close()
+class DB:
+    # Dict of tids and their instances
+    __instances = {}
 
-    return result
+    def __new__(cls):
+        tid = threading.current_thread().ident
 
-def query_all(query, params):
-    connection = sqlite3.connect(DB_NAME)
-    cursor = connection.cursor()
-    cursor.execute(query, params)
-    connection.commit()
-    result = cursor.fetchall()
-    connection.close()
+        if DB.__instances.get(tid) is None:
+            DB.__instances.update({tid: super(DB, cls).__new__(cls)})
+            DB.__instances.get(tid).__connection = sqlite3.connect(DB_NAME)
+        return DB.__instances.get(tid)
 
-    return result
+    def query(self, query, params):
+        cursor = self.__connection.cursor()
+        cursor.execute(query, params)
+        self.__connection.commit()
+        return cursor
 
-def execute(query, params):
-    connection = sqlite3.connect(DB_NAME)
-    cursor = connection.cursor()
-    cursor.execute(query, params)
-    connection.commit()
-    connection.close()
-
-def execute_and_get_id(query, params):
-    connection = sqlite3.connect(DB_NAME)
-    cursor = connection.cursor()
-    cursor.execute(query, params)
-    connection.commit()
-    result = cursor.lastrowid
-    connection.close()
-
-    return result
+    def close(self):
+        self.__connection.close()
