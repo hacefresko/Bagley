@@ -396,7 +396,8 @@ class SqlInjection (threading.Thread):
                 continue
 
             url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
-            command = ['sqlmap', '-v', '0', '--flush-session', '--batch', '-u',  url]
+            delay = delay = str(1/lib.config.REQ_PER_SEC)
+            command = ['sqlmap', '--delay=' + delay, '-v', '0', '--flush-session', '--batch', '-u',  url]
 
             if request.method == 'POST' and request.data:
                 command.append("--data")
