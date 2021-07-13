@@ -206,18 +206,20 @@ class Crawler (threading.Thread):
             traceback.print_tb(e.__traceback__)
             return
 
+        main_request = None
+        main_response = None
         # Capture all requests. The one requesting parent_url will be the main request. Other ones will be dynamic requests
         for request in self.driver.iter_requests():
-            if request.url == parent_url:
-                first_request, first_response = self.__processRequest(request, headers, cookies)
-                if not first_request or not first_response:
+            if request.url == parent_url and main_request is None and main_response is None:
+                main_request, main_response = self.__processRequest(request, headers, cookies)
+                if not main_request or not main_response:
                     return
 
-                code = first_response.code
+                code = main_response.code
 
                 # Follow redirect if 3xx response is received
                 if code//100 == 3:
-                    redirect_to = first_response.getHeader('location').value
+                    redirect_to = main_response.getHeader('location').value
                     if not redirect_to:
                         print("Received %d but location header is not present" % code)
                         return
@@ -241,14 +243,14 @@ class Crawler (threading.Thread):
                 # If resource is a JS file
                 if request.url[-3:] == '.js':
                     content = requests.get(request.url).text
-                    Script.insertScript(request.url, headers, cookies, content, first_response)
+                    Script.insertScript(request.url, headers, cookies, content, main_response)
                 # If domain is in scope, request has not been done yet and resource is not an image
                 elif Request.checkExtension(request.url) and not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')):
                     print("Made dynamic request to %s [%s]" % (request.url, request.method))
                     self.__processRequest(request, headers, cookies)
 
         # Parse first response body
-        parser = BeautifulSoup(first_response.body, 'html.parser')
+        parser = BeautifulSoup(main_response.body, 'html.parser')
         for element in parser(['a', 'form', 'script']):
             if element.name == 'a':
                 path = element.get('href')
@@ -303,7 +305,7 @@ class Crawler (threading.Thread):
                     if element.string is None:
                         continue
 
-                    Script.insertScript(None, None, None, element.string, first_response)
+                    Script.insertScript(None, None, None, element.string, main_response)
                 else:
                     src = urljoin(parent_url, src)
                     domain = urlparse(src).netloc
@@ -311,7 +313,7 @@ class Crawler (threading.Thread):
                         continue
 
                     content = requests.get(src).text
-                    Script.insertScript(src, headers, cookies, content, first_response)
+                    Script.insertScript(src, headers, cookies, content, main_response)
 
 class Fuzzer (threading.Thread):
     def __init__(self, crawler):
@@ -322,7 +324,7 @@ class Fuzzer (threading.Thread):
         if not Request.checkRequest(url, 'GET', None, None):
             self.crawler.addToQueue(url)
 
-        command = ['gobuster', 'dir', '-q', '-w', lib.config.DIR_FUZZING]
+        command = ['gobuster', 'dir', '-q', '-w', lib.config.DIR_FUZZING, '-u', url]
 
         # Add headers
         for header in headers:
@@ -337,15 +339,27 @@ class Fuzzer (threading.Thread):
                 cookies += str(cookie) + ' '
             command.append(cookies)
 
-        result = subprocess.run(command + ['-u', url], capture_output=True, encoding='utf-8')
+        result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if result.returncode != 0:
             return
 
         for line in result.stdout:
             discovered = urljoin(url, line.split(' ')[0])
-            print("[+] Found path! Queued %s to crawler" % discovered)
+            print("[+] Path found! Queued %s to crawler" % discovered)
             self.crawler.addToQueue(discovered)
+
+    def __fuzzDomain(self, domain):
+        command = ['gobuster', 'dns', '-q', '-w', lib.config.DOMAIN_FUZZING, '-d', domain]
+        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+
+        if result.returncode != 0:
+            return
+
+        for line in result.stdout:
+            discovered = line.split('Found: ')[1]
+            print('[+] Domain found! Inserted %s to database' % discovered)
+            Domain.insertDomain(discovered, None, None)
 
     def run(self):
         directories = Path.getDirectories()
@@ -359,12 +373,13 @@ class Fuzzer (threading.Thread):
                 self.__fuzzPath('https://' + str(directory), directory.domain.headers, directory.domain.cookies)
             else:
                 domain = next(domains)
-                if domain:
-                    print("[+] Fuzzing domain %s" % domain)
-                else:
+                if not domain or domain.name[0] != '.':
                     time.sleep(5)
                     continue
-
+                
+                print("[+] Fuzzing domain %s" % domain.name[1:])
+                self.__fuzzDomain(domain.name[1:])
+                    
 class SqlInjection (threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)

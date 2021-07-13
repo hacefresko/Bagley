@@ -122,6 +122,9 @@ class Domain:
             return Domain.getDomain(domain_name)
 
         domain = Domain(db.query('INSERT INTO domains (name) VALUES (?)', [domain_name]).lastrowid, domain_name)
+        
+        headers = headers if headers else []
+        cookies = cookies if cookies else []
         for element in headers + cookies:
             element.link(domain)
         
