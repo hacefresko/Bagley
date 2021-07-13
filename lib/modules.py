@@ -130,7 +130,7 @@ class Crawler (threading.Thread):
         request_headers = []
         for k,v in request.headers.items():
             request_headers.append(Header.insertHeader(k, v))
-
+        
         processed_request = Request.insertRequest(url, request.method, request_headers, request_cookies, request.body.decode('utf-8', errors='ignore'))
         
         if not processed_request:
@@ -165,7 +165,7 @@ class Crawler (threading.Thread):
             response_headers.append(Header.insertHeader(k,v))
 
         processed_response = Response.insertResponse(response.status_code, response.body.decode('utf-8', errors='ignore'), response_headers, response_cookies, processed_request)
-
+        
         return (processed_request, processed_response)
 
     def __crawl(self, parent_url, method, data, headers, cookies):
