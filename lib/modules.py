@@ -376,7 +376,7 @@ class SqlInjection (threading.Thread):
             if request.method == 'POST' and request.data:
                 command.append("--data")
                 command.append(request.data)
-
+                
             result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
             if "---" in result.stdout:
