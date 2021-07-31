@@ -21,7 +21,7 @@ class Domain:
     def __getHeaders(self):
         db = DB()
     
-        headers = db.query('SELECT id, key, value FROM headers INNER JOIN domain_headers on id = header WHERE domain = ?', [self.id]).fetchall()
+        headers = db.query('SELECT * FROM headers INNER JOIN domain_headers on id = header WHERE domain = ?', [self.id]).fetchall()
 
         result = []
         for header in headers:
@@ -308,7 +308,7 @@ class Request:
     def __getHeaders(self):
         db = DB()
     
-        headers = db.query('SELECT id, key, value FROM headers INNER JOIN request_headers on id = header WHERE request = ?', [self.id]).fetchall()
+        headers = db.query('SELECT * FROM headers INNER JOIN request_headers on id = header WHERE request = ?', [self.id]).fetchall()
 
         result = []
         for header in headers:
@@ -496,7 +496,7 @@ class Response:
     def __getHeaders(self):
         db = DB()
     
-        headers = db.query('SELECT id, key, value FROM headers INNER JOIN response_headers on id = header WHERE response = ?', [self.hash]).fetchall()
+        headers = db.query('SELECT * FROM headers INNER JOIN response_headers on id = header WHERE response = ?', [self.hash]).fetchall()
 
         result = []
         for header in headers:
@@ -601,7 +601,7 @@ class Header:
     def getHeader(key, value):
         key, value = Header.__parseHeader(key, value)
         db = DB()
-        result = db.query('SELECT * FROM headers WHERE key = ? AND value = ?', [key, value]).fetchone()
+        result = db.query('SELECT * FROM headers WHERE header_key = ? AND value = ?', [key, value]).fetchone()
         if not result:
             return False
         
@@ -614,7 +614,7 @@ class Header:
         header = Header.getHeader(key, value)
         if not header:
             db = DB()
-            id = db.query('INSERT INTO headers (key, value) VALUES (?,?)', [key, value]).lastrowid
+            id = db.query('INSERT INTO headers (header_key, value) VALUES (?,?)', [key, value]).lastrowid
             header = Header(id, key, value)
         return header
 

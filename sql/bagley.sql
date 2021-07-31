@@ -1,71 +1,66 @@
-PRAGMA foreign_keys=OFF;
-BEGIN TRANSACTION;
+SET FOREIGN_KEY_CHECKS = 0;
 
-DROP TABLE domains;
-DROP TABLE out_of_scope;
-DROP TABLE paths;
-DROP TABLE requests;
-DROP TABLE responses;
-DROP TABLE headers;
-DROP TABLE cookies;
-DROP TABLE scripts;
-DROP TABLE domain_headers;
-DROP TABLE domain_cookies;
-DROP TABLE request_headers;
-DROP TABLE request_cookies;
-DROP TABLE response_headers;
-DROP TABLE response_cookies;
-DROP TABLE response_scripts;
+DROP TABLE IF EXISTS domains;
+DROP TABLE IF EXISTS out_of_scope;
+DROP TABLE IF EXISTS paths;
+DROP TABLE IF EXISTS requests;
+DROP TABLE IF EXISTS responses;
+DROP TABLE IF EXISTS headers;
+DROP TABLE IF EXISTS cookies;
+DROP TABLE IF EXISTS scripts;
+DROP TABLE IF EXISTS domain_headers;
+DROP TABLE IF EXISTS domain_cookies;
+DROP TABLE IF EXISTS request_headers;
+DROP TABLE IF EXISTS request_cookies;
+DROP TABLE IF EXISTS response_headers;
+DROP TABLE IF EXISTS response_cookies;
+DROP TABLE IF EXISTS response_scripts;
 
 CREATE TABLE domains (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INT PRIMARY KEY AUTO_INCREMENT, 
     name TEXT
 );
 
 CREATE TABLE out_of_scope (
-    name TEXT PRIMARY KEY
+    name VARCHAR(255) PRIMARY KEY
 );
 
 -- Element 0 means it's empty. Parent 0 means it's the first element, so first will be (domain, 0, 0)
 CREATE TABLE paths (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     element TEXT NOT NULL, 
-    parent INTEGER NOT NULL, 
-    domain INTEGER NOT NULL,
+    parent INT NOT NULL, 
+    domain INT NOT NULL,
     FOREIGN KEY (domain) REFERENCES domains(id), 
     FOREIGN KEY (parent) REFERENCES paths(id)
 );
 
-
-
-CREATE TABLE requests (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    protocol TEXT NOT NULL,
-    path INTEGER NOT NULL,
-    params TEXT NOT NULL,
-    method TEXT NOT NULL,
-    data TEXT NOT NULL,
-    response TEXT,
-    FOREIGN KEY (path) REFERENCES paths(id)
-    FOREIGN KEY (response) REFERENCES responses(hash)
-);
-
 CREATE TABLE responses (
-    hash TEXT PRIMARY KEY,
-    code INTEGER NOT NULL,
+    hash VARCHAR(255) PRIMARY KEY,
+    code INT NOT NULL,
     content TEXT
 );
 
-
+CREATE TABLE requests (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    protocol TEXT NOT NULL,
+    path INT NOT NULL,
+    params TEXT NOT NULL,
+    method TEXT NOT NULL,
+    data TEXT NOT NULL,
+    response VARCHAR(255),
+    FOREIGN KEY (path) REFERENCES paths(id),
+    FOREIGN KEY (response) REFERENCES responses(hash)
+);
 
 CREATE TABLE headers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    key TEXT NOT NULL,
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    header_key TEXT NOT NULL,
     value TEXT NOT NULL
 );
 
 CREATE TABLE cookies (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id INT PRIMARY KEY AUTO_INCREMENT,
     name TEXT NOT NULL,
     value TEXT,
     domain TEXT,
@@ -78,8 +73,8 @@ CREATE TABLE cookies (
 );
 
 CREATE TABLE scripts (
-    hash TEXT PRIMARY KEY,
-    path INTEGER NOT NULL,
+    hash VARCHAR(255) PRIMARY KEY,
+    path INT NOT NULL,
     content TEXT NOT NULL,
     FOREIGN KEY (path) REFERENCES paths(id)
 );
@@ -88,16 +83,16 @@ CREATE TABLE scripts (
 
 -- Headers sent in all request made to that domain
 CREATE TABLE domain_headers (
-    domain INTEGER PRIMARY KEY,
-    header INTEGER NOT NULL,
+    domain INT PRIMARY KEY,
+    header INT NOT NULL,
     FOREIGN KEY (domain) REFERENCES domains(id),
     FOREIGN KEY (header) REFERENCES headers(id)
 );
 
 -- Cookies sent in all request made to that domain
 CREATE TABLE domain_cookies (
-    domain INTEGER PRIMARY KEY,
-    cookie INTEGER NOT NULL,
+    domain INT PRIMARY KEY,
+    cookie INT NOT NULL,
     FOREIGN KEY (domain) REFERENCES domains(id),
     FOREIGN KEY (cookie) REFERENCES cookies(id)
 );
@@ -105,15 +100,15 @@ CREATE TABLE domain_cookies (
 
 
 CREATE TABLE request_headers (
-    request INTEGER NOT NULL,
-    header INTEGER NOT NULL,
+    request INT NOT NULL,
+    header INT NOT NULL,
     FOREIGN KEY (request) REFERENCES requests(id),
     FOREIGN KEY (header) REFERENCES headers(id)
 );
 
 CREATE TABLE request_cookies (
-    request INTEGER NOT NULL,
-    cookie INTEGER NOT NULL,
+    request INT NOT NULL,
+    cookie INT NOT NULL,
     FOREIGN KEY (request) REFERENCES requests(id),
     FOREIGN KEY (cookie) REFERENCES cookies(id)
 );
@@ -121,25 +116,23 @@ CREATE TABLE request_cookies (
 
 
 CREATE TABLE response_headers (
-    response TEXT NOT NULL,
-    header INTEGER NOT NULL,
+    response VARCHAR(255) NOT NULL,
+    header INT NOT NULL,
     FOREIGN KEY (response) REFERENCES responses(hash),
     FOREIGN KEY (header) REFERENCES headers(id)
 );
 
 -- Cookies sent by response in Set-Cookie headers
 CREATE TABLE response_cookies (
-    response TEXT NOT NULL,
-    cookie INTEGER NOT NULL,
+    response VARCHAR(255) NOT NULL,
+    cookie INT NOT NULL,
     FOREIGN KEY (response) REFERENCES responses(hash),
     FOREIGN KEY (cookie) REFERENCES cookies(id)
 );
 
 CREATE TABLE response_scripts (
-    response TEXT NOT NULL,
-    script TEXT NOT NULL,
+    response VARCHAR(255) NOT NULL,
+    script VARCHAR(255) NOT NULL,
     FOREIGN KEY (response) REFERENCES responses(hash),
     FOREIGN KEY (script) REFERENCES scripts(hash)
 );
-
-COMMIT;
