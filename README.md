@@ -6,9 +6,9 @@ Bagley is a tool made for bug bounty enviroments to analize whole domains lookin
 
 ## Usage
 
-In order to create the database, execute:
+In order to configure the database, create a new database and a new user both named bagley and execute:
 
-    sqlite3 bagley.db < sql/bagley.db
+    mysql -u bagley -p bagley < sql/bagley.sql
     
 If you want to use another name for the database, it must be changed in database.py
 
@@ -42,6 +42,7 @@ Scope options:
 *   SqlInjection: Wrapper for [sqlmap]((https://github.com/sqlmapproject/sqlmap))
 
 ## External requirements
+*   [Mariadb](https://mariadb.com/)
 *   [Chrome](https://www.google.com/chrome/)
 *   [ChromeDriver](https://chromedriver.chromium.org/downloads)
 *   [Gobuster](https://github.com/OJ/gobuster)
