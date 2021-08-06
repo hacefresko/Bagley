@@ -1,4 +1,4 @@
-import threading, mysql.connector
+import threading, mariadb
 
 DB_USER = 'bagley'
 DB_HOST = '127.0.0.1'
@@ -19,12 +19,9 @@ class DB:
                 # another thread could have created the instance before we acquired the lock. So check that the instance is still nonexistent.
                 if DB.__instances.get(tid) is None:
                     DB.__instances.update({tid: super(DB, cls).__new__(cls)})
-                    DB.__instances.get(tid).__connection = mysql.connector.connect(host=DB_HOST, user=DB_USER, database=DB_NAME)
+                    DB.__instances.get(tid).__connection = mariadb.connect(host=DB_HOST, user=DB_USER, database=DB_NAME, autocommit=True) # autocommit = True -> https://stackoverflow.com/questions/9305669/mysql-python-connection-does-not-see-changes-to-database-made-on-another-connect
+                                                                    
         return DB.__instances.get(tid)
-
-    def reset_conn(self):
-        self.__connection.close()
-        self.__connection = mysql.connector.connect(host=DB_HOST, user=DB_USER, database=DB_NAME)
 
     def close(self):
         self.__connection.close()
@@ -32,21 +29,13 @@ class DB:
     def exec(self, query, params):
         cursor = self.__connection.cursor()
         cursor.execute(query, params)
-        self.__connection.commit()
         cursor.close()
-
-        with self.__lock:
-            DB.__dirty = True
 
     def exec_and_get_last_id(self, query, params):
         cursor = self.__connection.cursor()
         cursor.execute(query, params)
-        self.__connection.commit()
         id = cursor.lastrowid
         cursor.close()
-
-        with self.__lock:
-            DB.__dirty = True
 
         return id
 
@@ -55,9 +44,6 @@ class DB:
         cursor.execute(query, params)
         result = cursor.fetchone()
         cursor.close()
-        
-        if DB.__dirty:
-            self.reset_conn()
 
         return result
 
@@ -66,8 +52,5 @@ class DB:
         cursor.execute(query, params)
         result = cursor.fetchall()
         cursor.close()
-
-        if DB.__dirty:
-            self.reset_conn()
 
         return result
