@@ -28,8 +28,8 @@ CREATE TABLE out_of_scope (
 -- Element 0 means it's empty. Parent 0 means it's the first element, so first will be (domain, 0, 0)
 CREATE TABLE paths (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    element TEXT NOT NULL, 
-    parent INT NOT NULL, 
+    element TEXT, 
+    parent INT NULL, 
     domain INT NOT NULL,
     FOREIGN KEY (domain) REFERENCES domains(id), 
     FOREIGN KEY (parent) REFERENCES paths(id)
@@ -56,7 +56,7 @@ CREATE TABLE requests (
 CREATE TABLE headers (
     id INT PRIMARY KEY AUTO_INCREMENT,
     header_key TEXT NOT NULL,
-    value TEXT NOT NULL
+    value TEXT
 );
 
 CREATE TABLE cookies (
