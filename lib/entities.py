@@ -297,15 +297,15 @@ class Request:
         self.id = id
         self.protocol = protocol
         self.path = Path.getPath(path_id)
-        self.params = params if params != '0' else False
+        self.params = params
         self.method = method
-        self.data = data if data != '0' else False
+        self.data = data
         self.response = Response.getResponse(response_hash)
         self.headers = self.__getHeaders()
         self.cookies = self.__getCookies()
 
     def __str__(self):
-        result = "%s %s HTTP/1.1\r\n" % (self.method, urlparse(self.protocol + '://' + str(self.path)).path)
+        result = "%s %s HTTP/1.1\r\n" % (self.method, urlparse(self.protocol + '://' + str(self.path)).path + ('?' + params) if params else '')
         result += "Host: %s\r\n" % (self.path.domain.name)
         for header in self.headers:
             result += "%s\r\n" % (str(header))
@@ -344,21 +344,21 @@ class Request:
 
         return result
 
-    # Parses params substituting all keys containing terms in blacklist by those terms. Returns False if params does not exist
+    # Parses params substituting all keys containing terms in blacklist by those terms. Returns None if params does not exist
     @staticmethod
     def __parseParams(params):
         if not params:
-            return False
+            return None
         new_params = params
         for word in lib.config.PARAMS_BLACKLIST:
             new_params = Utils.replaceURLencoded(new_params, word, word)
         return new_params
 
-    # Tries to parse data substituting all keys containing terms in blacklist by those terms. Returns False if data does not exist
+    # Tries to parse data substituting all keys containing terms in blacklist by those terms. Returns None if data does not exist
     @staticmethod
     def __parseData(content_type, data):
         if not data:
-            return False
+            return None
         new_data = data
         for word in lib.config.PARAMS_BLACKLIST:
             new_data = Utils.substitutePOSTData(content_type, new_data, word, word)
@@ -381,10 +381,12 @@ class Request:
             return False
 
         protocol = urlparse(url).scheme
-        params = urlparse(url).query if urlparse(url).query else False
-        data = data if (data is not None and data and method == 'POST') else False
+        params = urlparse(url).query if urlparse(url).query else None
+        data = data if (data is not None and data and method == 'POST') else None
 
         db = DB()
+
+        # Check requests with same keys for params and data
         if params or data:
             query = 'SELECT * FROM requests WHERE protocol = %s AND path = %d AND method = %s'
             query_params = [protocol, path.id, method]
@@ -392,17 +394,30 @@ class Request:
             if params:
                 query += ' AND params LIKE %s'
                 query_params.append(Utils.replaceURLencoded(params, None, '%'))
-
             if data:
                 query += ' AND data LIKE %s'
                 query_params.append(Utils.substitutePOSTData(content_type, data, None, '%'))
-
             result = db.query_all(query, tuple(query_params))
 
             if len(result) > 10:
                 return True
 
-        return True if db.query_one('SELECT * FROM requests WHERE protocol = %s AND path = %d AND params = %s AND method = %s AND data = %s', (protocol, path.id, params, method, data)) else False
+        query = 'SELECT * FROM requests WHERE protocol = %s AND path = %d AND method = %s '
+        query_params = [protocol, path.id, method]
+
+        if params:
+            query += 'AND params = %s '
+            query_params.append(params)
+        else:
+            query += ' AND params is Null '
+
+        if data:
+            query += 'AND data = %s '
+            query_params.append(data)
+        else:
+            query += ' AND data is Null '
+
+        return True if db.query_one(query, tuple(query_params)) else False
 
     # Returns False if extension is in blacklist from config.py, else True   
     @staticmethod
@@ -417,10 +432,26 @@ class Request:
             return False
         protocol = urlparse(url).scheme
         params = Request.__parseParams(urlparse(url).query)
-        data = Request.__parseData(content_type, data) if method == 'POST' else False
+        data = Request.__parseData(content_type, data) if method == 'POST' else None
 
         db = DB()
-        request = db.query_one('SELECT * FROM requests WHERE protocol = %s AND path = %d AND params = %s AND method = %s AND data = %s', (protocol, path.id, params, method, data))
+
+        query = 'SELECT * FROM requests WHERE protocol = %s AND path = %d AND method = %s '
+        query_params = [protocol, path.id, method]
+
+        if params:
+            query += 'AND params = %s '
+            query_params.append(params)
+        else:
+            query += ' AND params is Null '
+
+        if data:
+            query += 'AND data = %s '
+            query_params.append(data)
+        else:
+            query += ' AND data is Null '
+
+        request = db.query_one(query, tuple(query_params))
         if not request:
             return False
         return Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])
@@ -457,7 +488,7 @@ class Request:
 
         protocol = urlparse(url).scheme
         params = Request.__parseParams(urlparse(url).query)
-        data = Request.__parseData(content_type, data) if method == 'POST' else False
+        data = Request.__parseData(content_type, data) if method == 'POST' else None
 
         db = DB()
         db.exec('INSERT INTO requests (protocol, path, params, method, data) VALUES (%s,%d,%s,%s,%s)', (protocol, path.id, params, method, data))
@@ -566,22 +597,24 @@ class Response:
     def insertResponse(code, body, headers, cookies, request):
         if not isinstance(request, Request):
             return False
-        if Response.checkResponse(code, body, headers, cookies):
-            return False
-
-        if not body:
-            body = False
-
-        response_hash = Response.__hashResponse(code, body, headers, cookies)
 
         db = DB()
 
-        db.exec('INSERT INTO responses (hash, code, content) VALUES (%s,%d,%s)', (response_hash, code, body))
-        db.exec('UPDATE requests SET response = %s WHERE id = %d', (response_hash, request.id))
+        if not Response.checkResponse(code, body, headers, cookies):
+            if not body:
+                body = False
 
-        response = Response.getResponse(response_hash)
-        for element in headers + cookies:
-            element.link(response)
+            response_hash = Response.__hashResponse(code, body, headers, cookies)
+
+            db.exec('INSERT INTO responses (hash, code, content) VALUES (%s,%d,%s)', (response_hash, code, body))
+            
+            response = Response.getResponse(response_hash)
+            for element in headers + cookies:
+                element.link(response)
+        else:
+            response_hash = Response.__hashResponse(code, body, headers, cookies)
+            
+        db.exec('UPDATE requests SET response = %s WHERE id = %d', (response_hash, request.id))
 
         return Response.getResponse(response_hash)
 

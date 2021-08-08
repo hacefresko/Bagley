@@ -45,9 +45,9 @@ CREATE TABLE requests (
     id INT PRIMARY KEY AUTO_INCREMENT,
     protocol TEXT NOT NULL,
     path INT NOT NULL,
-    params TEXT NOT NULL,
+    params TEXT,
     method TEXT NOT NULL,
-    data TEXT NOT NULL,
+    data TEXT,
     response VARCHAR(255),
     FOREIGN KEY (path) REFERENCES paths(id),
     FOREIGN KEY (response) REFERENCES responses(hash)
