@@ -321,6 +321,7 @@ class Fuzzer (threading.Thread):
         self.crawler = crawler
 
     def __fuzzPath(self, url, headers, cookies):
+        # Crawl all urls on the database that has not been crawled
         if not Request.checkRequest(url, 'GET', None, None):
             self.crawler.addToQueue(url)
 
@@ -348,8 +349,9 @@ class Fuzzer (threading.Thread):
 
         for line in result.stdout.splitlines():
             discovered = urljoin(url, line.split(' ')[0])
-            print("[+] Path found! Queued %s to crawler" % discovered)
-            self.crawler.addToQueue(discovered)
+            if not Request.checkRequest(discovered, 'GET', None, None):
+                print("[+] Path found! Queued %s to crawler" % discovered)
+                self.crawler.addToQueue(discovered)
 
     def __fuzzDomain(self, domain):
         command = ['gobuster', 'dns', '-q', '-w', lib.config.DOMAIN_FUZZING, '-d', domain]
