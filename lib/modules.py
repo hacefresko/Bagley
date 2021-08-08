@@ -224,6 +224,8 @@ class Crawler (threading.Thread):
                         print("Received %d but location header is not present" % code)
                         return
 
+                    urljoin(parent_url, redirect_to)
+
                     if code != 307 and code != 308:
                         method = 'GET'
                         data = None
