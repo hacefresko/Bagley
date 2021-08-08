@@ -29,7 +29,7 @@ CREATE TABLE out_of_scope (
 CREATE TABLE paths (
     id INT PRIMARY KEY AUTO_INCREMENT,
     element TEXT, 
-    parent INT NULL, 
+    parent INT, 
     domain INT NOT NULL,
     FOREIGN KEY (domain) REFERENCES domains(id), 
     FOREIGN KEY (parent) REFERENCES paths(id)
@@ -38,7 +38,7 @@ CREATE TABLE paths (
 CREATE TABLE responses (
     hash VARCHAR(255) PRIMARY KEY,
     code INT NOT NULL,
-    content TEXT
+    content LONGTEXT
 );
 
 CREATE TABLE requests (
@@ -74,8 +74,8 @@ CREATE TABLE cookies (
 
 CREATE TABLE scripts (
     hash VARCHAR(255) PRIMARY KEY,
-    path INT NOT NULL,
-    content TEXT NOT NULL,
+    path INT,
+    content LONGTEXT,
     FOREIGN KEY (path) REFERENCES paths(id)
 );
 

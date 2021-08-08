@@ -153,12 +153,12 @@ class Path:
         db = DB()
         result = ''
         element = self.element
-        parent_id = self.parent.id if self.parent else 0
+        parent_id = self.parent.id if self.parent else None
 
-        while parent_id != 0:
-            result = "/" + (element if element != '0' else '') + result
+        while parent_id:
+            result = "/" + element if element else '' + result
             element, parent_id = db.query_one('SELECT element, parent FROM paths WHERE id = %d', (parent_id,))
-        result = "/" + (element if element != '0' else '') + result
+        result = "/" + (element if element else '') + result
         result = str(self.domain) + result
 
         return result 
@@ -166,9 +166,25 @@ class Path:
     # Returns path if path specified by element, parent and domain exists else False
     @staticmethod
     def __getPath(element, parent, domain):
-        parent_id = parent.id if parent else False
         db = DB()
-        path = db.query_one('SELECT * FROM paths WHERE element = %s AND parent = %d AND domain = %d', (element, parent_id, domain.id))
+
+        query = 'SELECT * FROM paths WHERE domain = %s '
+        query_params = [domain.id]
+
+        if element:
+            query += 'AND element = %s '
+            query_params.append(element)
+        else:
+            query += 'AND element is Null '
+
+        if parent:
+            query += 'AND parent = %d '
+            query_params.append(parent.id)
+        else:
+            query += 'AND parent is Null '
+
+        path = db.query_one(query, tuple(query_params))
+        
         return Path(path[0], path[1], path[2], path[3]) if path else False
 
     # Returns a dict with domain and a list elements with each element from the URL. URL must have protocol, domain and elements in order to get parsed correctly.
@@ -193,7 +209,7 @@ class Path:
         # Get domain
         result['domain'] = urlparse(url)[1]
         # Get elements after example.com/ and subsitute '' by False
-        result['elements'] = [False if i=='' else i for i in urlparse(url)[2].split('/')[1:]]
+        result['elements'] = [None if i=='' else i for i in urlparse(url)[2].split('/')[1:]]
 
         return result
 
@@ -244,7 +260,7 @@ class Path:
             return False
 
         # Iterate over each domain/file from URL
-        parent = False
+        parent = None
         for i, element in enumerate(parsedURL['elements']):
             path = Path.__getPath(element, parent, domain)
             if not path:
@@ -266,11 +282,11 @@ class Path:
         domain = Domain.insertDomain(parsedURL['domain'], headers, cookies)
 
         # Iterate over each domain/file from URL
-        parent = False
+        parent = None
         for i, element in enumerate(parsedURL['elements']):
             path = Path.__getPath(element, parent, domain)
             if not path:
-                path = Path.getPath(db.exec_and_get_last_id('INSERT INTO paths (element, parent, domain) VALUES (%s,%d,%d)', (element, parent.id if parent else False, domain.id)))
+                path = Path.getPath(db.exec_and_get_last_id('INSERT INTO paths (element, parent, domain) VALUES (%s,%d,%d)', (element, parent.id if parent else None, domain.id)))
             if i == len(parsedURL['elements']) - 1:
                 return path
             parent = path
@@ -757,7 +773,7 @@ class Script:
                 return False
             path = path.id
         else:
-            path = False
+            path = None
 
         db = DB()
         script = Script.getScript(url, content)
