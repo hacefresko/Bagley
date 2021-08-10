@@ -41,6 +41,44 @@ class Domain:
 
         return result
 
+    # Returns string containing the tree structure of all paths in the domain
+    def getStructure(self):
+        db = DB()
+
+        # Lats indicates if the current element is the last children to draw the tree
+        def recursion(path, last, tabs):
+            string = tabs + '+---' + path.element + '\n'
+
+            results = db.query_all('SELECT * FROM paths WHERE parent = %d and element is not Null', (path.id,))
+            for i, result in enumerate(results):
+                child = Path(result[0], result[1], result[2], result[3])
+                if i != len(results)-1:
+                    nextLast = False
+                else:
+                    nextLast = True
+                if last:
+                    newTabs = tabs + '    '
+                else:
+                    newTabs = tabs + '|   '
+                string += recursion(child, nextLast, newTabs)
+
+            return string
+
+        string = "+" + "-"*len(self.name) + "+\n"
+        string += "|" + self.name + "|\n"
+        string += "+" + "-"*len(self.name) + "+\n"
+        string += "|\n"
+
+        results = db.query_all('SELECT * FROM paths WHERE parent is Null and element is not Null AND domain = %d', (self.id,))
+        for i, result in enumerate(results):
+            child = Path(result[0], result[1], result[2], result[3])
+            if i != len(results)-1:
+                string += recursion(child, False, '')
+            else:
+                string += recursion(child, True, '')
+
+        return string
+
     # Returns domain identified by id or False if it does not exist
     @staticmethod
     def getDomainById(id):
@@ -228,8 +266,8 @@ class Path:
             if child.parent == path.parent:
                 return True
 
-        return False
-        
+        return False   
+
     # Returns path corresponding to id or False if it does not exist
     @staticmethod
     def getPath(id):
