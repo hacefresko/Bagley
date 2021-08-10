@@ -230,13 +230,14 @@ class Crawler (threading.Thread):
                         method = 'GET'
                         data = None
 
-                    if Domain.checkScope(urlparse(redirect_to).netloc) and Request.checkExtension(redirect_to) and not Request.checkRequest(redirect_to, method, None, data):
+                    if Request.checkExtension(redirect_to) and not Request.checkRequest(redirect_to, method, None, data):
+                        if not Domain.checkScope(urlparse(redirect_to).netloc):
+                            print("[x] Got redirection %d but %s not in scope" % (code, redirect_to))
+                            return
                         print("[+] Following redirection %d to %s [%s]" % (code, redirect_to, method))
                         self.__crawl(redirect_to, method, data, headers, cookies)
                         return
-                    else:
-                        print("[x] Got redirection %d but %s not in scope" % (code, redirect_to))
-                        return
+                        
             else:
                 domain = urlparse(request.url).netloc
                 if not Domain.checkScope(domain):
