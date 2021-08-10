@@ -169,7 +169,7 @@ class Crawler (threading.Thread):
         return (processed_request, processed_response)
 
     def __crawl(self, parent_url, method, data, headers, cookies):
-        print("Crawling %s [%s]" % (parent_url, method))
+        print("[+] Crawling %s [%s]" % (parent_url, method))
 
         domain = Path.insertPath(parent_url, headers, cookies).domain
 
@@ -194,7 +194,7 @@ class Crawler (threading.Thread):
                     self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain": cookie.domain})
             except:
                 # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
-                print("%s is a cookie-averse document" % parent_url)
+                print("[x] %s is a cookie-averse document" % parent_url)
 
         try:
             if method == 'GET':
@@ -221,7 +221,7 @@ class Crawler (threading.Thread):
                 if code//100 == 3:
                     redirect_to = main_response.getHeader('location').value
                     if not redirect_to:
-                        print("Received %d but location header is not present" % code)
+                        print("[x] Received %d but location header is not present" % code)
                         return
 
                     urljoin(parent_url, redirect_to)
@@ -231,11 +231,11 @@ class Crawler (threading.Thread):
                         data = None
 
                     if Domain.checkScope(urlparse(redirect_to).netloc) and Request.checkExtension(redirect_to) and not Request.checkRequest(redirect_to, method, None, data):
-                        print("Following redirection %d to %s [%s]" % (code, redirect_to, method))
+                        print("[+] Following redirection %d to %s [%s]" % (code, redirect_to, method))
                         self.__crawl(redirect_to, method, data, headers, cookies)
                         return
                     else:
-                        print("Got redirection %d but %s not in scope" % (code, redirect_to))
+                        print("[x] Got redirection %d but %s not in scope" % (code, redirect_to))
                         return
             else:
                 domain = urlparse(request.url).netloc
@@ -248,7 +248,7 @@ class Crawler (threading.Thread):
                     Script.insertScript(request.url, headers, cookies, content, main_response)
                 # If domain is in scope, request has not been done yet and resource is not an image
                 elif Request.checkExtension(request.url) and not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')):
-                    print("Made dynamic request to %s [%s]" % (request.url, request.method))
+                    print("[+] Made dynamic request to %s [%s]" % (request.url, request.method))
                     self.__processRequest(request, headers, cookies)
 
         # Parse first response body
@@ -352,7 +352,7 @@ class Fuzzer (threading.Thread):
         for line in result.stdout.splitlines():
             discovered = urljoin(url, line.split(' ')[0])
             if not Request.checkRequest(discovered, 'GET', None, None):
-                print("[+] Path found! Queued %s to crawler" % discovered)
+                print("[*] Path found! Queued %s to crawler" % discovered)
                 self.crawler.addToQueue(discovered)
 
     def __fuzzDomain(self, domain):
@@ -364,7 +364,7 @@ class Fuzzer (threading.Thread):
 
         for line in result.stdout.splitlines():
             discovered = line.split('Found: ')[1]
-            print('[+] Domain found! Inserted %s to database' % discovered)
+            print('[*] Domain found! Inserted %s to database' % discovered)
             Domain.insertDomain(discovered, None, None)
 
     def run(self):
@@ -407,10 +407,12 @@ class SqlInjection (threading.Thread):
                 command.append("--data")
                 command.append(request.data)
             
+            print("[+] Testing SQL injection in %s [%s]" % (url, request.method))
+
             result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
             if "---" in result.stdout:
-                print("[+] SQL injection found in %s" % url)
+                print("[*] SQL injection found in %s" % url)
                 print(result.stdout)
 
             tested = [*[request.id for request in request.getSameKeysRequests()], *tested]
