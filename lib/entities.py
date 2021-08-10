@@ -240,10 +240,10 @@ class Path:
     # Yields paths corresponding to directories or False if there are no requests. It continues infinetly until program stops
     @staticmethod
     def getDirectories():
-        id = 1
+        id = 0
         db = DB()
         while True:
-            path = db.query_one('SELECT * FROM paths WHERE element = 0 AND id > %d LIMIT 1', (id,))
+            path = db.query_one('SELECT * FROM paths WHERE element is Null AND id > %d LIMIT 1', (id,))
             if not path:
                 yield False
                 continue
