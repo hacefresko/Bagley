@@ -598,12 +598,14 @@ class Response:
         if not isinstance(request, Request):
             return False
 
+        if not body:
+            body = None
+
         db = DB()
 
-        if not Response.checkResponse(code, body, headers, cookies):
-            if not body:
-                body = False
-
+        if Response.checkResponse(code, body, headers, cookies):
+            response_hash = Response.__hashResponse(code, body, headers, cookies)
+        else:
             response_hash = Response.__hashResponse(code, body, headers, cookies)
 
             db.exec('INSERT INTO responses (hash, code, content) VALUES (%s,%d,%s)', (response_hash, code, body))
@@ -611,8 +613,7 @@ class Response:
             response = Response.getResponse(response_hash)
             for element in headers + cookies:
                 element.link(response)
-        else:
-            response_hash = Response.__hashResponse(code, body, headers, cookies)
+            
             
         db.exec('UPDATE requests SET response = %s WHERE id = %d', (response_hash, request.id))
 

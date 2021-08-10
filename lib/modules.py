@@ -251,6 +251,9 @@ class Crawler (threading.Thread):
                     print("[+] Made dynamic request to %s [%s]" % (request.url, request.method))
                     self.__processRequest(request, headers, cookies)
 
+        if not main_response:
+            return
+
         # Parse first response body
         parser = BeautifulSoup(main_response.body, 'html.parser')
         for element in parser(['a', 'form', 'script']):
