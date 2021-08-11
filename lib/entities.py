@@ -551,7 +551,7 @@ class Request:
             query_params.append(Utils.replaceURLencoded(self.params, None, '%'))
         if self.data:
             query += ' AND data LIKE %s'
-            query_params.append(Utils.substitutePOSTData(self.getHeader('content-type'), self.data, None, '%'))
+            query_params.append(Utils.substitutePOSTData(self.getHeader('content-type').value if self.getHeader('content-type') else None, self.data, None, '%'))
 
         db = DB()
         result = db.query_all(query, tuple(query_params))
