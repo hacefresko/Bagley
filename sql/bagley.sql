@@ -83,7 +83,7 @@ CREATE TABLE scripts (
 
 -- Headers sent in all request made to that domain
 CREATE TABLE domain_headers (
-    domain INT PRIMARY KEY,
+    domain INT NOT NULL,
     header INT NOT NULL,
     FOREIGN KEY (domain) REFERENCES domains(id),
     FOREIGN KEY (header) REFERENCES headers(id)
@@ -91,7 +91,7 @@ CREATE TABLE domain_headers (
 
 -- Cookies sent in all request made to that domain
 CREATE TABLE domain_cookies (
-    domain INT PRIMARY KEY,
+    domain INT NOT NULL,
     cookie INT NOT NULL,
     FOREIGN KEY (domain) REFERENCES domains(id),
     FOREIGN KEY (cookie) REFERENCES cookies(id)
