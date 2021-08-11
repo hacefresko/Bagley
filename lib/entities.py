@@ -616,7 +616,7 @@ class Response:
     @staticmethod
     def checkResponse(code, body, headers, cookies):
         if not body:
-            body = False
+            body = None
 
         db = DB()
         return True if db.query_one('SELECT * FROM responses WHERE hash = %s', (Response.__hashResponse(code, body, headers, cookies),)) else False
