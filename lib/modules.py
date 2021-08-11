@@ -148,7 +148,8 @@ class Crawler (threading.Thread):
             for raw_cookie in response.headers.get_all('set-cookie'):
                 # Default values for cookie attributes
                 cookie = {'expires':'session', 'max-age':'session', 'domain': urlparse(url).netloc, 'path': '/', 'secure': False, 'httponly': False, 'samesite':'lax'}
-                for attribute in raw_cookie.split('; '):
+                for attribute in raw_cookie.split(';'):
+                    attribute = attribute.strip()
                     if len(attribute.split('=')) == 1:
                         cookie.update({attribute.lower(): True})
                     elif attribute.split('=')[0].lower() in ['expires', 'max-age', 'domain', 'path', 'samesite']:
@@ -173,6 +174,10 @@ class Crawler (threading.Thread):
 
         domain = Path.insertPath(parent_url, headers, cookies).domain
 
+        # Needed for selenium to insert cookies with their domains correctly https://stackoverflow.com/questions/41559510/selenium-chromedriver-add-cookie-invalid-domain-error
+        if domain.cookies:
+            self.driver.get(parent_url)
+
         # Delete all previous requests so they don't pollute the results
         del self.driver.requests
 
@@ -187,7 +192,7 @@ class Crawler (threading.Thread):
                     request.headers[k] = header.value
             self.driver.request_interceptor = interceptor
 
-        # Add cookies associated to damain to request
+        # Add cookies associated to domain to request
         if domain.cookies:
             try:
                 for cookie in domain.cookies:
@@ -224,7 +229,7 @@ class Crawler (threading.Thread):
                         print("[x] Received %d but location header is not present" % code)
                         return
 
-                    urljoin(parent_url, redirect_to)
+                    redirect_to = urljoin(parent_url, redirect_to)
 
                     if code != 307 and code != 308:
                         method = 'GET'
