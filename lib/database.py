@@ -5,9 +5,6 @@ DB_HOST = '127.0.0.1'
 DB_NAME = 'bagley'
 
 class DB:
-    # True when there has been a change in the database (this way, we reset the connection when there are changes so the reader doesn't get stuck, since usually happens although the cursor is closed)
-    __dirty = False
-
     __instances = {}
     __lock = threading.Lock()
 
