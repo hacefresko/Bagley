@@ -252,7 +252,7 @@ class Crawler (threading.Thread):
                     print("[+] Made dynamic request to %s [%s]" % (request.url, request.method))
                     self.__processRequest(request, headers, cookies)
 
-        if not main_response:
+        if not main_response or not main_response.body:
             return
 
         # Parse first response body
