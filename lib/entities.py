@@ -194,7 +194,7 @@ class Path:
         parent_id = self.parent.id if self.parent else None
 
         while parent_id:
-            result = "/" + element if element else '' + result
+            result = "/" + (element if element else '') + result
             element, parent_id = db.query_one('SELECT element, parent FROM paths WHERE id = %d', (parent_id,))
         result = "/" + (element if element else '') + result
         result = str(self.domain) + result
