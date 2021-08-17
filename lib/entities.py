@@ -717,7 +717,7 @@ class Header:
             db.exec('INSERT INTO response_headers (response, header) VALUES (%s,%d)', (target.hash, self.id))
             return True
         elif isinstance(target, Domain):
-            db.exec('INSERT INTO domain_headers(domain, header) VALUES (%s,%d)', (target.name, self.id))
+            db.exec('INSERT INTO domain_headers(domain, header) VALUES (%s,%d)', (target.id, self.id))
         else:
             return False
 

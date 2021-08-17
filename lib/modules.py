@@ -183,13 +183,17 @@ class Crawler (threading.Thread):
 
         # Add headers associated to domain to request via a request interceptor
         if domain.headers:
+            # If we try to acces headers from interceptor by domain.headers, when internally
+            # the driver uses variable domain as a string, it will be overwritten and driver.headers
+            # will throw an exception
+            domain_headers = domain.headers
             def interceptor(request):
-                for header in domain.headers:
+                for header in domain_headers:
                     try:
                         del request.headers[header.key]
                     except:
                         pass
-                    request.headers[k] = header.value
+                    request.headers[header.key] = header.value
             self.driver.request_interceptor = interceptor
 
         # Add cookies associated to domain to request
