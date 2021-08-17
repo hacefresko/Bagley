@@ -142,13 +142,19 @@ class Domain:
         if db.query_one('SELECT name FROM out_of_scope WHERE name LIKE %s', (domain,)):
             return False
 
-        # Check if domain is in database (%domain so example.com is in scope in .example.com was specified)
-        if db.query_one('SELECT name FROM domains WHERE name LIKE %s', ('%' + domain,)):
-            return True
-        
-        # Check if parent domain is in a set of subdomains inside the database
-        if len(domain.split('.')) > 2 and db.query_one('SELECT name FROM domains WHERE name LIKE %s', ( '.' + '.'.join(domain.split('.')[-2:]) ,)):
-            return True
+        # Construct array with starting and interspersed dots i.e example.com => ['.','example','.','com']
+        parts = domain.split('.')
+        dot_interspersed_parts = (['.']*(2*len(parts)-1))
+        dot_interspersed_parts[::2] = parts
+        if dot_interspersed_parts[0] == '':
+            dot_interspersed_parts = dot_interspersed_parts[1:]
+        elif dot_interspersed_parts[0] != '.':
+            dot_interspersed_parts.insert(0, '.')
+
+        for i in range(len(dot_interspersed_parts)):
+            check = ''.join(dot_interspersed_parts[i:])
+            if db.query_one('SELECT name FROM domains WHERE name LIKE %s', (check,)):
+                return True
 
         return False
 

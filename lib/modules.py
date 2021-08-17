@@ -153,11 +153,13 @@ class Crawler (threading.Thread):
                     if len(attribute.split('=')) == 1:
                         cookie.update({attribute.lower(): True})
                     elif attribute.split('=')[0].lower() in ['expires', 'max-age', 'domain', 'path', 'samesite']:
-                        cookie.update({attribute.split('=')[0].lower(): attribute.split('=')[1]})
+                        cookie.update({attribute.split('=')[0].lower(): attribute.split('=')[1].lower()})
                     else:
                         cookie.update({'name': attribute.split('=')[0].lower()})
                         cookie.update({'value': attribute.split('=')[1]})
-                response_cookies.append(Cookie.insertCookie(cookie.get('name'), cookie.get('value'), cookie.get('domain'), cookie.get('path'), cookie.get('expires'), cookie.get('max-age'), cookie.get('httponly'), cookie.get('secure'), cookie.get('samesite')))
+                c = Cookie.insertCookie(cookie.get('name'), cookie.get('value'), cookie.get('domain'), cookie.get('path'), cookie.get('expires'), cookie.get('max-age'), cookie.get('httponly'), cookie.get('secure'), cookie.get('samesite'))
+                if c:
+                    response_cookies.append(c)
 
             del response.headers['set-cookie']
         
