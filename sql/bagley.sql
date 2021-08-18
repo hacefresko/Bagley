@@ -15,6 +15,7 @@ DROP TABLE IF EXISTS request_cookies;
 DROP TABLE IF EXISTS response_headers;
 DROP TABLE IF EXISTS response_cookies;
 DROP TABLE IF EXISTS response_scripts;
+DROP TABLE IF EXISTS vulnerabilities;
 
 CREATE TABLE domains (
     id INT PRIMARY KEY AUTO_INCREMENT, 
@@ -43,7 +44,7 @@ CREATE TABLE responses (
 
 CREATE TABLE requests (
     id INT PRIMARY KEY AUTO_INCREMENT,
-     TEXT NOT NULL,
+    protocol TEXT NOT NULL,
     path INT NOT NULL,
     params TEXT,
     method TEXT NOT NULL,
