@@ -160,15 +160,13 @@ class Domain:
 
     # Inserts domain if not already inserted
     @staticmethod
-    def insertDomain(domain_name, headers, cookies):
+    def insertDomain(domain_name, headers = [], cookies = []):
         db = DB()
         if Domain.checkDomain(domain_name):
             return Domain.getDomain(domain_name)
 
         domain = Domain(db.exec_and_get_last_id('INSERT INTO domains (name) VALUES (%s)', (domain_name,)), domain_name)
-        
-        headers = headers if headers else []
-        cookies = cookies if cookies else []
+
         for element in headers + cookies:
             element.link(domain)
         
@@ -316,7 +314,7 @@ class Path:
     # Inserts each path inside the URL if not already inserted and returns last inserted path (last element from URL).
     # If domain is not in scope, returns False. If domain is in scope but not in database, inserts it
     @staticmethod
-    def insertPath(url, headers, cookies):
+    def insertPath(url, headers = [], cookies = []):
         db = DB()
         parsedURL = Path.__parseURL(url)
 
@@ -862,6 +860,41 @@ class Script:
         db.exec('INSERT INTO response_scripts (response, script) VALUES (%s,%s)', (response.hash, script.hash))
 
         return script
+
+class Vulnerability:
+    def __init__(self, id, path_id, vuln_type, description):
+        self.id = id
+        self.path = Path.getPath(path_id)
+        self.type = vuln_type
+        self.description = description
+
+    @staticmethod
+    def __getVuln(path_id, vuln_type):
+        db = DB()
+
+        vuln = db.query_one('SELECT * FROM vulnerabilities WHERE path = %d AND type = %s', (path_id, vuln_type))
+        return Vulnerability(vuln[0], vuln[1], vuln[2], vuln[3]) if vuln else False
+
+    @staticmethod
+    def getVuln(url, vuln_type):
+        path = Path.parseURL(url)
+        if not path:
+            return False
+
+        return Vulnerability.__getVuln(path.id, vuln_type)
+
+    @staticmethod
+    def insertVuln(url, vuln_type, description):
+        path = Path.parseURL(url)
+        if not path:
+            return False
+
+        vuln = Vulnerability.__getVuln(path.id, vuln_type)
+        if vuln:
+            return vuln
+
+        db = DB()
+        return Vulnerability(db.exec_and_get_last_id('INSERT INTO vulnerabilities (path, type, description) VALUES (%d,%s,%s)', (path.id, vuln_type, description)), path.id, vuln_type, description)
 
 class Utils:
     @staticmethod

@@ -136,3 +136,12 @@ CREATE TABLE response_scripts (
     FOREIGN KEY (response) REFERENCES responses(hash),
     FOREIGN KEY (script) REFERENCES scripts(hash)
 );
+
+
+CREATE TABLE vulnerabilities (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    path INT NOT NULL,
+    type TEXT,
+    description TEXT,
+    FOREIGN KEY (path) REFERENCES paths(id)
+);
