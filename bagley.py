@@ -72,8 +72,8 @@ crawler.start()
 fuzzer = Fuzzer(crawler)
 fuzzer.start()
 
-sqli = SqlInjection()
-sqli.start()
+injector = Injector()
+injector.start()
 
 # Parse scope file
 while True:
