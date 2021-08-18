@@ -293,7 +293,7 @@ class Crawler (threading.Thread):
 
                 if Domain.checkScope(domain):
                     # Parse input, select and textarea (textarea is outside forms, linked by form attribute)
-                    data = ''
+                    data = None
                     textareas = parser('textarea', form=form_id) if form_id is not None else []
                     for input in element(['input','select']) + textareas:
                         # Skip submit buttons

@@ -450,16 +450,16 @@ class Request:
         query_params = [protocol, path.id, method]
 
         if params:
-            query += 'AND params = %s '
+            query += 'AND params = %s'
             query_params.append(params)
         else:
-            query += ' AND params is Null '
+            query += ' AND params is Null'
 
         if data:
-            query += 'AND data = %s '
+            query += 'AND data = %s'
             query_params.append(data)
         else:
-            query += ' AND data is Null '
+            query += ' AND data is Null'
 
         return True if db.query_one(query, tuple(query_params)) else False
 
@@ -519,7 +519,7 @@ class Request:
     @staticmethod
     def insertRequest(url, method, headers, cookies, data):
         path = Path.parseURL(url)
-        if not path:
+        if not path or not Request.checkExtension(url):
             return False
 
         content_type = None
@@ -527,12 +527,12 @@ class Request:
             if header.key == 'content-type':
                 content_type = header.value
 
-        if not Request.checkExtension(url) or Request.checkRequest(url, method, content_type, data):
-            return False
-
         protocol = urlparse(url).scheme
         params = Request.__parseParams(urlparse(url).query)
         data = Request.__parseData(content_type, data) if method == 'POST' else None
+
+        if Request.checkRequest(url, method, content_type, data):
+            return False
 
         db = DB()
         db.exec('INSERT INTO requests (protocol, path, params, method, data) VALUES (%s,%d,%s,%s,%s)', (protocol, path.id, params, method, data))
