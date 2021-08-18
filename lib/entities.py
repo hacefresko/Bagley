@@ -450,13 +450,13 @@ class Request:
         query_params = [protocol, path.id, method]
 
         if params:
-            query += 'AND params = %s'
+            query += ' AND params = %s'
             query_params.append(params)
         else:
             query += ' AND params is Null'
 
         if data:
-            query += 'AND data = %s'
+            query += ' AND data = %s'
             query_params.append(data)
         else:
             query += ' AND data is Null'
