@@ -37,9 +37,9 @@ Scope options:
 ## Available modules
 *   Crawler: Crawler capable of following redirects, rendering JavaScript and logging dynamic requests to APIs, other domains inside the scope, etc.
 
-*   Fuzzer: Fuzzes subdomains for the specified group of subdomains and web paths for each path corresponding to a directory. It sends the discovered elements to the crawler. Wrapper for [gobuster](https://github.com/OJ/gobuster)
+*   Fuzzer: Fuzzes subdomains and paths inside the scope. Sends discovered elements to the crawler. Wrapper for [gobuster](https://github.com/OJ/gobuster)
 
-*   SqlInjection: Wrapper for [sqlmap](https://github.com/sqlmapproject/sqlmap)
+*   Injector: Wrapper for [sqlmap](https://github.com/sqlmapproject/sqlmap)
 
 ## External requirements
 *   [Mariadb](https://mariadb.com/)
