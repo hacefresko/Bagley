@@ -400,7 +400,7 @@ class Fuzzer (threading.Thread):
                 print("[+] Fuzzing domain %s" % domain.name[1:])
                 self.__fuzzDomain(domain.name[1:])
                     
-class SqlInjection (threading.Thread):
+class Injector (threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
     
