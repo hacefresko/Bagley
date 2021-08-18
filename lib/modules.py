@@ -414,6 +414,7 @@ class Injector (threading.Thread):
                 continue
 
             url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
+            
             delay = delay = str(1/lib.config.REQ_PER_SEC)
             command = ['sqlmap', '--delay=' + delay, '-v', '0', '--flush-session', '--batch', '-u',  url]
 
@@ -427,6 +428,7 @@ class Injector (threading.Thread):
 
             if "---" in result.stdout:
                 print("[*] SQL injection found in %s" % url)
+                Vulnerability.insertVuln(url, 'SQLi', result.stdout)
                 print(result.stdout)
 
             tested = [*[request.id for request in request.getSameKeysRequests()], *tested]
