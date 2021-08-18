@@ -113,8 +113,8 @@ class Crawler (threading.Thread):
         post(arguments[1], arguments[0]);
         """, params, path)
 
-    # Inserts in the database the request and its response. Returns (request, response). Headers and cookies params
-    # are the extra headers and cookies that were added to the request
+    # Inserts in the database the request and its response if url belongs to the scope. 
+    # Returns (request, response). Headers and cookies params are extra headers and cookies added to the request
     def __processRequest(self, request, headers, cookies):
         url = request.url
         Path.insertPath(url, headers, cookies)
@@ -171,106 +171,13 @@ class Crawler (threading.Thread):
 
         return (processed_request, processed_response)
 
-    def __crawl(self, parent_url, method, data, headers, cookies):
-        print("[+] Crawling %s [%s]" % (parent_url, method))
-
-        domain = Path.insertPath(parent_url, headers, cookies).domain
-
-        # Needed for selenium to insert cookies with their domains correctly https://stackoverflow.com/questions/41559510/selenium-chromedriver-add-cookie-invalid-domain-error
-        if domain.cookies:
-            self.driver.get(parent_url)
-
-        # Delete all previous requests so they don't pollute the results
-        del self.driver.requests
-
-        # Add headers associated to domain to request via a request interceptor
-        if domain.headers:
-            # If we try to acces headers from interceptor by domain.headers, when another variable
-            # named domain is used, it will overwrite driver.headers so it will throw an exception
-            domain_headers = domain.headers
-            def interceptor(request):
-                for header in domain_headers:
-                    try:
-                        del request.headers[header.key]
-                    except:
-                        pass
-                    request.headers[header.key] = header.value
-            self.driver.request_interceptor = interceptor
-
-        # Add cookies associated to domain to request
-        if domain.cookies:
-            try:
-                for cookie in domain.cookies:
-                    self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain": cookie.domain})
-            except:
-                # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
-                print("[x] %s is a cookie-averse document" % parent_url)
-
-        try:
-            if method == 'GET':
-                self.driver.get(parent_url)
-            elif method == 'POST':
-                self.__post(parent_url, data)
-        except Exception as e:
-            print('[x] Exception ocurred when requesting %s' % (parent_url))
-            traceback.print_tb(e.__traceback__)
-            return
-
-        main_request = None
-        main_response = None
-        # Capture all requests. The one requesting parent_url will be the main request. Other ones will be dynamic requests
-        for request in self.driver.iter_requests():
-            if request.url == parent_url and main_request is None and main_response is None:
-                main_request, main_response = self.__processRequest(request, headers, cookies)
-                if not main_request or not main_response:
-                    return
-
-                code = main_response.code
-
-                # Follow redirect if 3xx response is received
-                if code//100 == 3:
-                    redirect_to = main_response.getHeader('location').value
-                    if not redirect_to:
-                        print("[x] Received %d but location header is not present" % code)
-                        return
-
-                    redirect_to = urljoin(parent_url, redirect_to)
-
-                    if code != 307 and code != 308:
-                        method = 'GET'
-                        data = None
-
-                    if Request.checkExtension(redirect_to) and not Request.checkRequest(redirect_to, method, None, data):
-                        if not Domain.checkScope(urlparse(redirect_to).netloc):
-                            print("[x] Got redirection %d but %s not in scope" % (code, redirect_to))
-                            return
-                        print("[+] Following redirection %d to %s [%s]" % (code, redirect_to, method))
-                        self.__crawl(redirect_to, method, data, headers, cookies)
-                        return
-                        
-            else:
-                domain = urlparse(request.url).netloc
-                if not Domain.checkScope(domain):
-                    continue
-
-                # If resource is a JS file
-                if request.url[-3:] == '.js':
-                    content = requests.get(request.url).text
-                    Script.insertScript(request.url, headers, cookies, content, main_response)
-                # If domain is in scope, request has not been done yet and resource is not an image
-                elif Request.checkExtension(request.url) and not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')):
-                    print("[+] Made dynamic request to %s [%s]" % (request.url, request.method))
-                    self.__processRequest(request, headers, cookies)
-
-        if not main_response or not main_response.body:
-            return
-
-        # Parse first response body
-        parser = BeautifulSoup(main_response.body, 'html.parser')
-        for element in parser(['a', 'form', 'script']):
+    # Traverse the HTML looking for paths to crawl
+    def __parseHTML(self, parent_url, response, headers, cookies):
+        parser = BeautifulSoup(response.body, 'html.parser')
+        for element in parser(['a', 'form', 'script', 'frame']):
             if element.name == 'a':
                 path = element.get('href')
-                if path is None:
+                if not path:
                     continue
 
                 # Cut the html id selector from url
@@ -321,7 +228,7 @@ class Crawler (threading.Thread):
                     if element.string is None:
                         continue
 
-                    Script.insertScript(None, None, None, element.string, main_response)
+                    Script.insertScript(None, None, None, element.string, response)
                 else:
                     src = urljoin(parent_url, src)
                     domain = urlparse(src).netloc
@@ -329,8 +236,117 @@ class Crawler (threading.Thread):
                         continue
 
                     content = requests.get(src).text
-                    Script.insertScript(src, headers, cookies, content, main_response)
+                    Script.insertScript(src, headers, cookies, content, response)
 
+    # Main method of crawler
+    def __crawl(self, parent_url, method, data, headers, cookies):
+        print("[+] Crawling %s [%s]" % (parent_url, method))
+
+        domain = Path.insertPath(parent_url, headers, cookies).domain
+
+        # Needed for selenium to insert cookies with their domains correctly https://stackoverflow.com/questions/41559510/selenium-chromedriver-add-cookie-invalid-domain-error
+        if domain.cookies:
+            self.driver.get(parent_url)
+
+        # Delete all previous requests so they don't pollute the results
+        del self.driver.requests
+
+        # Add headers associated to domain to request via a request interceptor
+        if domain.headers:
+            # If we try to acces headers from interceptor by domain.headers, when another variable
+            # named domain is used, it will overwrite driver.headers so it will throw an exception
+            domain_headers = domain.headers
+            def interceptor(request):
+                for header in domain_headers:
+                    try:
+                        del request.headers[header.key]
+                    except:
+                        pass
+                    request.headers[header.key] = header.value
+            self.driver.request_interceptor = interceptor
+
+        # Add cookies associated to domain to request
+        if domain.cookies:
+            try:
+                for cookie in domain.cookies:
+                    self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain": cookie.domain})
+            except:
+                # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
+                print("[x] %s is a cookie-averse document" % parent_url)
+
+        try:
+            if method == 'GET':
+                self.driver.get(parent_url)
+            elif method == 'POST':
+                self.__post(parent_url, data)
+        except Exception as e:
+            print('[x] Exception ocurred when requesting %s' % (parent_url))
+            traceback.print_tb(e.__traceback__)
+            return
+
+        # List of responses to analyze
+        responses = []
+
+        main_request = None
+        main_response = None
+
+        # Capture all requests
+        for request in self.driver.iter_requests():
+            # Main request
+            if request.url == parent_url and main_request is None and main_response is None:
+                main_request, main_response = self.__processRequest(request, headers, cookies)
+                if not main_request or not main_response:
+                    return
+
+                # Follow redirect if 3xx response is received
+                code = main_response.code
+                if code//100 == 3:
+                    redirect_to = main_response.getHeader('location').value
+                    if not redirect_to:
+                        print("[x] Received %d but location header is not present" % code)
+                        return
+
+                    redirect_to = urljoin(parent_url, redirect_to)
+
+                    if code != 307 and code != 308:
+                        method = 'GET'
+                        data = None
+
+                    if Request.checkExtension(redirect_to) and not Request.checkRequest(redirect_to, method, None, data):
+                        if not Domain.checkScope(urlparse(redirect_to).netloc):
+                            print("[x] Got redirection %d but %s not in scope" % (code, redirect_to))
+                            return
+                        print("[+] Following redirection %d to %s [%s]" % (code, redirect_to, method))
+                        self.__crawl(redirect_to, method, data, headers, cookies)
+                        return
+
+                
+                responses.append({'url': parent_url, 'response':main_response, 'headers': headers, 'cookies': cookies})
+
+            # Dynamic requests      
+            else:
+                domain = urlparse(request.url).netloc
+                if not Domain.checkScope(domain):
+                    continue
+
+                # If resource is a JS file
+                if request.url[-3:] == '.js':
+                    content = requests.get(request.url).text
+                    Script.insertScript(request.url, headers, cookies, content, main_response)
+                    continue
+                # If domain is in scope, request has not been done yet and resource is not an image
+                elif Request.checkExtension(request.url) and not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')):
+                    print("[+] Made dynamic request to %s [%s]" % (request.url, request.method))
+                    req, resp = self.__processRequest(request, headers, cookies)
+                    
+                    # If dynamic request responded with HTML, send it to analize
+                    if resp and resp.body and bool(BeautifulSoup(resp.body, 'html.parser').find()):
+                        responses.append({'url': request.url, 'response':resp, 'headers': headers, 'cookies': cookies})
+
+        # Analyze all responses
+        for response in responses:
+            self.__parseHTML(response['url'], response['response'], response['headers'], response['cookies'])
+        
 class Fuzzer (threading.Thread):
     def __init__(self, crawler):
         threading.Thread.__init__(self)
@@ -385,20 +401,19 @@ class Fuzzer (threading.Thread):
         directories = Path.getDirectories()
         domains = Domain.getDomains()
         while True:
-            directory = next(directories)
-            if directory:
-                print("[+] Fuzzing path %s" % directory)
-
-                self.__fuzzPath('http://' + str(directory), directory.domain.headers, directory.domain.cookies)
-                self.__fuzzPath('https://' + str(directory), directory.domain.headers, directory.domain.cookies)
+            domain = next(domains)
+            if domain and domain.name[0] == '.':
+                print("[+] Fuzzing domain %s" % domain.name[1:])
+                self.__fuzzDomain(domain.name[1:])
             else:
-                domain = next(domains)
-                if not domain or domain.name[0] != '.':
+                directory = next(directories)
+                if not directory:
                     time.sleep(5)
                     continue
                 
-                print("[+] Fuzzing domain %s" % domain.name[1:])
-                self.__fuzzDomain(domain.name[1:])
+                print("[+] Fuzzing path %s" % directory)
+                self.__fuzzPath('http://' + str(directory), directory.domain.headers, directory.domain.cookies)
+                self.__fuzzPath('https://' + str(directory), directory.domain.headers, directory.domain.cookies)
                     
 class Injector (threading.Thread):
     def __init__(self):
