@@ -213,7 +213,7 @@ class Crawler (threading.Thread):
                     data = data[:-1] if data != '' else None
                         
                     # If form method is GET, append data to URL as params and set data to None
-                    if method == 'GET' and len(data):
+                    if method == 'GET' and data:
                         if url.find('?'):
                             url = url.split('?')[0]
                         url += '?' + data
