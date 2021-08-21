@@ -19,10 +19,17 @@ class Crawler (threading.Thread):
         # Init selenium driver
         opts = Options()
         opts.headless = True
-        # https://stackoverflow.com/questions/51503437/headless-chrome-web-driver-too-slow-and-unable-to-download-file
-        opts.add_argument('--no-proxy-server')
+        opts.add_argument('--no-proxy-server') # https://stackoverflow.com/questions/51503437/headless-chrome-web-driver-too-slow-and-unable-to-download-file
         opts.add_argument("--proxy-server='direct://'")
         opts.add_argument("--proxy-bypass-list=*")
+        opts.add_argument("start-maximized"); # https://stackoverflow.com/a/26283818/1689770
+        opts.add_argument("enable-automation"); # https://stackoverflow.com/a/43840128/1689770
+        opts.add_argument("--no-sandbox"); # https://stackoverflow.com/a/50725918/1689770
+        opts.add_argument("--disable-infobars"); # https://stackoverflow.com/a/43840128/1689770
+        opts.add_argument("--disable-dev-shm-usage"); # https://stackoverflow.com/a/50725918/1689770
+        opts.add_argument("--disable-browser-side-navigation"); # https://stackoverflow.com/a/49123152/1689770
+        opts.add_argument("--disable-gpu"); # https://stackoverflow.com/questions/51959986/how-to-solve-selenium-chromedriver-timed-out-receiving-message-from-renderer-exc
+
         self.driver = webdriver.Chrome(options=opts)
 
         # Set timeout
