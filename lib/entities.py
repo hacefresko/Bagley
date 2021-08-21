@@ -838,12 +838,12 @@ class Script:
 
     # Inserts script if not already inserted, links it to the corresponding response if exists and returns it
     @staticmethod 
-    def insertScript(url, headers, cookies, content, response):
+    def insertScript(url, content, response):
         if not isinstance(response, Response):
             return False
 
         if url is not None:
-            path = Path.insertPath(url, headers, cookies)
+            path = Path.insertPath(url)
             # If path does not belong to the scope (stored domains)
             if not path:
                 return False
@@ -900,7 +900,7 @@ class Utils:
     @staticmethod
     def replaceURLencoded(data, match, newValue):
         if not data:
-            return False
+            return None
         new_data = ''
         for p in data.split('&'):
             if len(p.split('=')) == 1:
@@ -932,7 +932,7 @@ class Utils:
         boundary_substitute = 'BOUNDARY'
 
         if not data:
-            return False
+            return None
         
         if not content_type:
             try:

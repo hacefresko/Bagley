@@ -95,36 +95,38 @@ class Crawler (threading.Thread):
                 continue
 
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
-    def __post(self, path, params):
+    def __post(self, path, data, headers, cookies):
+        headers_dict = {}
+        for header in headers:
+            headers_dict[header.key] = header.value
+
+        if cookies:
+            cookie_header = ''
+            for cookie in cookies:
+                cookie_header += cookie.name + '=' + cookie.value + '; '
+            headers_dict['cookie'] = cookie_header
+
         self.driver.execute_script("""
-        function post(path, params, method='post', headers, cookies) {
-            const form = document.createElement('form');
-            form.method = method;
-            form.action = path;
-        
-            for (const key in params) {
-                if (params.hasOwnProperty(key)) {
-                    const hiddenField = document.createElement('input');
-                    hiddenField.type = 'hidden';
-                    hiddenField.name = key;
-                    hiddenField.value = params[key];
-            
-                    form.appendChild(hiddenField);
-                }
-            }
-        
-            document.body.appendChild(form);
-            form.submit();
+        function post(path, data, headers) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", path, true);
+
+            Object.keys(headers).forEach(function(key){
+                xhr.setRequestHeader(key, headers[key])
+            })
+
+            xhr.send(data)
         }
         
-        post(arguments[1], arguments[0]);
-        """, params, path)
+        post(arguments[0], arguments[1], arguments[2]);
+        """, path, data, headers_dict)
 
     # Inserts in the database the request and its response if url belongs to the scope. 
     # Returns (request, response). Headers and cookies params are extra headers and cookies added to the request
-    def __processRequest(self, request, headers, cookies):
+    # so the first time a domain is inserted they get inserted with it in the database
+    def __processRequest(self, request):
         url = request.url
-        Path.insertPath(url, headers, cookies)
+        Path.insertPath(url)
 
         request_cookies = []
         if request.headers.get('cookie'):
@@ -179,7 +181,7 @@ class Crawler (threading.Thread):
         return (processed_request, processed_response)
 
     # Traverse the HTML looking for paths to crawl
-    def __parseHTML(self, parent_url, response, headers, cookies):
+    def __parseHTML(self, parent_url, response):
         parser = BeautifulSoup(response.body, 'html.parser')
         for element in parser(['a', 'form', 'script', 'frame']):
             if element.name == 'a':
@@ -195,7 +197,7 @@ class Crawler (threading.Thread):
                 domain = urlparse(url).netloc
 
                 if Domain.checkScope(domain) and Request.checkExtension(url) and not Request.checkRequest(url, 'GET', None, None):
-                    self.__crawl(url, 'GET', None, headers, cookies)
+                    self.__crawl(url, 'GET', None)
                 
             elif element.name == 'form':
                 form_id = element.get('id')
@@ -210,8 +212,7 @@ class Crawler (threading.Thread):
                     data = ''
                     textareas = parser('textarea', form=form_id) if form_id is not None else []
                     for input in element(['input','select']) + textareas:
-                        # Skip submit buttons
-                        if input.get('type') != 'submit' and input.get('name') is not None:
+                        if input.get('name') is not None:
                             # If value is empty, put '1337'
                             if input.get('value') is None or input.get('value') == '':
                                 data += input.get('name') + "=1337&"
@@ -219,15 +220,20 @@ class Crawler (threading.Thread):
                                 data += input.get('name') + "=" + input.get('value') + "&"
                     data = data[:-1] if data != '' else None
                         
-                    # If form method is GET, append data to URL as params and set data to None
-                    if method == 'GET' and data:
-                        if url.find('?'):
-                            url = url.split('?')[0]
-                        url += '?' + data
-                        data = None
+                    # If form method is GET, append data to URL as params and set data and content type to None
+                    if method == 'GET':
+                        content_type = None
+                        if data:
+                            if url.find('?'):
+                                url = url.split('?')[0]
+                            url += '?' + data
+                            data = None
+                    else:
+                        content_type = 'application/x-www-form-urlencoded'
+                        headers = [Header.insertHeader('content-type', content_type)]
 
-                    if Request.checkExtension(url) and not Request.checkRequest(url, method, None, data):
-                        self.__crawl(url, method, data, headers, cookies)
+                    if Request.checkExtension(url) and not Request.checkRequest(url, method, content_type, data):
+                        self.__crawl(url, method, data, headers)
 
             elif element.name == 'script':
                 src = element.get('src')
@@ -235,7 +241,7 @@ class Crawler (threading.Thread):
                     if element.string is None:
                         continue
 
-                    Script.insertScript(None, None, None, element.string, response)
+                    Script.insertScript(None, element.string, response)
                 else:
                     src = urljoin(parent_url, src)
                     domain = urlparse(src).netloc
@@ -243,49 +249,49 @@ class Crawler (threading.Thread):
                         continue
 
                     content = requests.get(src).text
-                    Script.insertScript(src, headers, cookies, content, response)
+                    Script.insertScript(src, content, response)
 
-    # Main method of crawler
-    def __crawl(self, parent_url, method, data, headers, cookies):
+    # Main method of crawler. headers and cookies are extra ones to be appended to the ones corresponding to the domain
+    def __crawl(self, parent_url, method, data, headers = [], cookies = []):
         print("[+] Crawling %s [%s]" % (parent_url, method))
 
-        domain = Path.insertPath(parent_url, headers, cookies).domain
+        domain = Path.insertPath(parent_url).domain
 
         # Needed for selenium to insert cookies with their domains correctly https://stackoverflow.com/questions/41559510/selenium-chromedriver-add-cookie-invalid-domain-error
-        if domain.cookies:
+        if cookies or domain.cookies:
             self.driver.get(parent_url)
 
         # Delete all previous requests so they don't pollute the results
         del self.driver.requests
 
-        # Add headers associated to domain to request via a request interceptor
-        if domain.headers:
-            # If we try to acces headers from interceptor by domain.headers, when another variable
-            # named domain is used, it will overwrite driver.headers so it will throw an exception
-            domain_headers = domain.headers
-            def interceptor(request):
-                for header in domain_headers:
-                    try:
-                        del request.headers[header.key]
-                    except:
-                        pass
-                    request.headers[header.key] = header.value
-            self.driver.request_interceptor = interceptor
-
-        # Add cookies associated to domain to request
-        if domain.cookies:
-            try:
-                for cookie in domain.cookies:
-                    self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain": cookie.domain})
-            except:
-                # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
-                print("[x] %s is a cookie-averse document" % parent_url)
-
         try:
             if method == 'GET':
+                # Add headers associated to domain to request via a request interceptor
+                if headers or domain.headers:
+                    # If we try to acces headers from interceptor by domain.headers, when another variable
+                    # named domain is used, it will overwrite driver.headers so it will throw an exception
+                    interceptor_headers = headers + domain.headers
+                    def interceptor(request):
+                        for header in interceptor_headers:
+                            try:
+                                del request.headers[header.key]
+                            except:
+                                pass
+                            request.headers[header.key] = header.value
+                    self.driver.request_interceptor = interceptor
+
+                # Add cookies associated to domain to request
+                if cookies or domain.cookies:
+                    try:
+                        for cookie in cookies + domain.cookies:
+                            self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain": cookie.domain})
+                    except:
+                        # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
+                        print("[x] %s is a cookie-averse document" % parent_url)
+
                 self.driver.get(parent_url)
             elif method == 'POST':
-                self.__post(parent_url, data)
+                self.__post(parent_url, data, headers + domain.headers, cookies + domain.cookies)
         except Exception as e:
             print('[x] Exception ocurred when requesting %s' % (parent_url))
             traceback.print_tb(e.__traceback__)
@@ -301,7 +307,7 @@ class Crawler (threading.Thread):
         for request in self.driver.iter_requests():
             # Main request
             if request.url == parent_url and main_request is None and main_response is None:
-                main_request, main_response = self.__processRequest(request, headers, cookies)
+                main_request, main_response = self.__processRequest(request)
                 if not main_request or not main_response:
                     return
 
@@ -344,7 +350,7 @@ class Crawler (threading.Thread):
                 # If domain is in scope, request has not been done yet and resource is not an image
                 elif Request.checkExtension(request.url) and not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')):
                     print("[+] Made dynamic request to %s [%s]" % (request.url, request.method))
-                    req, resp = self.__processRequest(request, headers, cookies)
+                    req, resp = self.__processRequest(request)
                     
                     # If dynamic request responded with HTML, send it to analize
                     if resp and resp.body and bool(BeautifulSoup(resp.body, 'html.parser').find()):
@@ -352,7 +358,7 @@ class Crawler (threading.Thread):
 
         # Analyze all responses
         for response in responses:
-            self.__parseHTML(response['url'], response['response'], response['headers'], response['cookies'])
+            self.__parseHTML(response['url'], response['response'])
         
 class Fuzzer (threading.Thread):
     def __init__(self, crawler):
