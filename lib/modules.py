@@ -108,8 +108,9 @@ class Crawler (threading.Thread):
 
         # Third argument from open() means to request synchronously so selenium wait for it to be completed
         self.driver.execute_script("""
-        function post(path, data, headers) {
+        function post(path, data, headers, timeout) {
             var xhr = new XMLHttpRequest();
+            xhr.timeout = timeout;
             xhr.open("POST", path, false);
 
             Object.keys(headers).forEach(function(key){
