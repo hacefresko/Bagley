@@ -106,10 +106,11 @@ class Crawler (threading.Thread):
                 cookie_header += cookie.name + '=' + cookie.value + '; '
             headers_dict['cookie'] = cookie_header
 
+        # Third argument from open() means to request synchronously so selenium wait for it to be completed
         self.driver.execute_script("""
         function post(path, data, headers) {
             var xhr = new XMLHttpRequest();
-            xhr.open("POST", path, true);
+            xhr.open("POST", path, false);
 
             Object.keys(headers).forEach(function(key){
                 xhr.setRequestHeader(key, headers[key])
@@ -118,8 +119,8 @@ class Crawler (threading.Thread):
             xhr.send(data)
         }
         
-        post(arguments[0], arguments[1], arguments[2]);
-        """, path, data, headers_dict)
+        post(arguments[0], arguments[1], arguments[2], arguments[3]);
+        """, path, data, headers_dict, lib.config.TIMEOUT)
 
     # Inserts in the database the request and its response if url belongs to the scope. 
     # Returns (request, response). Headers and cookies params are extra headers and cookies added to the request
