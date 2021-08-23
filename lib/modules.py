@@ -319,21 +319,21 @@ class Crawler (threading.Thread):
                     redirect_to = main_response.getHeader('location').value
                     if not redirect_to:
                         print("[x] Received %d but location header is not present" % code)
-                        return
+                    else:
+                        redirect_to = urljoin(parent_url, redirect_to)
 
-                    redirect_to = urljoin(parent_url, redirect_to)
+                        if code != 307 and code != 308:
+                            method = 'GET'
+                            data = None
 
-                    if code != 307 and code != 308:
-                        method = 'GET'
-                        data = None
-
-                    if Request.checkExtension(redirect_to) and not Request.checkRequest(redirect_to, method, None, data):
-                        if not Domain.checkScope(urlparse(redirect_to).netloc):
-                            print("[x] Got redirection %d but %s not in scope" % (code, redirect_to))
-                            return
-                        print("[+] Following redirection %d to %s [%s]" % (code, redirect_to, method))
-                        self.__crawl(redirect_to, method, data, headers, cookies)
-                        return
+                        if Request.checkExtension(redirect_to) and not Request.checkRequest(redirect_to, method, None, data):
+                            if Domain.checkScope(urlparse(redirect_to).netloc):
+                                print("[+] Following redirection %d to %s [%s]" % (code, redirect_to, method))
+                                self.__crawl(redirect_to, method, data, headers, cookies)
+                            else:
+                                print("[x] Got redirection %d but %s not in scope" % (code, redirect_to))
+                    
+                    return
 
                 
                 responses.append({'url': parent_url, 'response':main_response, 'headers': headers, 'cookies': cookies})
@@ -347,7 +347,7 @@ class Crawler (threading.Thread):
                 # If resource is a JS file
                 if request.url[-3:] == '.js':
                     content = requests.get(request.url).text
-                    Script.insertScript(request.url, headers, cookies, content, main_response)
+                    Script.insertScript(request.url, content, main_response)
                     continue
                 # If domain is in scope, request has not been done yet and resource is not an image
                 elif Request.checkExtension(request.url) and not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')):
@@ -408,6 +408,8 @@ class Fuzzer (threading.Thread):
             return
 
         for line in result.stdout.splitlines():
+            if line == '':
+                continue
             discovered = line.split('Found: ')[1]
             print('[*] Domain found! Inserted %s to database' % discovered)
             Domain.insertDomain(discovered, None, None)
