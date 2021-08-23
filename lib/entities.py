@@ -160,17 +160,18 @@ class Domain:
 
     # Inserts domain if not already inserted
     @staticmethod
-    def insertDomain(domain_name, headers = [], cookies = []):
+    def insertDomain(domain_name):
         db = DB()
         if Domain.checkDomain(domain_name):
             return Domain.getDomain(domain_name)
 
         domain = Domain(db.exec_and_get_last_id('INSERT INTO domains (name) VALUES (%s)', (domain_name,)), domain_name)
-
-        for element in headers + cookies:
-            element.link(domain)
         
         return domain
+
+    # Links cookie or header (element) to domain
+    def add(self, element):
+        element.link(self)
 
     # Inserts an out of scope domain if not already inserted neither in scope nor out
     @staticmethod
@@ -314,14 +315,14 @@ class Path:
     # Inserts each path inside the URL if not already inserted and returns last inserted path (last element from URL).
     # If domain is not in scope, returns False. If domain is in scope but not in database, inserts it
     @staticmethod
-    def insertPath(url, headers = [], cookies = []):
+    def insertPath(url):
         db = DB()
         parsedURL = Path.__parseURL(url)
 
         if not Domain.checkScope(parsedURL['domain']):
             return False
         
-        domain = Domain.insertDomain(parsedURL['domain'], headers, cookies)
+        domain = Domain.insertDomain(parsedURL['domain'])
 
         # Iterate over each domain/file from URL
         parent = None
@@ -682,10 +683,11 @@ class Header:
 
     # Returns a formatted tupple with key and value
     @staticmethod
-    def __parseHeader(key, value):
+    def __parseHeader(key, value, blacklist=True):
+        # Header names are case-insensitive
         key = key.lower()
-        if key in lib.config.HEADERS_BLACKLIST:
-            value = '1337'
+        if blacklist and key in lib.config.HEADERS_BLACKLIST:
+                value = '1337'
         return (key, value)
 
     # Returns header or False if it does not exist  
@@ -701,8 +703,8 @@ class Header:
 
     # Inserts header if not inserted and returns it
     @staticmethod
-    def insertHeader(key, value):
-        key, value = Header.__parseHeader(key, value)
+    def insertHeader(key, value, blacklist=True):
+        key, value = Header.__parseHeader(key, value, blacklist)
         header = Header.getHeader(key, value)
         if not header:
             db = DB()
@@ -747,12 +749,12 @@ class Cookie:
     # Returns a formatted tupple with name and value
     @staticmethod
     def __parseCookie(name, value):
-        name = name.lower()
         if name in lib.config.COOKIES_BLACKLIST:
             value = '1337'
-        for term in lib.config.PARAMS_BLACKLIST:
-            if term in name:
-                value = term
+        else:
+            for term in lib.config.PARAMS_BLACKLIST:
+                if term in name:
+                    value = term
         return (name, value)
 
     # Returns True if exists or False if it does not exist   
@@ -773,11 +775,15 @@ class Cookie:
         path = Path.parseURL(url)
         if not path:
             return False
-
-        name, value = Cookie.__parseCookie(name, value)
-
         db = DB()
+
+        # First, try to get cookie as is, in case it was a session cookie added in the beggining in the scope file.
+        # In case there is no such cookie in db, try to get it parsed
         results = db.query_all('SELECT * FROM cookies WHERE name = %s AND value = %s', (name, value))
+        if not results:
+            name, value = Cookie.__parseCookie(name, value)
+            results = db.query_all('SELECT * FROM cookies WHERE name = %s AND value = %s', (name, value))
+        
         for result in results:
             cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9])
             # If domain/range of subdomains and range of paths  from cookie match with url
@@ -786,13 +792,14 @@ class Cookie:
                 return cookie
         return False
 
-    # Inserts cookie if not already inserted and returns it
+    # Inserts cookie if not already inserted and returns it. Blacklist parameter indicates if cookie value must be removed if value of cookie is blacklisted
     @staticmethod
-    def insertCookie(name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite):
+    def insertCookie(name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite, blacklist=True):
         if not Domain.checkScope(cookie_domain):
             return False
 
-        name, value = Cookie.__parseCookie(name, value)
+        if blacklist:
+            name, value = Cookie.__parseCookie(name, value)
         cookie = Cookie.__getCookie(name, value, cookie_domain, cookie_path)
         if not cookie:
             db = DB()

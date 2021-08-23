@@ -76,12 +76,12 @@ class Crawler (threading.Thread):
             try:
                 print("[+] Started crawling %s" % url)
                 if domain.headers:
-                    print("[+] Headers used:")
+                    print("[+] Headers used:\n")
                     for header in domain.headers:
                         print(header)
                     print()
                 if domain.cookies:
-                    print("[+] Cookies used:")
+                    print("[+] Cookies used:\n")
                     for cookie in domain.cookies:
                         print(cookie)
                     print()
@@ -221,6 +221,7 @@ class Crawler (threading.Thread):
                                 data += input.get('name') + "=" + input.get('value') + "&"
                     data = data[:-1] if data != '' else None
                         
+                    headers = None
                     # If form method is GET, append data to URL as params and set data and content type to None
                     if method == 'GET':
                         content_type = None
@@ -397,6 +398,7 @@ class Fuzzer (threading.Thread):
             discovered = urljoin(url, line.split(' ')[0])
             if not Request.checkRequest(discovered, 'GET', None, None):
                 print("[*] Path found! Queued %s to crawler" % discovered)
+                Path.insertPath(discovered)
                 self.crawler.addToQueue(discovered)
 
     def __fuzzDomain(self, domain):
@@ -411,7 +413,7 @@ class Fuzzer (threading.Thread):
                 continue
             discovered = line.split('Found: ')[1]
             print('[*] Domain found! Inserted %s to database' % discovered)
-            Domain.insertDomain(discovered, None, None)
+            Domain.insertDomain(discovered)
 
     def run(self):
         directories = Path.getDirectories()

@@ -56,6 +56,8 @@ except Exception:
     print('[x] Usage: ' + os.path.basename(__file__) + ' -S <scope file>')
     exit()
 
+scope_file_name = 'scope.txt'
+
 print("[+] Starting time: %s" % datetime.datetime.now())
 print("[+] Parsing scope file: %s" % scope_file_name)
 
@@ -93,24 +95,21 @@ while True:
         continue
     if not Domain.checkDomain(domain):
         print("[+] Target found: %s" % domain)
+        d = Domain.insertDomain(domain)
         
         json_headers = entry.get('headers')
-        headers = []
         if json_headers:
             for k,v in json_headers.items():
-                header = Header.insertHeader(k,v)
-                headers.append(header)
+                header = Header.insertHeader(k,v, False)
+                if header:
+                    d.add(header)
 
         json_cookies = entry.get('cookies')
-        cookies = []
         if json_cookies:
-
             for c in json_cookies:
-                cookie = Cookie.insertCookie(c.get('name'), c.get('value'), c.get('domain'), '/', None, None, None, None, None)
+                cookie = Cookie.insertCookie(c.get('name'), c.get('value'), c.get('domain'), '/', None, None, None, None, None, False)
                 if cookie:
-                    cookies.append(cookie)
-
-        Domain.insertDomain(domain, headers, cookies)
+                    d.add(cookie)
 
     if domain[0] == '.':
         # Insert out of scope domains
