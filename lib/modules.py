@@ -456,7 +456,7 @@ class Injector (threading.Thread):
                 command.append(request.data)
 
             for cookie in request.path.domain.cookies:
-                command.append("--cookie='"+str(cookie)+"'")
+                command.append("--cookie="+str(cookie))
             
             print("[+] Testing SQL injection in %s [%s]" % (url, request.method))
 
