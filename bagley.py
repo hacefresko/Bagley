@@ -56,8 +56,6 @@ except Exception:
     print('[x] Usage: ' + os.path.basename(__file__) + ' -S <scope file>')
     exit()
 
-scope_file_name = 'scope.txt'
-
 print("[+] Starting time: %s" % datetime.datetime.now())
 print("[+] Parsing scope file: %s" % scope_file_name)
 
