@@ -49,6 +49,12 @@ class Crawler (threading.Thread):
                 domain = Path.parseURL(url).domain
                 if not domain:
                     continue
+                try:
+                    initial_request = requests.get(url,  allow_redirects=False)
+                except Exception as e:
+                    print("[x] Cannot request %s" % (url))
+                    traceback.print_tb(e.__traceback__)
+                    continue
             else:
                 domain = next(domains)
                 if not domain:
