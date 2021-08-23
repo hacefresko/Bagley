@@ -51,9 +51,11 @@ class Crawler (threading.Thread):
                     continue
                 try:
                     initial_request = requests.get(url,  allow_redirects=False)
-                except Exception as e:
+                except requests.exceptions.SSLError:
+                    print("[x] SSL certificate validation failed for %s" % (url))
+                    continue
+                except:
                     print("[x] Cannot request %s" % (url))
-                    traceback.print_tb(e.__traceback__)
                     continue
             else:
                 domain = next(domains)
