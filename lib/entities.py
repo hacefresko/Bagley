@@ -154,6 +154,10 @@ class Domain:
             return True
         # If it is a domain name
         else:
+            # Check if any domain fits in the group of subdomains
+            if domain[0] == '.' and db.query_one('SELECT name FROM domains WHERE name LIKE %s', ("%"+domain,)):
+                return True
+
             # Construct array with starting and interspersed dots i.e example.com => ['.','example','.','com']
             parts = domain.split('.')
             dot_interspersed_parts = (['.']*(2*len(parts)-1))
