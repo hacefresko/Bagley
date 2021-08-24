@@ -1,4 +1,4 @@
-import hashlib, json, time, pathlib
+import hashlib, json, time, pathlib, socket
 from urllib.parse import urlparse, urlunparse
 
 import lib.config
@@ -130,11 +130,18 @@ class Domain:
         db = DB()
         return True if (db.query_one('SELECT name FROM domains WHERE name LIKE %s', (domain,)) or db.query_one('SELECT name FROM out_of_scope WHERE name LIKE %s', (domain,))) else False
 
-    # Returns True if domain is inside the scope, else False.
+    # Returns True if domain is inside the scope, else False. strict parameter indicates if port must be checked or not.
+    # i.e if strict = False, then 127.0.0.1 == 127.0.0.1:5000
     @staticmethod
-    def checkScope(domain):
+    def checkScope(domain, strict=True):
         if not domain:
             return False
+
+        if not strict:
+            if ':' in domain:
+                domain = domain.split(':')[0]
+            if Domain.checkScope(domain + ':%'):
+                return True
 
         db = DB()
 
@@ -142,19 +149,24 @@ class Domain:
         if db.query_one('SELECT name FROM out_of_scope WHERE name LIKE %s', (domain,)):
             return False
 
-        # Construct array with starting and interspersed dots i.e example.com => ['.','example','.','com']
-        parts = domain.split('.')
-        dot_interspersed_parts = (['.']*(2*len(parts)-1))
-        dot_interspersed_parts[::2] = parts
-        if dot_interspersed_parts[0] == '':
-            dot_interspersed_parts = dot_interspersed_parts[1:]
-        elif dot_interspersed_parts[0] != '.':
-            dot_interspersed_parts.insert(0, '.')
+        # If domain is an IP
+        if Utils.isIP(domain.split(':')[0]) and db.query_one('SELECT name FROM domains WHERE name LIKE %s', (domain,)):
+            return True
+        # If it is a domain name
+        else:
+            # Construct array with starting and interspersed dots i.e example.com => ['.','example','.','com']
+            parts = domain.split('.')
+            dot_interspersed_parts = (['.']*(2*len(parts)-1))
+            dot_interspersed_parts[::2] = parts
+            if dot_interspersed_parts[0] == '':
+                dot_interspersed_parts = dot_interspersed_parts[1:]
+            elif dot_interspersed_parts[0] != '.':
+                dot_interspersed_parts.insert(0, '.')
 
-        for i in range(len(dot_interspersed_parts)):
-            check = ''.join(dot_interspersed_parts[i:])
-            if db.query_one('SELECT name FROM domains WHERE name LIKE %s', (check,)):
-                return True
+            for i in range(len(dot_interspersed_parts)):
+                check = ''.join(dot_interspersed_parts[i:])
+                if db.query_one('SELECT name FROM domains WHERE name LIKE %s', (check,)):
+                    return True
 
         return False
 
@@ -760,7 +772,7 @@ class Cookie:
     # Returns True if exists or False if it does not exist   
     @staticmethod 
     def __getCookie(name, value, cookie_domain, cookie_path):
-        if cookie_domain and not Domain.checkScope(cookie_domain):
+        if cookie_domain and not Domain.checkScope(cookie_domain, False):
             return False
         
         db = DB()
@@ -795,7 +807,7 @@ class Cookie:
     # Inserts cookie if not already inserted and returns it. Blacklist parameter indicates if cookie value must be removed if value of cookie is blacklisted
     @staticmethod
     def insertCookie(name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite, blacklist=True):
-        if not Domain.checkScope(cookie_domain):
+        if not Domain.checkScope(cookie_domain, False):
             return False
 
         if blacklist:
@@ -904,6 +916,14 @@ class Vulnerability:
         return Vulnerability(db.exec_and_get_last_id('INSERT INTO vulnerabilities (path, type, description) VALUES (%d,%s,%s)', (path.id, vuln_type, description)), path.id, vuln_type, description)
 
 class Utils:
+    @staticmethod
+    def isIP(ip):
+        try:
+            socket.inet_aton(ip)
+            return True
+        except:
+            return False
+
     @staticmethod
     def replaceURLencoded(data, match, newValue):
         if not data:
