@@ -204,7 +204,7 @@ class Crawler (threading.Thread):
         domain = Path.insertPath(parent_url).domain
 
         # Needed for selenium to insert cookies with their domains correctly https://stackoverflow.com/questions/41559510/selenium-chromedriver-add-cookie-invalid-domain-error
-        if cookies or domain.cookies:
+        if cookies:
             self.driver.get(parent_url)
 
         # Delete all previous requests so they don't pollute the results
@@ -213,10 +213,10 @@ class Crawler (threading.Thread):
         try:
             if method == 'GET':
                 # Add headers associated to domain to request via a request interceptor
-                if headers or domain.headers:
+                if headers:
                     # If we try to acces headers from interceptor by domain.headers, when another variable
                     # named domain is used, it will overwrite driver.headers so it will throw an exception
-                    interceptor_headers = headers + domain.headers
+                    interceptor_headers = headers
                     def interceptor(request):
                         for header in interceptor_headers:
                             try:
@@ -227,9 +227,9 @@ class Crawler (threading.Thread):
                     self.driver.request_interceptor = interceptor
 
                 # Add cookies associated to domain to request
-                if cookies or domain.cookies:
+                if cookies :
                     try:
-                        for cookie in cookies + domain.cookies:
+                        for cookie in cookies:
                             self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain": cookie.domain})
                     except:
                         # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
@@ -237,7 +237,7 @@ class Crawler (threading.Thread):
 
                 self.driver.get(parent_url)
             elif method == 'POST':
-                self.__post(parent_url, data, headers + domain.headers, cookies + domain.cookies)
+                self.__post(parent_url, data, headers, cookies)
         except Exception as e:
             print('[x] Exception ocurred when requesting %s' % (parent_url))
             traceback.print_tb(e.__traceback__)
@@ -419,7 +419,7 @@ class Fuzzer (threading.Thread):
         for line in result.stdout.splitlines():
             if line == '':
                 continue
-            discovered = line.split('Found: ')[1]
+            discovered = line.split('Found: ')[1].strip()
             print('[*] Domain found! Inserted %s to database' % discovered)
             Domain.insertDomain(discovered)
 
