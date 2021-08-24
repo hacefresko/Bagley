@@ -93,8 +93,11 @@ while True:
         continue
     if not Domain.checkDomain(domain):
         print("[+] Target found: %s" % domain)
+
+        # Insert domain
         d = Domain.insertDomain(domain)
         
+        # Get and insert headers
         json_headers = entry.get('headers')
         if json_headers:
             for k,v in json_headers.items():
@@ -102,6 +105,7 @@ while True:
                 if header:
                     d.add(header)
 
+        # Get and insert cookies
         json_cookies = entry.get('cookies')
         if json_cookies:
             for c in json_cookies:
@@ -109,10 +113,9 @@ while True:
                 if cookie:
                     d.add(cookie)
 
-    if domain[0] == '.':
-        # Insert out of scope domains
-        excluded = entry.get('excluded')
-        if excluded:
-            for e in excluded:
-                Domain.insertOutOfScopeDomain(e)
-
+        # If group of subdomains specified, get out of scope domains
+        if domain[0] == '.':
+            excluded = entry.get('excluded')
+            if excluded:
+                for e in excluded:
+                    Domain.insertOutOfScopeDomain(e)

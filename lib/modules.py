@@ -38,70 +38,6 @@ class Crawler (threading.Thread):
     def addToQueue(self, url):
         self.queue.append(url)
 
-    def run(self):
-        # Generator for domains
-        domains = Domain.getDomains()
-        while True:
-            # Try to get url from queue. If queue is empty, try to get domain from database. If it's also
-            # empty, sleeps for 5 seconds and starts again
-            if len(self.queue) > 0:
-                url = self.queue.pop(0)
-                domain = Path.parseURL(url).domain
-                if not domain:
-                    continue
-                try:
-                    initial_request = requests.get(url,  allow_redirects=False)
-                except requests.exceptions.SSLError:
-                    print("[x] SSL certificate validation failed for %s" % (url))
-                    continue
-                except:
-                    print("[x] Cannot request %s" % (url))
-                    continue
-            else:
-                domain = next(domains)
-                if not domain:
-                    time.sleep(5)
-                    continue
-                domain_name = domain.name if domain.name[0] != '.' else domain.name[1:]
-
-                # Figure out what protocol to use
-                url = 'http://' + domain_name + '/'
-                try:
-                    initial_request = requests.get(url,  allow_redirects=False)
-                    if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
-                        url = 'https://' + domain_name + '/'
-                    elif not initial_request.ok:
-                        url = 'https://' + domain_name + '/'
-                        requests.get(url,  allow_redirects=False)
-                except Exception as e:
-                    print("[x] Cannot request %s" % (url))
-                    traceback.print_tb(e.__traceback__)
-                    continue
-
-            if Request.checkRequest(url, 'GET', None, None):
-                continue
-
-            try:
-                print("[+] Started crawling %s" % url)
-                if domain.headers:
-                    print("[+] Headers used:\n")
-                    for header in domain.headers:
-                        print(header)
-                    print()
-                if domain.cookies:
-                    print("[+] Cookies used:\n")
-                    for cookie in domain.cookies:
-                        print(cookie)
-                    print()
-
-                self.__crawl(url, 'GET', None, domain.headers, domain.cookies)
-            except Exception as e:
-                print('[x] Exception ocurred when crawling %s' % (url))
-                traceback.print_tb(e.__traceback__)
-            finally:
-                print("[+] Finished crawling %s" % url)
-                continue
-
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
     def __post(self, path, data, headers, cookies):
         headers_dict = {}
@@ -369,7 +305,71 @@ class Crawler (threading.Thread):
         # Analyze all responses
         for response in responses:
             self.__parseHTML(response['url'], response['response'])
-        
+
+    def run(self):
+        # Generator for domains
+        domains = Domain.getDomains()
+        while True:
+            # Try to get url from queue. If queue is empty, try to get domain from database. If it's also
+            # empty, sleeps for 5 seconds and starts again
+            if len(self.queue) > 0:
+                url = self.queue.pop(0)
+                domain = Path.parseURL(url).domain
+                if not domain:
+                    continue
+                try:
+                    initial_request = requests.get(url,  allow_redirects=False)
+                except requests.exceptions.SSLError:
+                    print("[x] SSL certificate validation failed for %s" % (url))
+                    continue
+                except:
+                    print("[x] Cannot request %s" % (url))
+                    continue
+            else:
+                domain = next(domains)
+                if not domain:
+                    time.sleep(5)
+                    continue
+                domain_name = domain.name if domain.name[0] != '.' else domain.name[1:]
+
+                # Figure out what protocol to use
+                url = 'http://' + domain_name + '/'
+                try:
+                    initial_request = requests.get(url,  allow_redirects=False)
+                    if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
+                        url = 'https://' + domain_name + '/'
+                    elif not initial_request.ok:
+                        url = 'https://' + domain_name + '/'
+                        requests.get(url,  allow_redirects=False)
+                except Exception as e:
+                    print("[x] Cannot request %s" % (url))
+                    traceback.print_tb(e.__traceback__)
+                    continue
+
+            if Request.checkRequest(url, 'GET', None, None):
+                continue
+
+            try:
+                print("[+] Started crawling %s" % url)
+                if domain.headers:
+                    print("[+] Headers used:\n")
+                    for header in domain.headers:
+                        print(header)
+                    print()
+                if domain.cookies:
+                    print("[+] Cookies used:\n")
+                    for cookie in domain.cookies:
+                        print(cookie)
+                    print()
+
+                self.__crawl(url, 'GET', None, domain.headers, domain.cookies)
+            except Exception as e:
+                print('[x] Exception ocurred when crawling %s' % (url))
+                traceback.print_tb(e.__traceback__)
+            finally:
+                print("[+] Finished crawling %s" % url)
+                continue
+
 class Fuzzer (threading.Thread):
     def __init__(self, crawler):
         threading.Thread.__init__(self)

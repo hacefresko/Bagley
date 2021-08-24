@@ -138,8 +138,8 @@ class Domain:
             return False
 
         if not strict:
-            if ':' in domain:
-                domain = domain.split(':')[0]
+            domain = domain.split(':')[0]
+            # Check if domain exists in database with any specified port
             if Domain.checkScope(domain + ':%'):
                 return True
 
@@ -804,7 +804,9 @@ class Cookie:
                 return cookie
         return False
 
-    # Inserts cookie if not already inserted and returns it. Blacklist parameter indicates if cookie value must be removed if value of cookie is blacklisted
+    # Inserts cookie if not already inserted and returns it. 
+    # blacklist parameter indicates if cookie value must be removed if value of cookie is blacklisted
+    # checkDomain parameter indicates if domain must be checked
     @staticmethod
     def insertCookie(name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite, blacklist=True):
         if not Domain.checkScope(cookie_domain, False):
