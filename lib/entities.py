@@ -975,7 +975,6 @@ class Utils:
 
         try:
             if 'multipart/form-data' in content_type:
-
                 # If data has already been parsed so boundary has changed
                 if '--'+boundary_substitute in data:
                     boundary = '--'+boundary_substitute
@@ -1002,12 +1001,11 @@ class Utils:
                 new_data += '--'
 
                 return new_data
-
             elif 'application/json' in content_type:
                 return json.dumps(Utils.replaceJSON(json.loads(data), match, newValue))
-
             elif 'application/x-www-form-urlencoded' in content_type:
                 return Utils.replaceURLencoded(data, match, newValue)
-
         except Exception as e:
+            print('[x] Exception %s ocurred when parsing POST data' % (e.__class__.__name__))
+        finally:
             return data

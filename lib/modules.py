@@ -239,8 +239,7 @@ class Crawler (threading.Thread):
             elif method == 'POST':
                 self.__post(parent_url, data, headers, cookies)
         except Exception as e:
-            print('[x] Exception ocurred when requesting %s' % (parent_url))
-            traceback.print_tb(e.__traceback__)
+            print('[x] Exception %s ocurred when requesting %s' % (e.__class__.__name__, parent_url))
             return
 
         # List of responses to analyze
@@ -364,8 +363,7 @@ class Crawler (threading.Thread):
 
                 self.__crawl(url, 'GET', None, domain.headers, domain.cookies)
             except Exception as e:
-                print('[x] Exception ocurred when crawling %s' % (url))
-                traceback.print_tb(e.__traceback__)
+                print('[x] Exception %s ocurred when crawling %s' % (e.__class__.__name__, url))
             finally:
                 print("[+] Finished crawling %s" % url)
                 continue
