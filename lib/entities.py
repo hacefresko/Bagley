@@ -1,7 +1,7 @@
 import hashlib, json, time, pathlib, socket
 from urllib.parse import urlparse, urlunparse
 
-import lib.config
+import config
 from lib.database import DB
 
 class Domain:
@@ -409,7 +409,7 @@ class Request:
         if not params:
             return None
         new_params = params
-        for word in lib.config.PARAMS_BLACKLIST:
+        for word in config.PARAMS_BLACKLIST:
             new_params = Utils.replaceURLencoded(new_params, word, word)
         return new_params
 
@@ -419,7 +419,7 @@ class Request:
         if not data:
             return None
         new_data = data
-        for word in lib.config.PARAMS_BLACKLIST:
+        for word in config.PARAMS_BLACKLIST:
             new_data = Utils.substitutePOSTData(content_type, new_data, word, word)
         return new_data
 
@@ -432,7 +432,7 @@ class Request:
 
     # Returns True if request exists in database else False. If there are already some requests with the same path, protocol and method 
     # but different params/data with same key, it returns True to avoid saving same requests with different CSRFs, session values, etc.
-    # If requested file extension belongs is in lib.config.EXTENSIONS_BLACKLIST, returns False
+    # If requested file extension belongs is in config.EXTENSIONS_BLACKLIST, returns False
     @staticmethod
     def checkRequest(url, method, content_type, data):
         path = Path.parseURL(url)
@@ -481,7 +481,7 @@ class Request:
     # Returns False if extension is in blacklist from config.py, else True   
     @staticmethod
     def checkExtension(url):
-        return False if pathlib.Path(url.split('?')[0]).suffix in lib.config.EXTENSIONS_BLACKLIST else True
+        return False if pathlib.Path(url.split('?')[0]).suffix in config.EXTENSIONS_BLACKLIST else True
         
     # Returns request if exists else false
     @staticmethod
@@ -702,7 +702,7 @@ class Header:
     def __parseHeader(key, value, blacklist=True):
         # Header names are case-insensitive
         key = key.lower()
-        if blacklist and key in lib.config.HEADERS_BLACKLIST:
+        if blacklist and key in config.HEADERS_BLACKLIST:
                 value = '1337'
         return (key, value)
 
@@ -765,10 +765,10 @@ class Cookie:
     # Returns a formatted tupple with name and value
     @staticmethod
     def __parseCookie(name, value):
-        if name in lib.config.COOKIES_BLACKLIST:
+        if name in config.COOKIES_BLACKLIST:
             value = '1337'
         else:
-            for term in lib.config.PARAMS_BLACKLIST:
+            for term in config.PARAMS_BLACKLIST:
                 if term in name:
                     value = term
         return (name, value)

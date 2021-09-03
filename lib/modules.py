@@ -5,7 +5,7 @@ from seleniumwire import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 
-import lib.config
+import config
 from lib.entities import *
 import traceback
 
@@ -33,7 +33,7 @@ class Crawler (threading.Thread):
         self.driver = webdriver.Chrome(options=opts)
 
         # Set timeout
-        self.driver.set_page_load_timeout(lib.config.TIMEOUT)
+        self.driver.set_page_load_timeout(config.TIMEOUT)
 
     def addToQueue(self, url):
         self.queue.append(url)
@@ -378,9 +378,9 @@ class Fuzzer (threading.Thread):
         if not Request.checkRequest(url, 'GET', None, None):
             self.crawler.addToQueue(url)
 
-        delay = str(int((1/lib.config.REQ_PER_SEC) * 1000)) + 'ms'
+        delay = str(int((1/config.REQ_PER_SEC) * 1000)) + 'ms'
 
-        command = ['gobuster', 'dir', '-q', '-w', lib.config.DIR_FUZZING, '-u', url, '--delay', delay]
+        command = ['gobuster', 'dir', '-q', '-w', config.DIR_FUZZING, '-u', url, '--delay', delay]
 
         # Add headers
         for header in headers:
@@ -408,7 +408,7 @@ class Fuzzer (threading.Thread):
                 self.crawler.addToQueue(discovered)
 
     def __fuzzDomain(self, domain):
-        command = ['gobuster', 'dns', '-q', '-w', lib.config.DOMAIN_FUZZING, '-d', domain]
+        command = ['gobuster', 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', domain]
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if result.returncode != 0:
@@ -454,7 +454,7 @@ class Injector (threading.Thread):
 
             url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
             
-            delay = delay = str(1/lib.config.REQ_PER_SEC)
+            delay = delay = str(1/config.REQ_PER_SEC)
             command = ['sqlmap', '--delay=' + delay, '-v', '0', '--flush-session', '--batch', '-u',  url]
 
             if request.method == 'POST' and request.data:
