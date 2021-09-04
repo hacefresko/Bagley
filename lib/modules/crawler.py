@@ -1,13 +1,12 @@
-import threading, time, requests, subprocess, sqlite3, json
-from urllib.parse import urljoin, urlparse
+import threading, time, requests, traceback
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 from seleniumwire import webdriver
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 
-import config
+from config import *
 from lib.entities import *
-import traceback
 
 class Crawler (threading.Thread):
     def __init__(self):
@@ -33,7 +32,7 @@ class Crawler (threading.Thread):
         self.driver = webdriver.Chrome(options=opts)
 
         # Set timeout
-        self.driver.set_page_load_timeout(config.TIMEOUT)
+        self.driver.set_page_load_timeout(TIMEOUT)
 
     def addToQueue(self, url):
         self.queue.append(url)
@@ -367,110 +366,3 @@ class Crawler (threading.Thread):
             finally:
                 print("[+] Finished crawling %s" % url)
                 continue
-
-class Fuzzer (threading.Thread):
-    def __init__(self, crawler):
-        threading.Thread.__init__(self)
-        self.crawler = crawler
-
-    def __fuzzPath(self, url, headers, cookies):
-        # Crawl all urls on the database that has not been crawled
-        if not Request.checkRequest(url, 'GET', None, None):
-            self.crawler.addToQueue(url)
-
-        delay = str(int((1/config.REQ_PER_SEC) * 1000)) + 'ms'
-
-        command = ['gobuster', 'dir', '-q', '-w', config.DIR_FUZZING, '-u', url, '--delay', delay]
-
-        # Add headers
-        for header in headers:
-            command.append('-H')
-            command.append("'" + str(header) + "'")
-
-        # Add cookies
-        if cookies:
-            command.append('-c')
-            cookies = ''
-            for cookie in cookies:
-                cookies += str(cookie) + ' '
-            command.append(cookies)
-
-        result = subprocess.run(command, capture_output=True, encoding='utf-8')
-
-        if result.returncode != 0:
-            return
-
-        for line in result.stdout.splitlines():
-            discovered = urljoin(url, line.split(' ')[0])
-            if not Request.checkRequest(discovered, 'GET', None, None):
-                print("[*] Path found! Queued %s to crawler" % discovered)
-                Path.insertPath(discovered)
-                self.crawler.addToQueue(discovered)
-
-    def __fuzzDomain(self, domain):
-        command = ['gobuster', 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', domain]
-        result = subprocess.run(command, capture_output=True, encoding='utf-8')
-
-        if result.returncode != 0:
-            return
-
-        for line in result.stdout.splitlines():
-            if line == '':
-                continue
-            discovered = line.split('Found: ')[1].strip()
-            print('[*] Domain found! Inserted %s to database' % discovered)
-            Domain.insertDomain(discovered)
-
-    def run(self):
-        directories = Path.getDirectories()
-        domains = Domain.getDomains()
-        while True:
-            domain = next(domains)
-            if domain and domain.name[0] == '.':
-                print("[+] Fuzzing domain %s" % domain.name[1:])
-                self.__fuzzDomain(domain.name[1:])
-            else:
-                directory = next(directories)
-                if not directory:
-                    time.sleep(5)
-                    continue
-                
-                print("[+] Fuzzing path %s" % directory)
-                self.__fuzzPath('http://' + str(directory), directory.domain.headers, directory.domain.cookies)
-                self.__fuzzPath('https://' + str(directory), directory.domain.headers, directory.domain.cookies)
-                    
-class Injector (threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self)
-    
-    def run(self):
-        tested = []
-        for request in Request.getRequests():
-            if not request:
-                time.sleep(5)
-                continue
-            if not request.response or request.response.code != 200 or (not request.params and not request.data) or request.id in tested:
-                continue
-
-            url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
-            
-            delay = delay = str(1/config.REQ_PER_SEC)
-            command = ['sqlmap', '--delay=' + delay, '-v', '0', '--flush-session', '--batch', '-u',  url]
-
-            if request.method == 'POST' and request.data:
-                command.append("--data")
-                command.append(request.data)
-
-            for cookie in request.path.domain.cookies:
-                command.append("--cookie="+str(cookie))
-            
-            print("[+] Testing SQL injection in %s [%s]" % (url, request.method))
-
-            result = subprocess.run(command, capture_output=True, encoding='utf-8')
-
-            if "---" in result.stdout:
-                print("[*] SQL injection found in %s" % url)
-                Vulnerability.insertVuln(url, 'SQLi', result.stdout)
-                print(result.stdout)
-
-            tested = [*[request.id for request in request.getSameKeysRequests()], *tested]

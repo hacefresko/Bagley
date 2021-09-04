@@ -1,5 +1,7 @@
-import os, signal, datetime, getopt, sys, time
-from lib.modules import *
+import os, signal, datetime, getopt, sys, time, json
+
+from lib.entities import *
+import lib.modules
 
 # Called when Ctrl+C
 def sigint_handler(sig, frame):
@@ -66,13 +68,13 @@ except FileNotFoundError:
     exit()
 
 # Init all modules
-crawler = Crawler()
+crawler = lib.modules.Crawler()
 crawler.start()
 
-fuzzer = Fuzzer(crawler)
+fuzzer = lib.modules.Fuzzer(crawler)
 fuzzer.start()
 
-injector = Injector()
+injector = lib.modules.Injector()
 injector.start()
 
 # Parse scope file

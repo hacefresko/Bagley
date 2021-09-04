@@ -2,7 +2,7 @@ import hashlib, json, time, pathlib, socket
 from urllib.parse import urlparse, urlunparse
 
 import config
-from lib.database import DB
+from .database import DB
 
 class Domain:
     def __init__(self, id, name):
