@@ -53,7 +53,6 @@ class Injector (threading.Thread):
             command.append('--data')
             command.append(request.data)
 
-
         # Add headers
         command.append('--headers')
         headers_string = ''
@@ -72,9 +71,19 @@ class Injector (threading.Thread):
 
         command.append(headers_string)
 
+        print(command)
 
-
-
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+        while True:
+            line = process.stdout.readline().rstrip()
+            if not line:
+                break
+            elif '------------------------------------------------------------' in line:
+                process.terminate()
+                print("[*] XSS found in %s" % url)
+                print(process.stdout)
+                break
+                
     def run(self):
         tested = []
         for request in Request.getRequests():
