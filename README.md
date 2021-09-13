@@ -39,7 +39,7 @@ Scope options:
 
 *   Fuzzer: Fuzzes subdomains and paths inside the scope. Sends discovered elements to the crawler. Wrapper for [gobuster](https://github.com/OJ/gobuster)
 
-*   Injector: Wrapper for [sqlmap](https://github.com/sqlmapproject/sqlmap)
+*   Injector: Tries to inject SQLi and XSS payloads on GET and POST parameters. Wrapper for [sqlmap](https://github.com/sqlmapproject/sqlmap) and [XSStrike](https://github.com/s0md3v/XSStrike)
 
 ## External requirements
 *   [Mariadb](https://mariadb.com/)
@@ -47,6 +47,7 @@ Scope options:
 *   [ChromeDriver](https://chromedriver.chromium.org/downloads)
 *   [Gobuster](https://github.com/OJ/gobuster)
 *   [Sqlmap](https://github.com/sqlmapproject/sqlmap)
+*   [XSStrike](https://github.com/s0md3v/XSStrike)
 
 ## Useful documentation
 *   [MDN HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP)
