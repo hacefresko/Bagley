@@ -38,50 +38,52 @@ class Injector (threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "---" in result.stdout:
-            print("[*] SQL injection found in %s" % url)
             Vulnerability.insertVuln(url, 'SQLi', result.stdout)
-            print(result.stdout)
+            print("[*] SQL injection found in %s" % url)
+            print('\n'+result.stdout+'\n')
 
     @staticmethod
     def __xss(request):
         url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
-        delay = str(1/REQ_PER_SEC)
-        command = ['xsstrike.py', '-u', url, '-d', delay]
+        # Standard delay of 1 sec since it does not accept non integers values and it's easier to do that
+        command = 'xsstrike -u "' + url + '"'
         
         # Add data
         if request.method == 'POST' and request.data:
-            command.append('--data')
-            command.append(request.data)
+            command += ' --data ' + request.data
 
         # Add headers
-        command.append('--headers')
-        headers_string = ''
+        command += ' --headers "'
 
         if request.headers:
             for header in request.headers:
-                headers_string += str(header) + '\n'
+                command += str(header) + '\n'
 
         if request.cookies:
-            headers_string += 'Cookie:'
+            command += 'Cookie:'
             for cookie in request.cookies:
-                headers_string += ' ' + str(cookie) + ';'
-            headers_string = headers_string[:-1]
-        else:
-            headers_string = headers_string[:-1]
+                command += ' ' + str(cookie) + ';'
+            
+        command = command[:-1]
+        command += '"'
 
-        command.append(headers_string)
-
-        print(command)
+        print("[+] Testing XSS in %s [%s]" % (url, request.method))
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
-        while True:
-            line = process.stdout.readline().rstrip()
-            if not line:
-                break
-            elif '------------------------------------------------------------' in line:
+
+        output = ''
+        while process.poll() is None:
+            line = process.stdout.readline().decode('utf-8', errors='ignore')
+            output += line
+            if '------------------------------------------------------------' in line.strip():
                 process.terminate()
+
+                output += process.communicate()[0].decode('utf-8', errors='ignore')
+                Vulnerability.insertVuln(url, 'XSS', output)
+
                 print("[*] XSS found in %s" % url)
-                print(process.stdout)
+                print('\n'+output+'\n')
+
                 break
                 
     def run(self):
