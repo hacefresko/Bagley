@@ -89,35 +89,41 @@ while True:
         print("[x] Target couldn't be parsed: %s" % line)
         continue
 
+    # Add to queue
+    if entry.get("queue"):
+        queued = entry.get("queue")
+        crawler.addToQueue(queued)
+        print("[+] %s added to queue" % queued)
     # Get domain
-    domain = entry.get('domain')
-    if not domain:
-        continue
-    if not Domain.checkDomain(domain):
-        print("[+] Target found: %s" % domain)
+    elif entry.get('domain'):
+        domain = entry.get('domain')
+        if not domain:
+            continue
+        if not Domain.checkDomain(domain):
+            print("[+] Target found: %s" % domain)
 
-        # Insert domain
-        d = Domain.insertDomain(domain)
-        
-        # Get and insert headers
-        json_headers = entry.get('headers')
-        if json_headers:
-            for k,v in json_headers.items():
-                header = Header.insertHeader(k,v, False)
-                if header:
-                    d.add(header)
+            # Insert domain
+            d = Domain.insertDomain(domain)
+            
+            # Get and insert headers
+            json_headers = entry.get('headers')
+            if json_headers:
+                for k,v in json_headers.items():
+                    header = Header.insertHeader(k,v, False)
+                    if header:
+                        d.add(header)
 
-        # Get and insert cookies
-        json_cookies = entry.get('cookies')
-        if json_cookies:
-            for c in json_cookies:
-                cookie = Cookie.insertCookie(c.get('name'), c.get('value'), c.get('domain'), '/', None, None, None, None, None, False)
-                if cookie:
-                    d.add(cookie)
+            # Get and insert cookies
+            json_cookies = entry.get('cookies')
+            if json_cookies:
+                for c in json_cookies:
+                    cookie = Cookie.insertCookie(c.get('name'), c.get('value'), c.get('domain'), '/', None, None, None, None, None, False)
+                    if cookie:
+                        d.add(cookie)
 
-        # If group of subdomains specified, get out of scope domains
-        if domain[0] == '.':
-            excluded = entry.get('excluded')
-            if excluded:
-                for e in excluded:
-                    Domain.insertOutOfScopeDomain(e)
+            # If group of subdomains specified, get out of scope domains
+            if domain[0] == '.':
+                excluded = entry.get('excluded')
+                if excluded:
+                    for e in excluded:
+                        Domain.insertOutOfScopeDomain(e)

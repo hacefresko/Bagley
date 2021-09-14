@@ -30,9 +30,12 @@ Scope options:
 
 *   cookies: Specifies the name, value and domain of the cookies that will be sent with every request to the target. '/' will be used as path, everything else will be None.
 
+*   queue: Specifies URL to start crwaling from. Domain must be already added.
+
 ### Example of scope file
     {"domain":".example.com", "excluded": ["test.example.com"]}
     {"domain":"api.example.com", "headers": {"Referer": "google.com", "Accept-Encoding": "gzip, deflate, br"}, "cookies": [{"name":"user_session", "value": "1234567890", "domain": "example.com"}, {"name": "logged_in", "value": "yes", "domain": ".example.com"}]}
+    {"queue": "https://www.example.com/example?e=1337"}
 
 ## Available modules
 *   Crawler: Crawler capable of following redirects, rendering JavaScript and logging dynamic requests to APIs, other domains inside the scope, etc.

@@ -315,8 +315,9 @@ class Crawler (threading.Thread):
             # empty, sleeps for 5 seconds and starts again
             if len(self.queue) > 0:
                 url = self.queue.pop(0)
-                domain = Path.parseURL(url).domain
-                if not domain:
+                try:
+                    domain = Path.insertPath(url).domain
+                except:
                     continue
                 try:
                     initial_request = requests.get(url,  allow_redirects=False)
