@@ -45,26 +45,26 @@ class Injector (threading.Thread):
     def __xss(request):
         url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
         # Standard delay of 1 sec since it does not accept non integers values and it's easier to do that
-        command = 'xsstrike -u "' + url + '"'
+        command = ['xsstrike', '-u', url]
         
         # Add data
         if request.method == 'POST' and request.data:
-            command += ' --data ' + request.data
+            command.append('--data')
+            command.append(request.data)
 
         # Add headers
-        command += ' --headers "'
-
+        command.append('--headers')
+        headers_command = ''
         if request.headers:
             for header in request.headers:
-                command += str(header) + '\n'
+                headers_command += str(header) + '\n'
 
         if request.cookies:
-            command += 'Cookie:'
+            headers_command += 'Cookie:'
             for cookie in request.cookies:
-                command += ' ' + str(cookie) + ';'
-            
-        command = command[:-1]
-        command += '"'
+                headers_command += ' ' + str(cookie) + ';'
+        headers_command = headers_command[:-1]
+        command.append(headers_command)
 
         print("[+] Testing XSS in %s [%s]" % (url, request.method))
 
