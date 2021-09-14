@@ -2,6 +2,7 @@ import threading, time, requests, traceback
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from seleniumwire import webdriver
+from seleniumwire.utils import decode
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 
@@ -120,7 +121,8 @@ class Crawler (threading.Thread):
         for k,v in response.headers.items():
             response_headers.append(Header.insertHeader(k,v))
 
-        processed_response = Response.insertResponse(response.status_code, response.body.decode('utf-8', errors='ignore'), response_headers, response_cookies, processed_request)
+        decoded_body = decode(response.body, response.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
+        processed_response = Response.insertResponse(response.status_code, decoded_body, response_headers, response_cookies, processed_request)
 
         return (processed_request, processed_response)
 
