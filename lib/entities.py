@@ -1005,7 +1005,9 @@ class Utils:
                 return json.dumps(Utils.replaceJSON(json.loads(data), match, newValue))
             elif 'application/x-www-form-urlencoded' in content_type:
                 return Utils.replaceURLencoded(data, match, newValue)
+            else:
+                return data
+                
         except Exception as e:
             print('[x] Exception %s ocurred when parsing POST data' % (e.__class__.__name__))
-        finally:
             return data
