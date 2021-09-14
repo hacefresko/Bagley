@@ -430,7 +430,7 @@ class Request:
                 return header
         return None
 
-    # Returns True if request exists in database else False. If there are already some requests with the same path, protocol and method 
+    # Returns True if request exists in database else False. If there are already some (10) requests with the same path, protocol and method 
     # but different params/data with same key, it returns True to avoid saving same requests with different CSRFs, session values, etc.
     # If requested file extension belongs is in config.EXTENSIONS_BLACKLIST, returns False
     @staticmethod
@@ -440,7 +440,7 @@ class Request:
             return False
 
         protocol = urlparse(url).scheme
-        params = urlparse(url).query if urlparse(url).query else None
+        params = Request.__parseParams(urlparse(url).query) if urlparse(url).query else None
         data = data if (data is not None and data and method == 'POST') else None
 
         db = DB()
@@ -458,7 +458,7 @@ class Request:
                 query_params.append(Utils.substitutePOSTData(content_type, data, None, '%'))
             result = db.query_all(query, tuple(query_params))
 
-            if len(result) > 10:
+            if len(result) >= 10:
                 return True
 
         query = 'SELECT * FROM requests WHERE protocol = %s AND path = %d AND method = %s '
@@ -937,7 +937,7 @@ class Utils:
         new_data = ''
         for p in data.split('&'):
             if len(p.split('=')) == 1:
-                return None
+                return data
             elif match is None or match.lower() in p.split('=')[0].lower():
                 new_data += p.split('=')[0]
                 new_data += '=' + newValue + '&'
@@ -967,12 +967,6 @@ class Utils:
         if not data:
             return None
         
-        if not content_type:
-            try:
-                return json.dumps(Utils.replaceJSON(json.loads(data), match, newValue))
-            except:
-                return  Utils.replaceURLencoded(data, match, newValue)
-
         try:
             if 'multipart/form-data' in content_type:
                 # If data has already been parsed so boundary has changed
@@ -1006,7 +1000,10 @@ class Utils:
             elif 'application/x-www-form-urlencoded' in content_type:
                 return Utils.replaceURLencoded(data, match, newValue)
             else:
-                return data
+                try:
+                    return json.dumps(Utils.replaceJSON(json.loads(data), match, newValue)).replace('"%"', '%') # If  match is %, then it must match all values in db, no tonly strings, so quotes must be removed
+                except:
+                    return  Utils.replaceURLencoded(data, match, newValue)
                 
         except Exception as e:
             print('[x] Exception %s ocurred when parsing POST data' % (e.__class__.__name__))
