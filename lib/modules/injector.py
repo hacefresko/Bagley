@@ -39,8 +39,7 @@ class Injector (threading.Thread):
 
         if "---" in result.stdout:
             Vulnerability.insertVuln(url, 'SQLi', result.stdout)
-            print("[*] SQL injection found in %s" % url)
-            print('\n'+result.stdout+'\n')
+            print("[*] SQL injection found in %s\n\n%s\n" % (url, result.stdout))
 
     @staticmethod
     def __xss(request):
@@ -81,8 +80,7 @@ class Injector (threading.Thread):
                 output += process.communicate()[0].decode('utf-8', errors='ignore')
                 Vulnerability.insertVuln(url, 'XSS', output)
 
-                print("[*] XSS found in %s" % url)
-                print('\n'+output+'\n')
+                print("[*] XSS found in %s\n\%s\n" % (url, output))
 
                 break
                 
