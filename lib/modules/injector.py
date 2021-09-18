@@ -11,7 +11,7 @@ class Injector (threading.Thread):
     def __sqli(request):
         url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
         delay = str(1/REQ_PER_SEC)
-        command = ['sqlmap', '--delay=' + delay, '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method]
+        command = ['sqlmap', '--level', '3', '--delay=' + delay, '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method]
 
         # Add POST data
         if request.method == 'POST' and request.data:
