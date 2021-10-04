@@ -123,7 +123,6 @@ class Crawler (threading.Thread):
 
         decoded_body = decode(response.body, response.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
         processed_response = Response.insertResponse(response.status_code, decoded_body, response_headers, response_cookies, processed_request)
-        #processed_response = Response.insertResponse(response.status_code, response.body.decode('utf-8', errors='ignore'), response_headers, response_cookies, processed_request)
 
         return (processed_request, processed_response)
 
