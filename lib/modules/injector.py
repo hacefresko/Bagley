@@ -83,6 +83,8 @@ class Injector (threading.Thread):
                 print("[*] XSS found in %s\n\%s\n" % (url, output))
 
                 break
+        if process.poll() != 0:
+            print("[x] xsstrike terminated with code %d" % process.poll())
                 
     def run(self):
         tested = []
