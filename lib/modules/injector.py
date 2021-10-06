@@ -45,7 +45,7 @@ class Injector (threading.Thread):
     def __xss(request):
         url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
         # Standard delay of 1 sec since it does not accept non integers values and it's easier to do that
-        command = ['xsstrike', '-u', url]
+        command = ['xsstrike', '-u', url, '--delay', '1']
         
         # Add data
         if request.method == 'POST' and request.data:
@@ -68,7 +68,7 @@ class Injector (threading.Thread):
 
         print("[+] Testing XSS in %s [%s]" % (url, request.method))
 
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+        process = subprocess.Popen(command, stdout=subprocess.PIPE)
 
         output = ''
         while process.poll() is None:
@@ -83,7 +83,7 @@ class Injector (threading.Thread):
                 print("[*] XSS found in %s\n\%s\n" % (url, output))
 
                 break
-        if process.poll() != 0:
+        if process.poll() != 0 and process.poll() != -15:
             print("[x] xsstrike terminated with code %d" % process.poll())
                 
     def run(self):
@@ -95,8 +95,8 @@ class Injector (threading.Thread):
             if not request.response or request.response.code != 200 or (not request.params and not request.data) or request.id in tested:
                 continue
 
-            Injector.__sqli(request)
             Injector.__xss(request)
+            Injector.__sqli(request)
 
             # Add request with same keys in POST/GET data to tested list
             tested = [*[request.id for request in request.getSameKeysRequests()], *tested]
