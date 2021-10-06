@@ -42,7 +42,7 @@ Scope options:
 
 *   Fuzzer: Fuzzes subdomains and paths inside the scope. Sends discovered elements to the crawler. Wrapper for [gobuster](https://github.com/OJ/gobuster)
 
-*   Injector: Tries to inject SQLi and XSS payloads on GET and POST parameters. Wrapper for [sqlmap](https://github.com/sqlmapproject/sqlmap) and [XSStrike](https://github.com/s0md3v/XSStrike)
+*   Injector: Tests SQLi and XSS on GET and POST parameters. Wrapper for [sqlmap](https://github.com/sqlmapproject/sqlmap) and [XSStrike](https://github.com/s0md3v/XSStrike)
 
 ## External requirements
 #### All of these requirements must be available in one of the PATH directories so Bagley can call them wherever it's executed
