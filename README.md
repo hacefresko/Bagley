@@ -38,7 +38,7 @@ Scope options:
     {"queue": "https://www.example.com/example?e=1337"}
 
 ## Available modules
-*   Crawler: Crawler capable of following redirects, rendering JavaScript and logging dynamic requests to APIs, other domains inside the scope, etc.
+*   Crawler: Crawler capable of rendering JavaScript and following redirects and dynamic requests to APIs, other domains... as long as they are inside the scope.
 
 *   Fuzzer: Fuzzes subdomains and paths inside the scope. Sends discovered elements to the crawler. Wrapper for [gobuster](https://github.com/OJ/gobuster)
 
