@@ -30,7 +30,7 @@ Scope options:
 
 *   cookies: Specifies the name, value and domain of the cookies that will be sent with every request to the target. '/' will be used as path, everything else will be None.
 
-*   queue: Specifies URL to start crwaling from. Domain must be already added.
+*   queue: Specifies URL to start crawling from. Domain must be already added.
 
 ### Example of scope file
     {"domain":".example.com", "excluded": ["test.example.com"]}
