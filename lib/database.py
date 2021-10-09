@@ -4,6 +4,10 @@ DB_USER = 'bagley'
 DB_HOST = '127.0.0.1'
 DB_NAME = 'bagley'
 
+#
+# Singleton module to manage database access
+#
+
 class DB:
     __instances = {}
     __lock = threading.Lock()

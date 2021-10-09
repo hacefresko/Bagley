@@ -202,6 +202,7 @@ class Crawler (threading.Thread):
     def __crawl(self, parent_url, method, data, headers = [], cookies = []):
         print("[+] Crawling %s [%s]" % (parent_url, method))
 
+        # Always inserts path into database since __crawl is only called if the path hasn't been crawled yet
         domain = Path.insertPath(parent_url).domain
 
         # Needed for selenium to insert cookies with their domains correctly https://stackoverflow.com/questions/41559510/selenium-chromedriver-add-cookie-invalid-domain-error
@@ -213,10 +214,11 @@ class Crawler (threading.Thread):
 
         try:
             if method == 'GET':
-                # Add headers associated to domain to request via a request interceptor
+                # Add headers inputed by the user, associated to the domain via a request interceptor
                 if headers:
                     # If we try to acces headers from interceptor by domain.headers, when another variable
-                    # named domain is used, it will overwrite driver.headers so it will throw an exception
+                    # named domain is used, it will overwrite driver.headers so it will throw an exception.
+                    # We need interceptor_headers to store the headers for the interceptor
                     interceptor_headers = headers
                     def interceptor(request):
                         for header in interceptor_headers:
@@ -227,7 +229,7 @@ class Crawler (threading.Thread):
                             request.headers[header.key] = header.value
                     self.driver.request_interceptor = interceptor
 
-                # Add cookies associated to domain to request
+                # Add cookies  inputed by the user, associated to the domain to request
                 if cookies :
                     try:
                         for cookie in cookies:
@@ -310,7 +312,7 @@ class Crawler (threading.Thread):
         # Generator for domains
         domains = Domain.getDomains()
         while True:
-            # Try to get url from queue. If queue is empty, try to get domain from database. If it's also
+            # Get url from queue. If queue is empty, get domain from database. If it's also
             # empty, sleeps for 5 seconds and starts again
             if len(self.queue) > 0:
                 url = self.queue.pop(0)
@@ -347,10 +349,12 @@ class Crawler (threading.Thread):
                     traceback.print_tb(e.__traceback__)
                     continue
 
+            # If url already in database, skip
             if Request.checkRequest(url, 'GET', None, None):
                 continue
 
             try:
+                # Add headers/cookies inputed by the user
                 print("[+] Started crawling %s" % url)
                 if domain.headers:
                     print("[+] Headers used:\n")
