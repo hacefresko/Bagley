@@ -40,7 +40,7 @@ Scope options:
 ## Available modules
 *   Crawler: Crawler capable of rendering JavaScript and following redirects and dynamic requests to APIs, other domains... as long as they are inside the scope.
 
-*   Fuzzer: Fuzzes subdomains and paths inside the scope. Sends discovered elements to the crawler. Wrapper for [gobuster](https://github.com/OJ/gobuster)
+*   Discoverer: Fuzzes subdomains and paths inside the scope. Sends discovered elements to the crawler. Wrapper for [gobuster](https://github.com/OJ/gobuster)
 
 *   Injector: Tests SQLi and XSS on GET and POST parameters. Wrapper for [sqlmap](https://github.com/sqlmapproject/sqlmap) and [XSStrike](https://github.com/s0md3v/XSStrike)
 
