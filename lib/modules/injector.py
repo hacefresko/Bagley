@@ -1,4 +1,4 @@
-import threading, subprocess, time
+import threading, subprocess, time, shutil
 
 from config import *
 from lib.entities import *
@@ -11,7 +11,7 @@ class Injector (threading.Thread):
     def __sqli(request):
         url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
         delay = str(1/REQ_PER_SEC)
-        command = ['sqlmap', '--level', '3', '--delay=' + delay, '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method]
+        command = [shutil.which('sqlmap'), '--level', '3', '--delay=' + delay, '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method]
 
         # Add POST data
         if request.method == 'POST' and request.data:
@@ -45,7 +45,7 @@ class Injector (threading.Thread):
     def __xss(request):
         url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
         # Standard delay of 1 sec since it does not accept non integers values and it's easier to do that
-        command = ['xsstrike', '-u', url, '--delay', '1']
+        command = [shutil.which('xsstrike'), '-u', url, '--delay', '1']
         
         # Add data
         if request.method == 'POST' and request.data:

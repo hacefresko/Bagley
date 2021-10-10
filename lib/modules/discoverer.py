@@ -1,4 +1,4 @@
-import threading, subprocess
+import threading, subprocess, json, shutil
 from urllib.parse import urljoin
 
 from config import *
@@ -9,14 +9,14 @@ class Discoverer(threading.Thread):
         threading.Thread.__init__(self)
         self.crawler = crawler
 
-    def __fuzzPath(self, url, headers, cookies):
+    def __fuzzPath(self, url, headers, cookies, errcodes=[]):
         # Crawl all urls on the database that has not been crawled
         if not Request.checkRequest(url, 'GET', None, None):
             self.crawler.addToQueue(url)
 
         delay = str(int((1/REQ_PER_SEC) * 1000)) + 'ms'
 
-        command = ['gobuster', 'dir', '-q', '-w', DIR_FUZZING, '-u', url, '--delay', delay]
+        command = [shutil.which('gobuster'), 'dir', '-q', '-w', DIR_FUZZING, '-u', url, '--delay', delay]
 
         # Add headers
         for header in headers:
@@ -31,35 +31,80 @@ class Discoverer(threading.Thread):
                 cookies += str(cookie) + ' '
             command.append(cookies)
 
-        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+        # Add errorcodes if specified
+        if len(errcodes) != 0:
+            command.append('-b')
+            command.append(','.join(errcodes))
 
-        if result.returncode != 0:
-            return
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        for line in result.stdout.splitlines():
+        line = process.stdout.readline().decode('utf-8', errors='ignore')
+        while line:
             discovered = urljoin(url, line.split(' ')[0])
             if not Request.checkRequest(discovered, 'GET', None, None):
                 print("[*] Path found! Queued %s to crawler" % discovered)
                 Path.insertPath(discovered)
                 self.crawler.addToQueue(discovered)
+            line = process.stdout.readline().decode('utf-8', errors='ignore')
+        
+        # Collect errors if execution fails
+        if process.poll() != 0:
+            error = process.stderr.readline().decode('utf-8', errors='ignore')
+            # If errorcodes must be specified to gobuster
+            if 'Error: the server returns a status code that matches the provided options for non existing urls' in error:
+                try:
+                    errcode = error.split('=>')[1].split('(')[0].strip()
+                    errcodes.append(errcode)
+                    self.__fuzzPath(url, headers, cookies, errcodes)
+                except:
+                    return
 
-    def __fuzzDomain(self, domain):
-        command = ['gobuster', 'dns', '-q', '-w', DOMAIN_FUZZING, '-d', domain]
-        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+    def __fuzzDomain(self, domain, errcodes=[]):
+        command = [shutil.which('gobuster'), 'dns', '-q', '-w', DOMAIN_FUZZING, '-d', domain]
+        # Add errorcodes if specified
+        if len(errcodes) != 0:
+            command.append('-b')
+            command.append(','.join(errcodes))
 
-        if result.returncode != 0:
-            return
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        for line in result.stdout.splitlines():
-            if line == '':
-                continue
-            discovered = line.split('Found: ')[1].strip()
-            print('[*] Domain found! Inserted %s to database' % discovered)
-            Domain.insertDomain(discovered)
+        line = process.stdout.readline().decode('utf-8', errors='ignore')
+        while line:
+            try:
+                discovered = line.split('Found: ')[1].rstrip()
+                print('[*] Domain found! Inserted %s to database' % discovered)
+                Domain.insertDomain(discovered)
+            except:
+                pass
+            finally:
+                line = process.stdout.readline().decode('utf-8', errors='ignore')
+        
+        # Collect errors if execution fails
+        if process.poll() != 0:
+            error = process.stderr.readline().decode('utf-8', errors='ignore')
+            # If errorcodes must be specified to gobuster
+            if 'Error: the server returns a status code that matches the provided options for non existing urls' in error:
+                try:
+                    errcode = error.split('=>')[1].split('(')[0].strip()
+                    errcodes.append(errcode)
+                    self.__fuzzPath(domain, errcodes)
+                except:
+                    return
 
     def __findSubDomains(self,domain):
-        pass
-
+        command = [shutil.which('subfinder'), '-oJ', '-nC', '-silent', '-all', '-d', domain]
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        line = process.stdout.readline().decode('utf-8', errors='ignore')
+        while line:
+            try:
+                discovered = json.loads(line).get('host')
+                print('[*] Domain found! Inserted %s to database' % discovered)
+                Domain.insertDomain(discovered)
+            except:
+                pass
+            finally:
+                line = process.stdout.readline().decode('utf-8', errors='ignore')
 
     def run(self):
         directories = Path.getDirectories()
