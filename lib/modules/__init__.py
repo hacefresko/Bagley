@@ -1,3 +1,3 @@
 from .crawler import Crawler
-from .fuzzer import Fuzzer
+from .discoverer import Discoverer
 from .injector import Injector

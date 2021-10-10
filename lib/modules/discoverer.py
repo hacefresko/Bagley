@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 from config import *
 from lib.entities import *
 
-class Fuzzer (threading.Thread):
+class Discoverer(threading.Thread):
     def __init__(self, crawler):
         threading.Thread.__init__(self)
         self.crawler = crawler
@@ -57,12 +57,18 @@ class Fuzzer (threading.Thread):
             print('[*] Domain found! Inserted %s to database' % discovered)
             Domain.insertDomain(discovered)
 
+    def __findSubDomains(self,domain):
+        pass
+
+
     def run(self):
         directories = Path.getDirectories()
         domains = Domain.getDomains()
         while True:
             domain = next(domains)
             if domain and domain.name[0] == '.':
+                print("[+] Finding subdomains for %s" % domain.name[1:])
+                self.__findSubDomains(domain.name[1:])
                 print("[+] Fuzzing domain %s" % domain.name[1:])
                 self.__fuzzDomain(domain.name[1:])
             else:

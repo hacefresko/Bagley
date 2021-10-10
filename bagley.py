@@ -71,8 +71,8 @@ except FileNotFoundError:
 crawler = lib.modules.Crawler()
 crawler.start()
 
-fuzzer = lib.modules.Fuzzer(crawler)
-fuzzer.start()
+discoverer = lib.modules.Discoverer(crawler)
+discoverer.start()
 
 injector = lib.modules.Injector()
 injector.start()
