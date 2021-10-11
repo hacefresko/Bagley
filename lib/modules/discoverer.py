@@ -15,7 +15,6 @@ class Discoverer(threading.Thread):
             self.crawler.addToQueue(url)
 
         delay = str(int((1/REQ_PER_SEC) * 1000)) + 'ms'
-
         command = [shutil.which('gobuster'), 'dir', '-q', '-w', DIR_FUZZING, '-u', url, '--delay', delay]
 
         # Add headers

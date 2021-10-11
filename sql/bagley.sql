@@ -145,7 +145,7 @@ CREATE TABLE vulnerabilities (
 
 CREATE TABLE technologies (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    name TEXT,
+    name TEXT NOT NULL,
     version TEXT
 );
 

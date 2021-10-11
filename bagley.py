@@ -77,6 +77,9 @@ discoverer.start()
 injector = lib.modules.Injector()
 injector.start()
 
+searcher = lib.modules.Searcher()
+searcher.start()
+
 # Parse scope file
 while True:
     line = scope_file.readline()

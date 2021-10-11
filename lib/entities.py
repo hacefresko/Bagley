@@ -309,6 +309,20 @@ class Path:
         path = db.query_one('SELECT id, element, parent, domain FROM paths WHERE id = %d', (id,))
         return Path(path[0], path[1], path[2], path[3]) if path else None
 
+    # Yields paths
+    @staticmethod
+    def getPaths():
+        id = 0
+        db = DB()
+        while True:
+            path = db.query_one('SELECT * FROM paths WHERE id > %d LIMIT 1', (id,))
+            if not path:
+                yield None
+                continue
+            id = path[0]
+            yield Path(path[0], path[1], path[2], path[3])
+
+
     # Yields paths corresponding to directories or False if there are no requests. It continues infinetly until program stops
     @staticmethod
     def getDirectories():
