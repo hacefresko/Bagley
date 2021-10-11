@@ -79,25 +79,25 @@ class Domain:
 
         return string
 
-    # Returns domain identified by id or False if it does not exist
+    # Returns domain identified by id or None if it does not exist
     @staticmethod
     def getDomainById(id):
         db = DB()
         domain = db.query_one('SELECT * FROM domains WHERE id = %d', (id,))
         if not domain:
-            return False
+            return None
         return Domain(domain[0], domain[1])
 
-    # Returns domain identified by the domain name or False if it does not exist
+    # Returns domain identified by the domain name or None if it does not exist
     @staticmethod
     def getDomain(domain_name):
         db = DB()
         domain = db.query_one('SELECT * FROM domains WHERE name = %s', (domain_name,))
         if not domain:
-            return False
+            return None
         return Domain(domain[0], domain[1])
 
-    # Yields domains or False if there are no requests. It continues infinetly until program stops
+    # Yields domains or None if there are no requests. It continues infinetly until program stops
     @staticmethod
     def getDomains():
         id = 1
@@ -105,7 +105,7 @@ class Domain:
         while True:
             domain = db.query_one('SELECT * FROM domains WHERE id = %d', (id,))
             if not domain:
-                yield False
+                yield None
                 continue
             id += 1
             yield Domain(domain[0], domain[1])
@@ -235,7 +235,7 @@ class Path:
 
         return result
 
-    # Returns path if path specified by element, parent and domain exists else False
+    # Returns path if path specified by element, parent and domain exists else None
     @staticmethod
     def __getPath(element, parent, domain):
         db = DB()
@@ -257,7 +257,7 @@ class Path:
 
         path = db.query_one(query, tuple(query_params))
         
-        return Path(path[0], path[1], path[2], path[3]) if path else False
+        return Path(path[0], path[1], path[2], path[3]) if path else None
 
     # Returns a dict with domain and a list elements with each element from the URL. URL must have protocol, domain and elements in order to get parsed correctly.
     @staticmethod
@@ -297,7 +297,7 @@ class Path:
             return True
         while child.parent:
             child = Path.getPath(child.parent.id)
-            if child.parent == path.parent:
+            if child and child.parent == path.parent:
                 return True
 
         return False   
@@ -307,7 +307,7 @@ class Path:
     def getPath(id):
         db = DB()
         path = db.query_one('SELECT id, element, parent, domain FROM paths WHERE id = %d', (id,))
-        return Path(path[0], path[1], path[2], path[3]) if path else False
+        return Path(path[0], path[1], path[2], path[3]) if path else None
 
     # Yields paths corresponding to directories or False if there are no requests. It continues infinetly until program stops
     @staticmethod
@@ -317,39 +317,39 @@ class Path:
         while True:
             path = db.query_one('SELECT * FROM paths WHERE element is Null AND id > %d LIMIT 1', (id,))
             if not path:
-                yield False
+                yield None
                 continue
             id = path[0]
             yield Path(path[0], path[1], path[2], path[3])
 
-    # Returns path corresponding to URL or False if it does not exist in the database
+    # Returns path corresponding to URL or None if it does not exist in the database
     @staticmethod
     def parseURL(url):
         parsedURL = Path.__parseURL(url)
 
         domain = Domain.getDomain(parsedURL['domain'])
         if not domain:
-            return False
+            return None
 
         # Iterate over each domain/file from URL
         parent = None
         for i, element in enumerate(parsedURL['elements']):
             path = Path.__getPath(element, parent, domain)
             if not path:
-                return False
+                return None
             if i == len(parsedURL['elements']) - 1:
                 return path
             parent = path
 
     # Inserts each path inside the URL if not already inserted and returns last inserted path (last element from URL).
-    # If domain is not in scope, returns False. If domain is in scope but not in database, inserts it
+    # If domain is not in scope, returns None. If domain is in scope but not in database, inserts it
     @staticmethod
     def insertPath(url):
         db = DB()
         parsedURL = Path.__parseURL(url)
 
         if not Domain.checkScope(parsedURL['domain']):
-            return False
+            return None
         
         domain = Domain.insertDomain(parsedURL['domain'])
 
@@ -362,7 +362,7 @@ class Path:
             if i == len(parsedURL['elements']) - 1:
                 return path
             parent = path
-        return False
+        return None
 
 class Request:
     def __init__(self, id, protocol, path_id, params, method, data, response_hash):
@@ -496,12 +496,12 @@ class Request:
     def checkExtension(url):
         return False if pathlib.Path(url.split('?')[0]).suffix in config.EXTENSIONS_BLACKLIST else True
         
-    # Returns request if exists else false
+    # Returns request if exists else None
     @staticmethod
     def getRequest(url, method, content_type, data):
         path = Path.parseURL(url)
         if not path:
-            return False
+            return None
         protocol = urlparse(url).scheme
         params = Request.__parseParams(urlparse(url).query)
         data = Request.__parseData(content_type, data) if method == 'POST' else None
@@ -525,10 +525,10 @@ class Request:
 
         request = db.query_one(query, tuple(query_params))
         if not request:
-            return False
+            return None
         return Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])
 
-    # Yields requests or False if there are no requests. It continues infinetly until program stops
+    # Yields requests or None if there are no requests. It continues infinetly until program stops
     @staticmethod
     def getRequests():
         id = 1
@@ -536,19 +536,19 @@ class Request:
         while True:
             request = db.query_one('SELECT * FROM requests WHERE id = %d', (id,))
             if not request:
-                yield False
+                yield None
                 continue
             id += 1
             yield Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])
 
     # Inserts request and links headers and cookies. If request is already inserted or there are too many requests 
-    # to the same path and method but with different data/params values for the same keys, it returns false.
+    # to the same path and method but with different data/params values for the same keys, it returns None.
     # Path corresponding to url must already be inserted
     @staticmethod
     def insertRequest(url, method, headers, cookies, data):
         path = Path.parseURL(url)
         if not path or not Request.checkExtension(url):
-            return False
+            return None
 
         content_type = None
         for header in headers:
@@ -560,7 +560,7 @@ class Request:
         data = Request.__parseData(content_type, data) if method == 'POST' else None
 
         if Request.checkRequest(url, method, content_type, data):
-            return False
+            return None
 
         db = DB()
         db.exec('INSERT INTO requests (protocol, path, params, method, data) VALUES (%s,%d,%s,%s,%s)', (protocol, path.id, params, method, data))
@@ -575,7 +575,7 @@ class Request:
     # Returns a list of requests whose params or data keys are the same as the request the function was called on
     def getSameKeysRequests(self):
         if not self.params and not self.data:
-            return False
+            return []
 
         requests = []
         query = 'SELECT * FROM requests WHERE protocol = %s AND path = %d AND method = %s'
@@ -661,14 +661,14 @@ class Response:
         db = DB()
         response = db.query_one('SELECT * FROM responses WHERE hash = %s', (response_hash,))
         if not response:
-            return False
+            return None
         return Response(response[0], response[1], response[2])
 
     # Returns response hash if response succesfully inserted. Else, returns False. Also links header + cookies.
     @staticmethod
     def insertResponse(code, body, headers, cookies, request):
         if not isinstance(request, Request):
-            return False
+            return None
 
         if not body:
             body = None
@@ -685,7 +685,6 @@ class Response:
             response = Response.getResponse(response_hash)
             for element in headers + cookies:
                 element.link(response)
-            
             
         db.exec('UPDATE requests SET response = %s WHERE id = %d', (response_hash, request.id))
 
@@ -726,7 +725,7 @@ class Header:
         db = DB()
         result = db.query_one('SELECT * FROM headers WHERE header_key = %s AND value = %s', (key, value))
         if not result:
-            return False
+            return None
         
         return Header(result[0], result[1], result[2])
 
@@ -786,24 +785,24 @@ class Cookie:
                     value = term
         return (name, value)
 
-    # Returns True if exists or False if it does not exist   
+    # Returns True if exists or None if it does not exist   
     @staticmethod 
     def __getCookie(name, value, cookie_domain, cookie_path):
         if cookie_domain and not Domain.checkScope(cookie_domain, False):
-            return False
+            return None
         
         db = DB()
         cookie = db.query_one('SELECT * FROM cookies WHERE name = %s AND value = %s AND domain = %s AND path = %s', (name, value, cookie_domain, cookie_path))
         if not cookie:
-            return False
+            return None
         return Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9])
 
-    # Returns cookie if there is a cookie with name and value whose cookie_path and cookie_domain match with url, else False
+    # Returns cookie if there is a cookie with name and value whose cookie_path and cookie_domain match with url, else None
     @staticmethod
     def getCookie(name, value, url):
         path = Path.parseURL(url)
         if not path:
-            return False
+            return None
         db = DB()
 
         # First, try to get cookie as is, in case it was a session cookie added in the beggining in the scope file.
@@ -815,11 +814,11 @@ class Cookie:
         
         for result in results:
             cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9])
-            # If domain/range of subdomains and range of paths  from cookie match with url
+            # If domain/range of subdomains and range of paths from cookie match with url
             cookie_path = Path.parseURL(path.domain.name + cookie.path) if cookie.path != '/' else Path.parseURL(path.domain.name)
             if Domain.compareDomains(cookie.domain, path.domain.name) and path.checkParent(cookie_path):
                 return cookie
-        return False
+        return None
 
     # Inserts cookie if not already inserted and returns it. 
     # blacklist parameter indicates if cookie value must be removed if value of cookie is blacklisted
@@ -827,7 +826,7 @@ class Cookie:
     @staticmethod
     def insertCookie(name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite, blacklist=True):
         if not Domain.checkScope(cookie_domain, False):
-            return False
+            return None
 
         if blacklist:
             name, value = Cookie.__parseCookie(name, value)
@@ -872,20 +871,20 @@ class Script:
 
         result = db.query_one('SELECT * FROM scripts WHERE hash = %s', (Script.__getHash(url, content),))
         if not result:
-            return False
+            return None
         return Script(result[0], result[1], result[2])
 
     # Inserts script if not already inserted, links it to the corresponding response if exists and returns it
     @staticmethod 
     def insertScript(url, content, response):
         if not isinstance(response, Response):
-            return False
+            return None
 
         if url is not None:
             path = Path.insertPath(url)
             # If path does not belong to the scope (stored domains)
             if not path:
-                return False
+                return None
             path = path.id
         else:
             path = None
@@ -911,20 +910,20 @@ class Vulnerability:
     def __getVuln(path_id, vuln_type):
         db = DB()
         vuln = db.query_one('SELECT * FROM vulnerabilities WHERE path = %d AND type = %s', (path_id, vuln_type))
-        return Vulnerability(vuln[0], vuln[1], vuln[2], vuln[3]) if vuln else False
+        return Vulnerability(vuln[0], vuln[1], vuln[2], vuln[3]) if vuln else None
 
     @staticmethod
     def getVuln(url, vuln_type):
         path = Path.parseURL(url)
         if not path:
-            return False
+            return None
         return Vulnerability.__getVuln(path.id, vuln_type)
 
     @staticmethod
     def insertVuln(url, vuln_type, description):
         path = Path.parseURL(url)
         if not path:
-            return False
+            return None
 
         vuln = Vulnerability.__getVuln(path.id, vuln_type)
         if vuln:
@@ -943,7 +942,7 @@ class Technology:
     def getTech(name, version):
         db = DB()
         tech = db.query_one('SELECT * FROM technologies WHERE name = %s AND version = %s', (name, version))
-        return Technology(tech[0], tech[1], tech[2]) if tech else False
+        return Technology(tech[0], tech[1], tech[2]) if tech else None
 
     @staticmethod
     def insertTech(name, version):

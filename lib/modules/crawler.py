@@ -203,7 +203,10 @@ class Crawler (threading.Thread):
         print("[+] Crawling %s [%s]" % (parent_url, method))
 
         # Always inserts path into database since __crawl is only called if the path hasn't been crawled yet
-        domain = Path.insertPath(parent_url).domain
+        path = Path.insertPath(parent_url)
+        if not path:
+            return
+        domain = path.domain
 
         # Needed for selenium to insert cookies with their domains correctly https://stackoverflow.com/questions/41559510/selenium-chromedriver-add-cookie-invalid-domain-error
         if cookies:
