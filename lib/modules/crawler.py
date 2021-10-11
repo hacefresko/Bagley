@@ -319,12 +319,13 @@ class Crawler (threading.Thread):
             # empty, sleeps for 5 seconds and starts again
             if len(self.queue) > 0:
                 url = self.queue.pop(0)
-                try:
-                    domain = Path.insertPath(url).domain
-                except:
+                path = Path.insertPath(url)
+                if not path:
                     continue
+                domain = path.domain
+
                 try:
-                    initial_request = requests.get(url,  allow_redirects=False)
+                    initial_request = requests.get(url, allow_redirects=False)
                 except requests.exceptions.SSLError:
                     print("[x] SSL certificate validation failed for %s" % (url))
                     continue
@@ -338,19 +339,33 @@ class Crawler (threading.Thread):
                     continue
                 domain_name = domain.name if domain.name[0] != '.' else domain.name[1:]
 
-                # Figure out what protocol to use
-                url = 'http://' + domain_name + '/'
+                http_request = None
+                https_request = None
+
+                # Check for http and https
                 try:
-                    initial_request = requests.get(url,  allow_redirects=False)
-                    if initial_request.is_permanent_redirect and urlparse(initial_request.headers.get('Location')).scheme == 'https':
-                        url = 'https://' + domain_name + '/'
-                    elif not initial_request.ok:
-                        url = 'https://' + domain_name + '/'
-                        requests.get(url,  allow_redirects=False)
-                except Exception as e:
-                    print("[x] Cannot request %s" % (url))
-                    traceback.print_tb(e.__traceback__)
-                    continue
+                    http_request = requests.get('http://'+domain_name+'/',  allow_redirects=False)
+                    if http_request and http_request.is_permanent_redirect and urlparse(http_request.headers.get('Location')).scheme == 'https':
+                        http_request = None
+                except:
+                    pass
+
+                try:
+                    https_request = requests.get('https://'+domain_name+'/',  allow_redirects=False)
+                except:
+                    pass
+
+                # If both http and https are up, start by http and add https to queue, else, start by the one that is up
+                if http_request and https_request:
+                    url = http_request.url
+                    self.addToQueue(https_request.url)
+                elif http_request:
+                    url = http_request.url
+                elif https_request:
+                    url = https_request.url
+
+                if http_request:
+                    print("[*] HTTP protocol is used by %s" % http_request.url)
 
             # If url already in database, skip
             if Request.checkRequest(url, 'GET', None, None):

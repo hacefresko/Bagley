@@ -197,8 +197,9 @@ class Domain:
             db.exec('INSERT INTO out_of_scope (name) VALUES (%s)', (domain,))
 
 class Path:
-    def __init__(self, id, element, parent, domain):
+    def __init__(self, id, protocol, element, parent, domain):
         self.id = id
+        self.protocol = protocol
         self.element = element
         self.parent = Path.getPath(parent)
         self.domain = Domain.getDomainById(domain)
@@ -219,7 +220,7 @@ class Path:
             result = "/" + (element if element else '') + result
             element, parent_id = db.query_one('SELECT element, parent FROM paths WHERE id = %d', (parent_id,))
         result = "/" + (element if element else '') + result
-        result = str(self.domain) + result
+        result = self.protocol + '://' + str(self.domain) + result
 
         return result 
 
@@ -235,13 +236,13 @@ class Path:
 
         return result
 
-    # Returns path if path specified by element, parent and domain exists else None
+    # Returns path if path specified by protocol, element, parent and domain exists else None
     @staticmethod
-    def __getPath(element, parent, domain):
+    def __getPath(protocol, element, parent, domain):
         db = DB()
 
-        query = 'SELECT * FROM paths WHERE domain = %s '
-        query_params = [domain.id]
+        query = 'SELECT * FROM paths WHERE protocol = %s AND domain = %s '
+        query_params = [protocol, domain.id]
 
         if element:
             query += 'AND element = %s '
@@ -257,16 +258,12 @@ class Path:
 
         path = db.query_one(query, tuple(query_params))
         
-        return Path(path[0], path[1], path[2], path[3]) if path else None
+        return Path(path[0], path[1], path[2], path[3], path[4]) if path else None
 
-    # Returns a dict with domain and a list elements with each element from the URL. URL must have protocol, domain and elements in order to get parsed correctly.
+    # Returns a dict with protocol, domain and a list elements with each element from the URL. URL must have protocol, domain and elements in order to get parsed correctly.
     @staticmethod
     def __parseURL(url):
         result = {}
-
-        # Support for domains followed by path, without protocol
-        if urlparse(url)[1] == '':
-            url = 'http://' + url
         
         # Convert all pathless urls (i.e example.com) into urls with root dir (i.e example.com/)
         if urlparse(url)[2] == '':
@@ -278,10 +275,12 @@ class Path:
             url_to_parse[2] = "/"
             url = urlunparse(url_to_parse)
 
+        # Get protocol
+        result['protocol'] = urlparse(url).scheme
         # Get domain
-        result['domain'] = urlparse(url)[1]
-        # Get elements after example.com/ and subsitute '' by False
-        result['elements'] = [None if i=='' else i for i in urlparse(url)[2].split('/')[1:]]
+        result['domain'] = urlparse(url).netloc
+        # Get elements after http://example.com/ and subsitute '' by None
+        result['elements'] = [None if i=='' else i for i in urlparse(url).path.split('/')[1:]]
 
         return result
 
@@ -290,6 +289,8 @@ class Path:
         if not isinstance(path, Path):
             return False
         if self.domain != path.domain:
+            return False
+        if self.protocol != path.protocol:
             return False
 
         child = self
@@ -306,8 +307,8 @@ class Path:
     @staticmethod
     def getPath(id):
         db = DB()
-        path = db.query_one('SELECT id, element, parent, domain FROM paths WHERE id = %d', (id,))
-        return Path(path[0], path[1], path[2], path[3]) if path else None
+        path = db.query_one('SELECT id, protocol, element, parent, domain FROM paths WHERE id = %d', (id,))
+        return Path(path[0], path[1], path[2], path[3], path[4]) if path else None
 
     # Yields paths
     @staticmethod
@@ -320,8 +321,7 @@ class Path:
                 yield None
                 continue
             id = path[0]
-            yield Path(path[0], path[1], path[2], path[3])
-
+            yield Path(path[0], path[1], path[2], path[3], path[4])
 
     # Yields paths corresponding to directories or False if there are no requests. It continues infinetly until program stops
     @staticmethod
@@ -334,12 +334,16 @@ class Path:
                 yield None
                 continue
             id = path[0]
-            yield Path(path[0], path[1], path[2], path[3])
+            yield Path(path[0], path[1], path[2], path[3], path[4])
 
     # Returns path corresponding to URL or None if it does not exist in the database
     @staticmethod
     def parseURL(url):
         parsedURL = Path.__parseURL(url)
+
+        protocol = parsedURL['protocol']
+        if not protocol:
+            return None
 
         domain = Domain.getDomain(parsedURL['domain'])
         if not domain:
@@ -348,7 +352,7 @@ class Path:
         # Iterate over each domain/file from URL
         parent = None
         for i, element in enumerate(parsedURL['elements']):
-            path = Path.__getPath(element, parent, domain)
+            path = Path.__getPath(protocol, element, parent, domain)
             if not path:
                 return None
             if i == len(parsedURL['elements']) - 1:
@@ -362,26 +366,26 @@ class Path:
         db = DB()
         parsedURL = Path.__parseURL(url)
 
+        protocol = parsedURL['protocol']
+
         if not Domain.checkScope(parsedURL['domain']):
             return None
-        
         domain = Domain.insertDomain(parsedURL['domain'])
 
         # Iterate over each domain/file from URL
         parent = None
         for i, element in enumerate(parsedURL['elements']):
-            path = Path.__getPath(element, parent, domain)
+            path = Path.__getPath(protocol, element, parent, domain)
             if not path:
-                path = Path.getPath(db.exec_and_get_last_id('INSERT INTO paths (element, parent, domain) VALUES (%s,%d,%d)', (element, parent.id if parent else None, domain.id)))
+                path = Path.getPath(db.exec_and_get_last_id('INSERT INTO paths (protocol, element, parent, domain) VALUES (%s,%s,%d,%d)', (protocol, element, parent.id if parent else None, domain.id)))
             if i == len(parsedURL['elements']) - 1:
                 return path
             parent = path
         return None
 
 class Request:
-    def __init__(self, id, protocol, path_id, params, method, data, response_hash):
+    def __init__(self, id, path_id, params, method, data, response_hash):
         self.id = id
-        self.protocol = protocol
         self.path = Path.getPath(path_id)
         self.params = params
         self.method = method
@@ -391,8 +395,7 @@ class Request:
         self.cookies = self.__getCookies()
 
     def __str__(self):
-        result = "%s %s HTTP/1.1\r\n" % (self.method, urlparse(self.protocol + '://' + str(self.path)).path + ('?' + params) if params else '')
-        result += "Host: %s\r\n" % (self.path.domain.name)
+        result = "%s %s HTTP/1.1\r\n" % (self.method, urlparse(str(self.path)).path + ('?' + params) if params else '')
         for header in self.headers:
             result += "%s\r\n" % (str(header))
         if len(self.cookies) != 0:
@@ -457,7 +460,7 @@ class Request:
                 return header
         return None
 
-    # Returns True if request exists in database else False. If there are already some (10) requests with the same path, protocol and method 
+    # Returns True if request exists in database else False. If there are already some (10) requests with the same path and method 
     # but different params/data with same key, it returns True to avoid saving same requests with different CSRFs, session values, etc.
     # If requested file extension belongs is in config.EXTENSIONS_BLACKLIST, returns False
     @staticmethod
@@ -466,7 +469,6 @@ class Request:
         if not path:
             return False
 
-        protocol = urlparse(url).scheme
         params = Request.__parseParams(urlparse(url).query) if urlparse(url).query else None
         data = data if (data is not None and data and method == 'POST') else None
 
@@ -474,8 +476,8 @@ class Request:
 
         # Check requests with same keys for params and data
         if params or data:
-            query = 'SELECT * FROM requests WHERE protocol = %s AND path = %d AND method = %s'
-            query_params = [protocol, path.id, method]
+            query = 'SELECT * FROM requests WHERE path = %d AND method = %s'
+            query_params = [path.id, method]
 
             if params:
                 query += ' AND params LIKE %s'
@@ -488,8 +490,8 @@ class Request:
             if len(result) >= 10:
                 return True
 
-        query = 'SELECT * FROM requests WHERE protocol = %s AND path = %d AND method = %s '
-        query_params = [protocol, path.id, method]
+        query = 'SELECT * FROM requests WHERE path = %d AND method = %s '
+        query_params = [path.id, method]
 
         if params:
             query += ' AND params = %s'
@@ -516,14 +518,13 @@ class Request:
         path = Path.parseURL(url)
         if not path:
             return None
-        protocol = urlparse(url).scheme
         params = Request.__parseParams(urlparse(url).query)
         data = Request.__parseData(content_type, data) if method == 'POST' else None
 
         db = DB()
 
-        query = 'SELECT * FROM requests WHERE protocol = %s AND path = %d AND method = %s '
-        query_params = [protocol, path.id, method]
+        query = 'SELECT * FROM requests WHERE path = %d AND method = %s '
+        query_params = [path.id, method]
 
         if params:
             query += 'AND params = %s '
@@ -540,7 +541,7 @@ class Request:
         request = db.query_one(query, tuple(query_params))
         if not request:
             return None
-        return Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])
+        return Request(request[0], request[1], request[2], request[3], request[4], request[5])
 
     # Yields requests or None if there are no requests. It continues infinetly until program stops
     @staticmethod
@@ -553,7 +554,7 @@ class Request:
                 yield None
                 continue
             id += 1
-            yield Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6])
+            yield Request(request[0], request[1], request[2], request[3], request[4], request[5])
 
     # Inserts request and links headers and cookies. If request is already inserted or there are too many requests 
     # to the same path and method but with different data/params values for the same keys, it returns None.
@@ -569,7 +570,6 @@ class Request:
             if header.key == 'content-type':
                 content_type = header.value
 
-        protocol = urlparse(url).scheme
         params = Request.__parseParams(urlparse(url).query)
         data = Request.__parseData(content_type, data) if method == 'POST' else None
 
@@ -577,7 +577,7 @@ class Request:
             return None
 
         db = DB()
-        db.exec('INSERT INTO requests (protocol, path, params, method, data) VALUES (%s,%d,%s,%s,%s)', (protocol, path.id, params, method, data))
+        db.exec('INSERT INTO requests (path, params, method, data) VALUES (%d,%s,%s,%s)', (path.id, params, method, data))
         request = Request.getRequest(url, method, content_type, data)
 
         for element in headers + cookies:
@@ -592,8 +592,8 @@ class Request:
             return []
 
         requests = []
-        query = 'SELECT * FROM requests WHERE protocol = %s AND path = %d AND method = %s'
-        query_params = [self.protocol, self.path.id, self.method]
+        query = 'SELECT * FROM requests WHERE AND path = %d AND method = %s'
+        query_params = [self.path.id, self.method]
         if self.params:
             query += ' AND params LIKE %s'
             query_params.append(Utils.replaceURLencoded(self.params, None, '%'))
@@ -605,7 +605,7 @@ class Request:
         result = db.query_all(query, tuple(query_params))
 
         for request in result:
-            requests.append(Request(request[0], request[1], request[2], request[3], request[4], request[5], request[6]))
+            requests.append(Request(request[0], request[1], request[2], request[3], request[4], request[5]))
         return requests
 
 class Response:

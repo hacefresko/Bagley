@@ -122,5 +122,4 @@ class Discoverer(threading.Thread):
                     continue
                 
                 print("[+] Fuzzing path %s" % directory)
-                self.__fuzzPath('http://' + str(directory), directory.domain.headers, directory.domain.cookies)
-                self.__fuzzPath('https://' + str(directory), directory.domain.headers, directory.domain.cookies)
+                self.__fuzzPath(str(directory), directory.domain.headers, directory.domain.cookies)

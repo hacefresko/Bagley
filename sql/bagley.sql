@@ -32,6 +32,7 @@ CREATE TABLE out_of_scope (
 -- Element 0 means it's empty. Parent 0 means it's the first element, so first will be (domain, 0, 0)
 CREATE TABLE paths (
     id INT PRIMARY KEY AUTO_INCREMENT,
+    protocol TEXT NOT NULL,
     element TEXT, 
     parent INT, 
     domain INT NOT NULL,
@@ -47,7 +48,6 @@ CREATE TABLE responses (
 
 CREATE TABLE requests (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    protocol TEXT NOT NULL,
     path INT NOT NULL,
     params TEXT,
     method TEXT NOT NULL,

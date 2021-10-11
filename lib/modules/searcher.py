@@ -8,16 +8,16 @@ class Searcher (threading.Thread):
         threading.Thread.__init__(self)
 
     @staticmethod
-    def __wappalyzer(url):
+    def __wappalyzer(path):
         delay = str(int((1/REQ_PER_SEC) * 1000))
-        command = [shutil.which('wappalyzer'), '--delay='+delay, url]
+        command = [shutil.which('wappalyzer'), '--delay='+delay, str(path)]
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         try:
             for t in json.loads(result.stdout).get('technologies'):
                 tech = Technology.insertTech(t.get('name'), t.get('version'))
-                tech.link(Path.parseURL(url))
+                tech.link(path)
         except:
             return
 
@@ -27,5 +27,4 @@ class Searcher (threading.Thread):
                 time.sleep(5)
                 continue
 
-            Searcher.__wappalyzer('http://' + str(path)) 
-            Searcher.__wappalyzer('https://' + str(path)) 
+            Searcher.__wappalyzer(path)

@@ -9,7 +9,7 @@ class Injector (threading.Thread):
 
     @staticmethod
     def __sqli(request):
-        url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
+        url = str(request.path) + ('?' + request.params if request.params else '')
         delay = str(1/REQ_PER_SEC)
         command = [shutil.which('sqlmap'), '--level', '3', '--delay=' + delay, '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method]
 
@@ -43,7 +43,7 @@ class Injector (threading.Thread):
 
     @staticmethod
     def __xss(request):
-        url = request.protocol + '://' + str(request.path) + ('?' + request.params if request.params else '')
+        url = str(request.path) + ('?' + request.params if request.params else '')
         # Added delay 1 by default since it only accepts integer and it's a large enough delay
         command = [shutil.which('dalfox'), 'url', url, '-S', '--no-color', '--delay', '1']
         
