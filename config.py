@@ -10,14 +10,14 @@ EXTENSIONS_BLACKLIST = ['.css', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg'
 # Common session cookies whose values won't be stored
 COOKIES_BLACKLIST = ['PHPSESSID', 'JSESSIONID', 'CFID', 'CFTOKEN', 'ASP.NET_SessionId']
 
-# Terms that will be searched inside params, data and cookie keys not to store them
+# Params, POST data and cookies containing these words, won't be stored
 PARAMS_BLACKLIST = ['csrf', 'sess', 'token']
 
 # Headers whose value won't be stored
 HEADERS_BLACKLIST = ['date', 'cookie', 'set-cookie', 'content-length']
 
-# Directory fuzzing wordlist inside Seclists directory
+# Directory fuzzing wordlist
 DIR_FUZZING = '/Users/hacefresko/Tools/SecLists//Discovery/Web-Content/big.txt'
 
-# Domain fuzzing wordlist inside Seclists directory
+# Domain fuzzing wordlist
 DOMAIN_FUZZING = '/Users/hacefresko/Tools/SecLists/Discovery/DNS/subdomains-top1million-20000.txt'

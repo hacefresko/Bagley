@@ -12,6 +12,8 @@ In order to configure the database, create a new database and a new user both na
     
 If you want to use another name for the database, it must be changed in database.py
 
+File config.py defines some global variables that you may have to change, such as path for the directory fuzzing wordlist or the DNS fuzzing wordlist
+
 File specifying the scope must be provided with parameter -S. It must contain one target per line, in JSON format. The application will iterate over the targets inside the scope file and will scan all of them one by one. Once it's done, it will wait for the user to write more targets into the file.
 
 This way, the application can be launched as a daemon waiting for targets to be scanned.
