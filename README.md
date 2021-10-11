@@ -46,6 +46,8 @@ Scope options:
 
 *   Injector: Tests SQLi with [sqlmap](https://github.com/sqlmapproject/sqlmap) and XSS with [DalFox](https://github.com/hahwul/dalfox) on both GET and POST parameters.
 
+*   Searcher: Gets the technologies used by the application with [wappalyzer](https://github.com/AliasIO/wappalyzer)
+
 ## External requirements
 #### All of these requirements must be available in one of the PATH directories so Bagley can call them wherever it's executed
 *   [Mariadb](https://mariadb.com/)
@@ -55,6 +57,7 @@ Scope options:
 *   [Subfinder](https://github.com/projectdiscovery/subfinder)
 *   [Sqlmap](https://github.com/sqlmapproject/sqlmap)
 *   [DalFox](https://github.com/hahwul/dalfox)
+*   [Wappalyzer](https://github.com/AliasIO/wappalyzer)
 
 ## Useful documentation
 *   [MDN HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP)
