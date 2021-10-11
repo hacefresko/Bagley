@@ -955,7 +955,13 @@ class Technology:
     @staticmethod
     def getTech(name, version):
         db = DB()
-        tech = db.query_one('SELECT * FROM technologies WHERE name = %s AND version = %s', (name, version))
+        query = 'SELECT * FROM technologies WHERE name = %s '
+        if version:
+            query += 'AND version = %s'
+        else:
+            query += 'AND version is Null'
+            
+        tech = db.query_one(query, (name, version))
         return Technology(tech[0], tech[1], tech[2]) if tech else None
 
     @staticmethod
