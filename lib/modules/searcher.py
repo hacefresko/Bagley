@@ -10,7 +10,7 @@ class Searcher (threading.Thread):
     @staticmethod
     def __wappalyzer(path):
         delay = str(int((1/REQ_PER_SEC) * 1000))
-        command = [shutil.which('wappalyzer'), '--delay='+delay, str(path)]
+        command = [shutil.which('wappalyzer'), '--probe', '--delay='+delay, str(path)]
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
