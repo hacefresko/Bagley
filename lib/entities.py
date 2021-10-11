@@ -202,6 +202,7 @@ class Path:
         self.element = element
         self.parent = Path.getPath(parent)
         self.domain = Domain.getDomainById(domain)
+        self.technologies = self.__getTechs()
 
     def __eq__(self, other):
         if not other:
@@ -221,6 +222,18 @@ class Path:
         result = str(self.domain) + result
 
         return result 
+
+    # Returns the list of technologies of the
+    def __getTechs(self):
+        db = DB()
+    
+        techs = db.query_all('SELECT * FROM technologies INNER JOIN path_technologies on technologies.id = tech WHERE path = %d', (self.id,))
+
+        result = []
+        for tech in techs:
+            result.append(Technology(tech[0], tech[1], tech[2]))
+
+        return result
 
     # Returns path if path specified by element, parent and domain exists else False
     @staticmethod
@@ -724,8 +737,7 @@ class Header:
         header = Header.getHeader(key, value)
         if not header:
             db = DB()
-            id = db.exec_and_get_last_id('INSERT INTO headers (header_key, value) VALUES (%s,%s)', (key, value))
-            header = Header(id, key, value)
+            header = Header(db.exec_and_get_last_id('INSERT INTO headers (header_key, value) VALUES (%s,%s)', (key, value)), key, value)
         return header
 
     # Links the header to the specified target. If target is not a request nor a response, returns False
@@ -740,6 +752,7 @@ class Header:
             return True
         elif isinstance(target, Domain):
             db.exec('INSERT INTO domain_headers(domain, header) VALUES (%s,%d)', (target.id, self.id))
+            return True
         else:
             return False
 
@@ -837,6 +850,7 @@ class Cookie:
             return True
         elif isinstance(target, Domain):
             db.exec('INSERT INTO domain_cookies(domain, cookie) VALUES (%s,%d)', (target.id, self.id))
+            return True
         else:
             return False
 
@@ -896,7 +910,6 @@ class Vulnerability:
     @staticmethod
     def __getVuln(path_id, vuln_type):
         db = DB()
-
         vuln = db.query_one('SELECT * FROM vulnerabilities WHERE path = %d AND type = %s', (path_id, vuln_type))
         return Vulnerability(vuln[0], vuln[1], vuln[2], vuln[3]) if vuln else False
 
@@ -905,7 +918,6 @@ class Vulnerability:
         path = Path.parseURL(url)
         if not path:
             return False
-
         return Vulnerability.__getVuln(path.id, vuln_type)
 
     @staticmethod
@@ -920,6 +932,30 @@ class Vulnerability:
 
         db = DB()
         return Vulnerability(db.exec_and_get_last_id('INSERT INTO vulnerabilities (path, type, description) VALUES (%d,%s,%s)', (path.id, vuln_type, description)), path.id, vuln_type, description)
+
+class Technology:
+    def __init__(self, id, name, version):
+        self.id = id
+        self.name = name
+        self.version = version
+
+    @staticmethod
+    def getTech(name, version):
+        db = DB()
+        tech = db.query_one('SELECT * FROM technologies WHERE name = %s AND version = %s', (name, version))
+        return Technology(tech[0], tech[1], tech[2]) if tech else False
+
+    @staticmethod
+    def insertTech(name, version):
+        tech = Technology.getTech(name, version)
+        if not tech:
+            db = DB()
+            tech = Technology(db.exec_and_get_last_id('INSERT INTO technologies (name, version) VALUES (%s, %s)', (name, version)), name, version)
+        return tech
+
+    def link(self, path):
+        db = DB()
+        db.exec('INSERT INTO path_technologies (path, tech) VALUES (%d, %d)', (path.id, self.id))
 
 class Utils:
     @staticmethod

@@ -16,6 +16,9 @@ DROP TABLE IF EXISTS response_headers;
 DROP TABLE IF EXISTS response_cookies;
 DROP TABLE IF EXISTS response_scripts;
 DROP TABLE IF EXISTS vulnerabilities;
+DROP TABLE IF EXISTS technologies;
+DROP TABLE IF EXISTS path_technologies;
+DROP TABLE IF EXISTS cves;
 
 CREATE TABLE domains (
     id INT PRIMARY KEY AUTO_INCREMENT, 
@@ -80,8 +83,6 @@ CREATE TABLE scripts (
     FOREIGN KEY (path) REFERENCES paths(id)
 );
 
-
-
 -- Headers sent in all request made to that domain
 CREATE TABLE domain_headers (
     domain INT NOT NULL,
@@ -98,8 +99,6 @@ CREATE TABLE domain_cookies (
     FOREIGN KEY (cookie) REFERENCES cookies(id)
 );
 
-
-
 CREATE TABLE request_headers (
     request INT NOT NULL,
     header INT NOT NULL,
@@ -113,8 +112,6 @@ CREATE TABLE request_cookies (
     FOREIGN KEY (request) REFERENCES requests(id),
     FOREIGN KEY (cookie) REFERENCES cookies(id)
 );
-
-
 
 CREATE TABLE response_headers (
     response VARCHAR(255) NOT NULL,
@@ -138,11 +135,29 @@ CREATE TABLE response_scripts (
     FOREIGN KEY (script) REFERENCES scripts(hash)
 );
 
-
 CREATE TABLE vulnerabilities (
     id INT PRIMARY KEY AUTO_INCREMENT,
     path INT NOT NULL,
     type TEXT,
     description TEXT,
     FOREIGN KEY (path) REFERENCES paths(id)
+);
+
+CREATE TABLE technologies (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name TEXT,
+    version TEXT
+);
+
+CREATE TABLE path_technologies (
+    path INT NOT NULL,
+    tech INT NOT NULL,
+    FOREIGN KEY (path) REFERENCES paths(id),
+    FOREIGN KEY (tech) REFERENCES technologies(id)
+);
+
+CREATE TABLE cves (
+    id VARCHAR(50) PRIMARY KEY,
+    tech INT NOT NULL,
+    FOREIGN KEY (tech) REFERENCES technologies(id)
 );
