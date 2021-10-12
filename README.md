@@ -42,11 +42,11 @@ Scope options:
 ## Available modules
 *   Crawler: Crawler capable of rendering JavaScript and following redirects and dynamic requests to APIs, other domains... as long as they are inside the scope.
 
-*   Discoverer: Search for subdomains with [subfinder](https://github.com/projectdiscovery/subfinder) and fuzzes subdomains and content inside the scope with [gobuster](https://github.com/OJ/gobuster). Sends discovered elements to the crawler.
+*   Discoverer: Search for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and fuzzes subdomains and content inside the scope with [Gobuster](https://github.com/OJ/gobuster). Sends discovered elements to the crawler.
 
-*   Injector: Tests SQLi with [sqlmap](https://github.com/sqlmapproject/sqlmap), XSS with [DalFox](https://github.com/hahwul/dalfox) and CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz) on both GET and POST parameters.
+*   Injector: Tests SQLi with [Sqlmap](https://github.com/sqlmapproject/sqlmap), XSS with [DalFox](https://github.com/hahwul/dalfox) and CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz) on both GET and POST parameters.
 
-*   Searcher: Gets the technologies used by the application with [wappalyzer](https://github.com/AliasIO/wappalyzer)
+*   Searcher: Gets the technologies used by the application with [Wappalyzer](https://github.com/AliasIO/wappalyzer)
 
 ## External requirements
 #### All of these requirements must be available in one of the PATH directories so Bagley can call them wherever it's executed
