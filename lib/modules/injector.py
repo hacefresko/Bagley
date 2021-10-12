@@ -76,8 +76,45 @@ class Injector (threading.Thread):
 
         if "[POC]" in result.stdout:
             Vulnerability.insertVuln(url, 'XSS', result.stdout)
-            print("[*] XSS injection found in %s\n\n%s\n" % (url, result.stdout))
-                
+            print("[*] XSS found in %s\n\n%s\n" % (url, result.stdout))
+
+    @staticmethod
+    def __crlf(request):
+        url = str(request.path) + ('?' + request.params if request.params else '')
+        # Added delay 1 by default since it only accepts integer and it's a large enough delay
+        command = [shutil.which('crlfuzz'), '-u', url, '-s', '-c', '10']
+        
+        # Add POST data
+        if request.method == 'POST' and request.data:
+            command.append('-X')
+            command.append('POST')
+            command.append('-d')
+            command.append(request.data)
+
+        # Add headers
+        if request.headers:
+            for header in request.headers:
+                command.append('-H')
+                command.append(str(header))
+
+        # Add cookies
+        if request.cookies:
+            command.append('-H')
+            cookies_string = 'Cookie: '
+            for cookie in request.cookies:
+                cookies_string += str(cookie) + '; '
+            cookies_string = cookies_string[:-2]
+            command.append(cookies_string)
+        
+        print("[+] Testing CRLF injection in %s [%s]" % (url, request.method))
+
+        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+
+        if "[VLN]" in result.stdout:
+            Vulnerability.insertVuln(url, 'CRLF', result.stdout)
+            print("[*] CRLF injection found in %s\n\n%s\n" % (url, result.stdout))
+
+
     def run(self):
         tested = []
         for request in Request.getRequests():
@@ -89,6 +126,7 @@ class Injector (threading.Thread):
 
             Injector.__xss(request)
             Injector.__sqli(request)
+            Injector.__crlf(request)
 
             # Add request with same keys in POST/GET data to tested list
             tested = [*[request.id for request in request.getSameKeysRequests()], *tested]
