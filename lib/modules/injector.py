@@ -24,6 +24,7 @@ class Injector (threading.Thread):
             for header in request.headers:
                 headers_string += str(header) + '\n'
             headers_string = headers_string[:-1]
+            command.append(headers_string)
 
         # Add cookies
         if request.cookies:
