@@ -592,7 +592,7 @@ class Request:
             return []
 
         requests = []
-        query = 'SELECT * FROM requests WHERE AND path = %d AND method = %s'
+        query = 'SELECT * FROM requests WHERE path = %d AND method = %s'
         query_params = [self.path.id, self.method]
         if self.params:
             query += ' AND params LIKE %s'
