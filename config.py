@@ -1,3 +1,9 @@
+# Database variables
+DB_SCRIPT = 'sql/bagley.sql'
+DB_USER = 'bagley'
+DB_HOST = '127.0.0.1'
+DB_NAME = 'bagley'
+
 # Timeout for selenium
 TIMEOUT = 120
 

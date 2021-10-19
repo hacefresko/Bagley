@@ -1,8 +1,4 @@
-import threading, mariadb
-
-DB_USER = 'bagley'
-DB_HOST = '127.0.0.1'
-DB_NAME = 'bagley'
+import threading, mariadb, config
 
 #
 # Singleton module to manage database access
@@ -19,15 +15,15 @@ class DB:
             with cls.__lock:
                 # another thread could have created the instance before we acquired the lock. So check that the instance is still nonexistent.
                 if DB.__instances.get(tid) is None:
-                    DB.__instances.update({tid: super(DB, cls).__new__(cls)})
-                    DB.__instances.get(tid).__connection = mariadb.connect(host=DB_HOST, user=DB_USER, database=DB_NAME, autocommit=True) # autocommit = True -> https://stackoverflow.com/questions/9305669/mysql-python-connection-does-not-see-changes-to-database-made-on-another-connect
-                                                                    
+                    DB.__instances[tid] = super(DB, cls).__new__(cls)
+                    DB.__instances.get(tid).__connection = mariadb.connect(host=config.DB_HOST, user=config.DB_USER, database=config.DB_NAME, autocommit=True) # autocommit = True -> https://stackoverflow.com/questions/9305669/mysql-python-connection-does-not-see-changes-to-database-made-on-another-connect
+
         return DB.__instances.get(tid)
 
     def close(self):
         self.__connection.close()
 
-    def exec(self, query, params):
+    def exec(self, query, params=()):
         cursor = self.__connection.cursor()
         cursor.execute(query, params)
         cursor.close()

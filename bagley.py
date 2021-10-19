@@ -1,4 +1,4 @@
-import os, signal, datetime, getopt, sys, time, json
+import os, signal, datetime, getopt, sys, time, json, re
 
 from lib.entities import *
 import lib.modules
@@ -59,8 +59,25 @@ except Exception:
     exit()
 
 print("[+] Starting time: %s" % datetime.datetime.now())
-print("[+] Parsing scope file: %s" % scope_file_name)
 
+# Import SQL file
+db = DB()
+print("[+] Reseting database")
+statement = ''
+for line in open(config.DB_SCRIPT):
+    if re.match(r'--', line):
+        continue
+    if not re.search(r';$', line):  # keep appending lines that don't end in ';'
+        statement = statement + line
+    else:  # when you get a line ending in ';' then exec statement and reset for next statement
+        statement = statement + line
+        try:
+            db.exec(statement)
+        except Exception as e:
+            print('[x] MySQLError when executing %s' % config.DB_SCRIPT)
+        statement = ''
+
+print("[+] Parsing scope file: %s" % scope_file_name)
 try:
     scope_file = open(scope_file_name, 'r')
 except FileNotFoundError:
