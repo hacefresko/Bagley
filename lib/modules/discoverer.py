@@ -39,7 +39,7 @@ class Discoverer(threading.Thread):
 
         line = process.stdout.readline().decode('utf-8', errors='ignore')
         while line:
-            discovered = urljoin(url, line.split(' ')[0])
+            discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
             if not Request.checkRequest(discovered, 'GET', None, None):
                 print("[*] Path found! Queued %s to crawler" % discovered)
                 Path.insertPath(discovered)

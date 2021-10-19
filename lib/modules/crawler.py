@@ -363,6 +363,9 @@ class Crawler (threading.Thread):
                     url = http_request.url
                 elif https_request:
                     url = https_request.url
+                else:
+                    print("[x] Cannot request %s" % domain_name)
+                    continue
 
                 if http_request:
                     print("[*] HTTP protocol is used by %s" % http_request.url)
