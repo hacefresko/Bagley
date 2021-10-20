@@ -159,7 +159,6 @@ class Crawler (threading.Thread):
                     external_textareas = parser('textarea', form=form_id) if form_id is not None else []
                     for input in element(['input','select']):
                         if input.get('name') is not None:
-                            # If value is empty, put '1337'
                             if input.get('value') is None or input.get('value') == '':
                                 t = input.get('type')
                                 if t == 'number':
@@ -178,9 +177,8 @@ class Crawler (threading.Thread):
                             elif input.string:
                                 data += input.get('name') + "=" + input.string + "&"
                             else:
-                                data += input.get('name') + "=1337&"
+                                data += input.get('name') + "=lel&"
                             
-
                     data = data[:-1] if data != '' else None
                         
                     headers = None
