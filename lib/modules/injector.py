@@ -41,7 +41,7 @@ class Injector (threading.Thread):
         if "---" in result.stdout:
             Vulnerability.insertVuln(url, 'SQLi', result.stdout)
             print("[*] SQL injection found in %s\n\n%s\n" % (url, result.stdout))
-        elif "[WARNING] false positive or unexploitable injection point detected":
+        elif "[WARNING] false positive or unexploitable injection point detected" in result.stdout:
             Vulnerability.insertVuln(url, 'pSQLi', result.stdout)
             print("[*] Possible SQL found in %s, but sqlmap couldn't exploit it\n\n%s\n" % (url, result.stdout))
 
@@ -125,12 +125,14 @@ class Injector (threading.Thread):
             if not request:
                 time.sleep(5)
                 continue
-            if not request.response or request.response.code != 200 or (not request.params and not request.data) or request.id in tested:
+            if not request.response or request.id in tested or request.response.code != 200: 
                 continue
-
-            Injector.__xss(request)
-            Injector.__sqli(request)
+                
             Injector.__crlf(request)
+
+            if request.params or request.data:
+                Injector.__xss(request)
+                Injector.__sqli(request)
 
             # Add request with same keys in POST/GET data to tested list
             tested = [*[request.id for request in request.getSameKeysRequests()], *tested]
