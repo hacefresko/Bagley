@@ -62,7 +62,7 @@ print("[+] Starting time: %s" % datetime.datetime.now())
 
 # Import SQL file
 db = DB()
-print("[+] Reseting database")
+print("[+] Starting database")
 statement = ''
 for line in open(config.DB_SCRIPT):
     if re.match(r'--', line):

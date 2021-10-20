@@ -18,10 +18,10 @@ class Injector (threading.Thread):
             command.append("--data")
             command.append(request.data)
 
-        # Add headers
-        if request.headers:
+        # Add only headers added by the user since otherwise it would try SQLi on each header (too much time)
+        if request.path.domain.headers:
             headers_string = '--headers='
-            for header in request.headers:
+            for header in request.path.domain.headers:
                 headers_string += str(header) + '\n'
             headers_string = headers_string[:-1]
             command.append(headers_string)
@@ -41,6 +41,9 @@ class Injector (threading.Thread):
         if "---" in result.stdout:
             Vulnerability.insertVuln(url, 'SQLi', result.stdout)
             print("[*] SQL injection found in %s\n\n%s\n" % (url, result.stdout))
+        elif "[WARNING] false positive or unexploitable injection point detected":
+            Vulnerability.insertVuln(url, 'pSQLi', result.stdout)
+            print("[*] Possible SQL found in %s, but sqlmap couldn't exploit it\n\n%s\n" % (url, result.stdout))
 
     @staticmethod
     def __xss(request):
