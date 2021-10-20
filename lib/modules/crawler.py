@@ -157,13 +157,24 @@ class Crawler (threading.Thread):
                     # Parse input, select and textarea (textarea may be outside forms, linked by form attribute)
                     data = ''
                     external_textareas = parser('textarea', form=form_id) if form_id is not None else []
-                    for input in element(['input','select', 'textarea']) + external_textareas:
+                    for input in element(['input','select']):
                         if input.get('name') is not None:
                             # If value is empty, put '1337'
                             if input.get('value') is None or input.get('value') == '':
                                 data += input.get('name') + "=1337&"
                             else:
                                 data += input.get('name') + "=" + input.get('value') + "&"
+                    for input in element(['textarea']) + external_textareas:
+                        if input.get('name') is not None:
+                            # If value is empty, put '1337'
+                            if input.get('value'):
+                                data += input.get('name') + "=" + input.get('value') + "&"
+                            elif input.string:
+                                data += input.get('name') + "=" + input.string + "&"
+                            else:
+                                data += input.get('name') + "=1337&"
+                            
+
                     data = data[:-1] if data != '' else None
                         
                     headers = None
@@ -344,14 +355,14 @@ class Crawler (threading.Thread):
 
                 # Check for http and https
                 try:
-                    http_request = requests.get('http://'+domain_name+'/',  allow_redirects=False)
+                    http_request = requests.get('http://'+domain_name+'/',  allow_redirects=False, timeout=5)
                     if http_request and http_request.is_permanent_redirect and urlparse(http_request.headers.get('Location')).scheme == 'https':
                         http_request = None
                 except:
                     pass
 
                 try:
-                    https_request = requests.get('https://'+domain_name+'/',  allow_redirects=False)
+                    https_request = requests.get('https://'+domain_name+'/',  allow_redirects=False, timeout=5)
                 except:
                     pass
 

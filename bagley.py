@@ -109,13 +109,8 @@ while True:
         print("[x] Target couldn't be parsed: %s" % line)
         continue
 
-    # Add to queue
-    if entry.get("queue"):
-        queued = entry.get("queue")
-        crawler.addToQueue(queued)
-        print("[+] %s added to queue" % queued)
     # Get domain
-    elif entry.get('domain'):
+    if entry.get('domain'):
         domain = entry.get('domain')
         if not domain:
             continue
@@ -147,3 +142,9 @@ while True:
                 if excluded:
                     for e in excluded:
                         Domain.insertOutOfScopeDomain(e)
+
+            # Add to queue
+            if entry.get("queue"):
+                for q in entry.get("queue"):
+                    crawler.addToQueue(q)
+                    print("[+] %s added to queue" % q)
