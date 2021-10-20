@@ -154,10 +154,10 @@ class Crawler (threading.Thread):
                 domain = urlparse(url).netloc
 
                 if Domain.checkScope(domain):
-                    # Parse input, select and textarea (textarea is outside forms, linked by form attribute)
+                    # Parse input, select and textarea (textarea may be outside forms, linked by form attribute)
                     data = ''
-                    textareas = parser('textarea', form=form_id) if form_id is not None else []
-                    for input in element(['input','select']) + textareas:
+                    external_textareas = parser('textarea', form=form_id) if form_id is not None else []
+                    for input in element(['input','select', 'textarea']) + external_textareas:
                         if input.get('name') is not None:
                             # If value is empty, put '1337'
                             if input.get('value') is None or input.get('value') == '':
