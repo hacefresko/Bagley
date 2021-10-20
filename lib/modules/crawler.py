@@ -161,7 +161,13 @@ class Crawler (threading.Thread):
                         if input.get('name') is not None:
                             # If value is empty, put '1337'
                             if input.get('value') is None or input.get('value') == '':
-                                data += input.get('name') + "=1337&"
+                                t = input.get('type')
+                                if t == 'number':
+                                    data += input.get('name') + "=1337&"
+                                elif t == 'email':
+                                    data += input.get('name') + "=1337@lel.com&"
+                                else:
+                                    data += input.get('name') + "=lel&"
                             else:
                                 data += input.get('name') + "=" + input.get('value') + "&"
                     for input in element(['textarea']) + external_textareas:
