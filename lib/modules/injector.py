@@ -118,6 +118,39 @@ class Injector (threading.Thread):
             Vulnerability.insertVuln(url, 'CRLF', result.stdout)
             print("[*] CRLF injection found in %s\n\n%s\n" % (url, result.stdout))
 
+    @staticmethod
+    def __ssti(request):
+        url = str(request.path) + ('?' + request.params if request.params else '')
+        # Added delay 1 by default since it only accepts integer and it's a large enough delay
+        command = [shutil.which('tplmap'), '-u', url]
+        
+        # Add POST data
+        if request.method == 'POST' and request.data:
+            command.append('-d')
+            command.append(request.data)
+
+        # Add headers
+        if request.headers:
+            for header in request.headers:
+                # Tplmap detects char * as an injection point, so Headers containing that won't be added
+                if '*' in str(header):
+                    continue
+                command.append('-H')
+                command.append(str(header))
+
+        # Add cookies
+        if request.cookies:
+            for cookie in request.cookies:
+                command.append('-c')
+                command.append(str(cookie))
+        
+        print("[+] Testing SSTI in %s [%s]" % (url, request.method))
+
+        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+
+        if "Tplmap identified the following injection point" in result.stdout:
+            Vulnerability.insertVuln(url, 'SSTI', result.stdout)
+            print("[*] SSTI found in %s\n\n%s\n" % (url, result.stdout))
 
     def run(self):
         tested = []
@@ -132,6 +165,7 @@ class Injector (threading.Thread):
 
             if request.params or request.data:
                 Injector.__xss(request)
+                Injector.__ssti(request)
                 Injector.__sqli(request)
 
             # Add request with same keys in POST/GET data to tested list

@@ -37,7 +37,7 @@ Scope options:
 
 *   Discoverer: Search for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and fuzzes subdomains and content inside the scope with [Gobuster](https://github.com/OJ/gobuster). Sends discovered elements to the crawler.
 
-*   Injector: Tests SQLi with [Sqlmap](https://github.com/sqlmapproject/sqlmap), XSS with [DalFox](https://github.com/hahwul/dalfox) and CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz) on both GET and POST parameters.
+*   Injector: Tests SQLi with [Sqlmap](https://github.com/sqlmapproject/sqlmap), XSS with [DalFox](https://github.com/hahwul/dalfox), CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz) and SSTI with [Tplmap](https://github.com/epinna/tplmap) on GET and POST parameters.
 
 *   Searcher: Gets the technologies used by the application with [Wappalyzer](https://github.com/AliasIO/wappalyzer)
 
@@ -52,6 +52,7 @@ Scope options:
 *   [DalFox](https://github.com/hahwul/dalfox)
 *   [CRLFuzz](https://github.com/dwisiswant0/crlfuzz)
 *   [Wappalyzer](https://github.com/AliasIO/wappalyzer)
+*   [Tplmap](https://github.com/epinna/tplmap)
 
 ## Useful documentation
 *   [MDN HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP)
