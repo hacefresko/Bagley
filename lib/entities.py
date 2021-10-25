@@ -169,9 +169,10 @@ class Domain:
 
             for i in range(len(dot_interspersed_parts)):
                 check = ''.join(dot_interspersed_parts[i:])
+                if db.query_one('SELECT name FROM out_of_scope WHERE name LIKE %s', (check,)):
+                    return False
                 if db.query_one('SELECT name FROM domains WHERE name LIKE %s', (check,)):
                     return True
-
         return False
 
     # Inserts domain if not already inserted

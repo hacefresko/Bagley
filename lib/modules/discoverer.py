@@ -76,8 +76,9 @@ class Discoverer(threading.Thread):
         while line:
             try:
                 discovered = line.split('Found: ')[1].rstrip()
-                print('[*] Domain found! Inserted %s to database' % discovered)
-                Domain.insertDomain(discovered)
+                if Domain.checkScope(discovered):
+                    print('[*] Domain found! Inserted %s to database' % discovered)
+                    Domain.insertDomain(discovered)
             except:
                 pass
             finally:
@@ -103,8 +104,9 @@ class Discoverer(threading.Thread):
         while line:
             try:
                 discovered = json.loads(line).get('host')
-                print('[*] Domain found! Inserted %s to database' % discovered)
-                Domain.insertDomain(discovered)
+                if Domain.checkScope(discovered):
+                    print('[*] Domain found! Inserted %s to database' % discovered)
+                    Domain.insertDomain(discovered)
             except:
                 pass
             finally:
