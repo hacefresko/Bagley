@@ -39,12 +39,17 @@ class Discoverer(threading.Thread):
 
         line = process.stdout.readline().decode('utf-8', errors='ignore')
         while line:
-            discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
-            if not Request.checkRequest(discovered, 'GET', None, None):
-                print("[*] Path found! Queued %s to crawler" % discovered)
-                Path.insertPath(discovered)
-                self.crawler.addToQueue(discovered)
-            line = process.stdout.readline().decode('utf-8', errors='ignore')
+            try:
+                code = int(line.split('(')[1].split(')')[0].split(':')[1].strip())
+                discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
+                if int(code / 100) != 4 and not Request.checkRequest(discovered, 'GET', None, None):
+                    print("[*] Path found! Queued %s to crawler" % discovered)
+                    Path.insertPath(discovered)
+                    self.crawler.addToQueue(discovered)
+            except:
+                pass
+            finally:
+                line = process.stdout.readline().decode('utf-8', errors='ignore')
         
         # Collect errors if execution fails
         if process.poll() != 0:
