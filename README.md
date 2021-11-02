@@ -35,9 +35,9 @@ Scope options:
 
 ## Available modules
 
-*   Crawler: Crawler capable of rendering JavaScript and following redirects and dynamic requests to APIs, other domains... as long as they are inside the scope.
+*   Crawler: Crawls all resources rendering JavaScript (including dynamic requests made to APIs, other domains inside the scope, etc.).
 
-*   Discoverer: Searches for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and fuzzes subdomains and paths with [Gobuster](https://github.com/OJ/gobuster). When a subdomain is found, it checks if it's vulnerable to Subdomain Takeover with [Subjack](https://github.com/haccer/subjack). Every discover asset is sent to the crawler.
+*   Discoverer: Searches for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and fuzzes subdomains and resources with [Gobuster](https://github.com/OJ/gobuster). When a subdomain is found, it checks if it's vulnerable to Subdomain Takeover with [Subjack](https://github.com/haccer/subjack). Every discover asset is sent to the crawler.
 
 *   Injector: Tests SQLi with [Sqlmap](https://github.com/sqlmapproject/sqlmap), XSS with [DalFox](https://github.com/hahwul/dalfox), CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz) and SSTI with [Tplmap](https://github.com/epinna/tplmap) on GET and POST parameters.
 

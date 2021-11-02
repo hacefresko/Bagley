@@ -127,7 +127,7 @@ class Discoverer(threading.Thread):
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
-        if result != '':
+        if result.stdout != '':
             Vulnerability.insertVuln('Subdomain Takeover', result.stdout)
             print('[*] Subdomain Takeover found at %s!\n\n%s\n' % (domain, result.stdout))
         
