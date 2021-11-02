@@ -122,9 +122,6 @@ class Discoverer(threading.Thread):
 
     def __subdomainTakeover(self, domain):
         command = [shutil.which('subjack'), '-a', '-m', '-d', domain]
-        
-        print("[+] Checking if subdomain %s is available for takeover" % domain)
-
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if result.stdout != '':
