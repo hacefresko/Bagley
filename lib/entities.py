@@ -915,37 +915,28 @@ class Script:
         return script
 
 class Vulnerability:
-    def __init__(self, id, path_id, vuln_type, description):
+    def __init__(self, id, vuln_type, description):
         self.id = id
-        self.path = Path.getPath(path_id)
         self.type = vuln_type
         self.description = description
 
     @staticmethod
-    def __getVuln(path_id, vuln_type):
+    def getVuln(id):
         db = DB()
-        vuln = db.query_one('SELECT * FROM vulnerabilities WHERE path = %d AND type = %s', (path_id, vuln_type))
-        return Vulnerability(vuln[0], vuln[1], vuln[2], vuln[3]) if vuln else None
+        vuln = db.query_one('SELECT * FROM vulnerabilities WHERE id = %d', (id,))
+        return Vulnerability(vuln[0], vuln[1], vuln[2]) if vuln else None
 
     @staticmethod
-    def getVuln(url, vuln_type):
-        path = Path.parseURL(url)
-        if not path:
-            return None
-        return Vulnerability.__getVuln(path.id, vuln_type)
+    def getVulnsByType(vuln_type):
+        db = DB()
+        vuln = db.query_one('SELECT * FROM vulnerabilities WHERE type = %s', (vuln_type,))
+        return Vulnerability(vuln[0], vuln[1], vuln[2]) if vuln else None
+
 
     @staticmethod
-    def insertVuln(url, vuln_type, description):
-        path = Path.parseURL(url)
-        if not path:
-            return None
-
-        vuln = Vulnerability.__getVuln(path.id, vuln_type)
-        if vuln:
-            return vuln
-
+    def insertVuln(vuln_type, description):
         db = DB()
-        return Vulnerability(db.exec_and_get_last_id('INSERT INTO vulnerabilities (path, type, description) VALUES (%d,%s,%s)', (path.id, vuln_type, description)), path.id, vuln_type, description)
+        return Vulnerability(db.exec_and_get_last_id('INSERT INTO vulnerabilities (type, description) VALUES (%s,%s)', (vuln_type, description)), vuln_type, description)
 
 class Technology:
     def __init__(self, id, slug, name, version):

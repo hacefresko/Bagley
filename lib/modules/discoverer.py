@@ -63,12 +63,14 @@ class Discoverer(threading.Thread):
                 except:
                     return
 
-    def __fuzzDomain(self, domain, errcodes=[]):
+    def __fuzzSubDomain(self, domain, errcodes=[]):
         command = [shutil.which('gobuster'), 'dns', '-q', '-w', DOMAIN_FUZZING, '-d', domain]
         # Add errorcodes if specified
         if len(errcodes) != 0:
             command.append('-b')
             command.append(','.join(errcodes))
+
+        print("[+] Fuzzing domain %s" % domain)
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -79,6 +81,7 @@ class Discoverer(threading.Thread):
                 if Domain.checkScope(discovered):
                     print('[*] Domain found! Inserted %s to database' % discovered)
                     Domain.insertDomain(discovered)
+                    self.__subdomainTakeover(discovered)
             except:
                 pass
             finally:
@@ -90,6 +93,7 @@ class Discoverer(threading.Thread):
             # If errorcodes must be specified to gobuster
             if 'Error: the server returns a status code that matches the provided options for non existing urls' in error:
                 try:
+                    # Repeat the execution with errorcodes
                     errcode = error.split('=>')[1].split('(')[0].strip()
                     errcodes.append(errcode)
                     self.__fuzzPath(domain, errcodes)
@@ -98,6 +102,9 @@ class Discoverer(threading.Thread):
 
     def __findSubDomains(self,domain):
         command = [shutil.which('subfinder'), '-oJ', '-nC', '-silent', '-all', '-d', domain]
+
+        print("[+] Finding subdomains for %s" % domain)
+
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
         line = process.stdout.readline().decode('utf-8', errors='ignore')
@@ -107,21 +114,31 @@ class Discoverer(threading.Thread):
                 if Domain.checkScope(discovered):
                     print('[*] Domain found! Inserted %s to database' % discovered)
                     Domain.insertDomain(discovered)
+                    self.__subdomainTakeover(discovered)
             except:
                 pass
             finally:
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
 
+    def __subdomainTakeover(self, domain):
+        command = [shutil.which('subjack'), '-a', '-m', '-d', domain]
+        
+        print("[+] Checking if subdomain %s is available for takeover" % domain)
+
+        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+
+        if result != '':
+            Vulnerability.insertVuln('Subdomain Takeover', result.stdout)
+            print('[*] Subdomain Takeover found at %s!\n\n%s\n' % (domain, result.stdout))
+        
     def run(self):
         directories = Path.getDirectories()
         domains = Domain.getDomains()
         while True:
             domain = next(domains)
             if domain and domain.name[0] == '.':
-                print("[+] Finding subdomains for %s" % domain.name[1:])
                 self.__findSubDomains(domain.name[1:])
-                print("[+] Fuzzing domain %s" % domain.name[1:])
-                self.__fuzzDomain(domain.name[1:])
+                self.__fuzzSubDomain(domain.name[1:])
             else:
                 directory = next(directories)
                 if not directory:

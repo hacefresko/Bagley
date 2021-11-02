@@ -39,11 +39,11 @@ class Injector (threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "---" in result.stdout:
-            Vulnerability.insertVuln(url, 'SQLi', result.stdout)
-            print("[*] SQL injection found in %s\n\n%s\n" % (url, result.stdout))
+            Vulnerability.insertVuln('SQLi', result.stdout)
+            print("[*] SQL injection found in %s!\n\n%s\n" % (url, result.stdout))
         elif "[WARNING] false positive or unexploitable injection point detected" in result.stdout:
-            Vulnerability.insertVuln(url, 'pSQLi', result.stdout)
-            print("[*] Possible SQL found in %s, but sqlmap couldn't exploit it\n\n%s\n" % (url, result.stdout))
+            Vulnerability.insertVuln('pSQLi', result.stdout)
+            print("[*] Possible SQL found in %s! But sqlmap couldn't exploit it\n\n%s\n" % (url, result.stdout))
 
     @staticmethod
     def __xss(request):
@@ -79,8 +79,8 @@ class Injector (threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "[POC]" in result.stdout:
-            Vulnerability.insertVuln(url, 'XSS', result.stdout)
-            print("[*] XSS found in %s\n\n%s\n" % (url, result.stdout))
+            Vulnerability.insertVuln('XSS', result.stdout)
+            print("[*] XSS found in %s!\n\n%s\n" % (url, result.stdout))
 
     @staticmethod
     def __crlf(request):
@@ -115,8 +115,8 @@ class Injector (threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "[VLN]" in result.stdout:
-            Vulnerability.insertVuln(url, 'CRLF', result.stdout)
-            print("[*] CRLF injection found in %s\n\n%s\n" % (url, result.stdout))
+            Vulnerability.insertVuln('CRLF', result.stdout)
+            print("[*] CRLF injection found in %s!\n\n%s\n" % (url, result.stdout))
 
     @staticmethod
     def __ssti(request):
@@ -149,8 +149,8 @@ class Injector (threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "Tplmap identified the following injection point" in result.stdout:
-            Vulnerability.insertVuln(url, 'SSTI', result.stdout)
-            print("[*] SSTI found in %s\n\n%s\n" % (url, result.stdout))
+            Vulnerability.insertVuln('SSTI', result.stdout)
+            print("[*] SSTI found in %s!\n\n%s\n" % (url, result.stdout))
 
     def run(self):
         tested = []

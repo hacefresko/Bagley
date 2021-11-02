@@ -29,13 +29,15 @@ Scope options:
 *   queue: Specifies list of URLs to start crawling from. Domain must be already added.
 
 ### Example of scope file
+
     {"domain":".example.com", "excluded": ["test.example.com"], "queue": ["https://www.example.com/example?e=1337"]}
     {"domain":"api.example.com", "headers": {"Referer": "google.com", "Accept-Encoding": "gzip, deflate, br"}, "cookies": [{"name":"user_session", "value": "1234567890", "domain": "example.com"}, {"name": "logged_in", "value": "yes", "domain": ".example.com"}]}
 
 ## Available modules
+
 *   Crawler: Crawler capable of rendering JavaScript and following redirects and dynamic requests to APIs, other domains... as long as they are inside the scope.
 
-*   Discoverer: Search for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and fuzzes subdomains and content inside the scope with [Gobuster](https://github.com/OJ/gobuster). Sends discovered elements to the crawler.
+*   Discoverer: Searches for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and fuzzes subdomains and paths with [Gobuster](https://github.com/OJ/gobuster). When a subdomain is found, it checks if it's vulnerable to Subdomain Takeover with [Subjack](https://github.com/haccer/subjack). Every discover asset is sent to the crawler.
 
 *   Injector: Tests SQLi with [Sqlmap](https://github.com/sqlmapproject/sqlmap), XSS with [DalFox](https://github.com/hahwul/dalfox), CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz) and SSTI with [Tplmap](https://github.com/epinna/tplmap) on GET and POST parameters.
 
@@ -48,11 +50,12 @@ Scope options:
 *   [ChromeDriver](https://chromedriver.chromium.org/downloads)
 *   [Gobuster](https://github.com/OJ/gobuster)
 *   [Subfinder](https://github.com/projectdiscovery/subfinder)
+*   [Subjack](https://github.com/haccer/subjack)
 *   [Sqlmap](https://github.com/sqlmapproject/sqlmap)
 *   [DalFox](https://github.com/hahwul/dalfox)
 *   [CRLFuzz](https://github.com/dwisiswant0/crlfuzz)
-*   [Wappalyzer](https://github.com/AliasIO/wappalyzer)
 *   [Tplmap](https://github.com/epinna/tplmap)
+*   [Wappalyzer](https://github.com/AliasIO/wappalyzer)
 
 ## Useful documentation
 *   [MDN HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP)

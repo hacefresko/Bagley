@@ -137,10 +137,8 @@ CREATE TABLE response_scripts (
 
 CREATE TABLE vulnerabilities (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    path INT NOT NULL,
     type TEXT,
-    description TEXT,
-    FOREIGN KEY (path) REFERENCES paths(id)
+    description TEXT
 );
 
 CREATE TABLE technologies (
