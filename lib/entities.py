@@ -967,30 +967,30 @@ class Vulnerability:
         return Vulnerability(db.exec_and_get_last_id('INSERT INTO vulnerabilities (type, description) VALUES (%s,%s)', (vuln_type, description)), vuln_type, description)
 
 class Technology:
-    def __init__(self, id, slug, name, version):
+    def __init__(self, id, cpe, name, version):
         self.id = id
-        self.slug = slug
+        self.cpe = cpe
         self.name = name
         self.version = version
 
     @staticmethod
-    def getTech(slug, version):
+    def getTech(cpe, version):
         db = DB()
-        query = 'SELECT * FROM technologies WHERE slug = %s '
+        query = 'SELECT * FROM technologies WHERE cpe = %s '
         if version:
             query += 'AND version = %s'
         else:
             query += 'AND version is Null'
             
-        tech = db.query_one(query, (slug, version))
+        tech = db.query_one(query, (cpe, version))
         return Technology(tech[0], tech[1], tech[2], tech[3]) if tech else None
 
     @staticmethod
-    def insertTech(slug, name, version=None):
+    def insertTech(cpe, name, version=None):
         tech = Technology.getTech(name, version)
         if not tech:
             db = DB()
-            tech = Technology(db.exec_and_get_last_id('INSERT INTO technologies (slug, name, version) VALUES (%s, %s, %s)', (slug, name, version)), slug, name, version)
+            tech = Technology(db.exec_and_get_last_id('INSERT INTO technologies (cpe, name, version) VALUES (%s, %s, %s)', (cpe, name, version)), cpe, name, version)
         return tech
 
     def link(self, path):

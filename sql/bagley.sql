@@ -143,7 +143,7 @@ CREATE TABLE vulnerabilities (
 
 CREATE TABLE technologies (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    slug TEXT NOT NULL,
+    cpe TEXT NOT NULL,
     name TEXT NOT NULL,
     version TEXT
 );
