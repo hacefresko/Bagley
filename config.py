@@ -13,11 +13,8 @@ REQ_PER_SEC = 10
 # Formats that won't be stored
 EXTENSIONS_BLACKLIST = ['.css', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp', '.bmp', '.ico', '.tiff', '.woff2', '.woff', '.mp4', '.rar', '.zip', '.pdf', '.apk']
 
-# Common session cookies whose values won't be stored
-COOKIES_BLACKLIST = ['PHPSESSID', 'JSESSIONID', 'CFID', 'CFTOKEN', 'ASP.NET_SessionId']
-
 # Params, POST data and cookies containing these words, won't be stored
-PARAMS_BLACKLIST = ['csrf', 'sess', 'token']
+PARAMS_BLACKLIST = ['csrf']
 
 # Headers whose value won't be stored
 HEADERS_BLACKLIST = ['date', 'cookie', 'set-cookie', 'content-length']

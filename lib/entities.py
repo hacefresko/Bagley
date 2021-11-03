@@ -470,7 +470,7 @@ class Request:
     # If there are already requests to X but without cookies param, it returns False
     # If requested file extension belongs to config.EXTENSIONS_BLACKLIST, returns False
     @staticmethod
-    def checkRequest(url, method, content_type=None, data=None, cookies=None):
+    def checkRequest(url, method, content_type=None, data=None, cookies=[]):
         path = Path.parseURL(url)
         if not path:
             return False
@@ -511,14 +511,25 @@ class Request:
         else:
             query += ' AND data is Null'
 
-        req = db.query_one(query, tuple(query_params))
-        if req:
-            # Check if there is one new cookie that has never been sent with a similar response
-            if cookies:
-                for c in cookies:
-                    if not db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (req[0], c.name)):
-                        return False
-            else:
+        requests = db.query_all(query, tuple(query_params))
+        for request in requests:
+            existing_cookies = 0
+            for c in cookies:
+                if db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
+                    existing_cookies += 1
+            if existing_cookies == len(cookies):
+                return True
+        return False
+
+
+        for request in requests:
+            # Check if there is at least one new cookie that has never been sent with a similar response
+            valid = True
+            for c in cookies:
+                if db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
+                    valid = False
+                    break
+            if valid:
                 return True
         
         return False
@@ -812,12 +823,9 @@ class Cookie:
     # Returns a formatted tupple with name and value
     @staticmethod
     def __parseCookie(name, value):
-        if name in config.COOKIES_BLACKLIST:
-            value = '1337'
-        else:
-            for term in config.PARAMS_BLACKLIST:
-                if term in name:
-                    value = term
+        for term in config.PARAMS_BLACKLIST:
+            if term in name:
+                value = term
         return (name, value)
 
     # Returns True if exists or None if it does not exist   

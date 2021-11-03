@@ -143,8 +143,8 @@ class Crawler (threading.Thread):
                 url = urljoin(parent_url, path)
                 domain = urlparse(url).netloc
 
-                if Domain.checkScope(domain) and Request.checkExtension(url) and not Request.checkRequest(url, 'GET', cookies=response.cookies):
-                    self.__crawl(url, 'GET', cookies=Utils.mergeCookies(cookies, response.cookies))
+                if Domain.checkScope(domain) and Request.checkExtension(url) and not Request.checkRequest(url, 'GET', cookies=cookies):
+                    self.__crawl(url, 'GET', cookies=cookies)
                 
             elif element.name == 'form':
                 form_id = element.get('id')
@@ -195,8 +195,8 @@ class Crawler (threading.Thread):
                         content_type = 'application/x-www-form-urlencoded'
                         headers = [Header.insertHeader('content-type', content_type)]
 
-                    if Request.checkExtension(url) and not Request.checkRequest(url, method, content_type, data, response.cookies):
-                        self.__crawl(url, method, data, headers, Utils.mergeCookies(cookies, response.cookies))
+                    if Request.checkExtension(url) and not Request.checkRequest(url, method, content_type, data, cookies):
+                        self.__crawl(url, method, data, headers, cookies)
 
             elif element.name == 'script':
                 src = element.get('src')
@@ -216,7 +216,10 @@ class Crawler (threading.Thread):
 
     # Main method of crawler. headers and cookies are extra ones to be appended to the ones corresponding to the domain
     def __crawl(self, parent_url, method, data=None, headers = [], cookies = []):
-        print("[+] Crawling %s [%s]" % (parent_url, method))
+        if cookies:
+            print(('['+method+']').ljust(8) + parent_url + '\t' + str([c.name for c in cookies]))
+        else:
+            print(('['+method+']').ljust(8) + parent_url)
 
         # Always inserts path into database since __crawl is only called if the path hasn't been crawled yet
         path = Path.insertPath(parent_url)
@@ -255,13 +258,13 @@ class Crawler (threading.Thread):
                             self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain": cookie.domain})
                     except:
                         # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
-                        print("[x] %s is a cookie-averse document" % parent_url)
+                        print("[ERROR] %s is a cookie-averse document" % parent_url)
 
                 self.driver.get(parent_url)
             elif method == 'POST':
                 self.__post(parent_url, data, headers, cookies)
         except Exception as e:
-            print('[x] Exception %s ocurred when requesting %s' % (e.__class__.__name__, parent_url))
+            print('[ERROR] Exception %s ocurred when requesting %s' % (e.__class__.__name__, parent_url))
             return
 
         # List of responses to analyze
@@ -283,7 +286,7 @@ class Crawler (threading.Thread):
                 if code//100 == 3:
                     redirect_to = main_response.getHeader('location').value
                     if not redirect_to:
-                        print("[x] Received %d but location header is not present" % code)
+                        print("[ERROR] Received %d but location header is not present" % code)
                     else:
                         redirect_to = urljoin(parent_url, redirect_to)
 
@@ -291,16 +294,17 @@ class Crawler (threading.Thread):
                             method = 'GET'
                             data = None
 
-                        if Request.checkExtension(redirect_to) and not Request.checkRequest(redirect_to, method, data=data, cookies=main_response.cookies):
+                        new_cookies = Utils.mergeCookies(cookies, main_response.cookies)
+
+                        if Request.checkExtension(redirect_to) and not Request.checkRequest(redirect_to, method, data=data, cookies=new_cookies):
                             if Domain.checkScope(urlparse(redirect_to).netloc):
-                                print("[+] Following redirection %d to %s [%s]" % (code, redirect_to, method))
-                                self.__crawl(redirect_to, method, data, headers, Utils.mergeCookies(cookies, main_response.cookies))
+                                print("[%d]   %s " % (code, redirect_to))
+                                self.__crawl(redirect_to, method, data, headers, new_cookies)
                             else:
-                                print("[x] Got redirection %d but %s not in scope" % (code, redirect_to))
+                                print("[%d]   %s [OUT OF SCOPE]" % (code, redirect_to))
                     
                     return
 
-                
                 responses.append({'url': parent_url, 'response':main_response, 'headers': headers, 'cookies': cookies})
 
             # Dynamic requests      
@@ -309,23 +313,28 @@ class Crawler (threading.Thread):
                 if not Domain.checkScope(domain):
                     continue
 
+                new_cookies = Utils.mergeCookies(cookies, main_response.cookies)
+
                 # If resource is a JS file
                 if request.url[-3:] == '.js':
                     content = requests.get(request.url).text
                     Script.insertScript(request.url, content, main_response)
                     continue
                 # If domain is in scope, request has not been done yet and resource is not an image
-                elif Request.checkExtension(request.url) and not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), main_response.cookies):
-                    print("[+] Made dynamic request to %s [%s]" % (request.url, request.method))
+                elif Request.checkExtension(request.url) and not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), new_cookies):
+                    if new_cookies:
+                        print(('['+method+']').ljust(8) + parent_url + '\t' + str([c.name for c in new_cookies]))
+                    else:
+                        print(('['+method+']').ljust(8) + parent_url)
                     req, resp = self.__processRequest(request)
                     
                     # If dynamic request responded with HTML, send it to analize
                     if resp and resp.body and bool(BeautifulSoup(resp.body, 'html.parser').find()):
-                        responses.append({'url': request.url, 'response':resp, 'headers': headers, 'cookies': cookies})
+                        responses.append({'url': request.url, 'response':resp, 'cookies': new_cookies})
 
         # Analyze all responses
         for response in responses:
-            self.__parseHTML(response['url'], cookies, response['response'])
+            self.__parseHTML(response['url'], response['cookies'], response['response'])
 
     def run(self):
         # Generator for domains
@@ -403,10 +412,11 @@ class Crawler (threading.Thread):
                     for cookie in domain.cookies:
                         print(cookie)
                     print()
-
+                print()
+                
                 self.__crawl(url, 'GET', headers=domain.headers, cookies=domain.cookies)
             except Exception as e:
-                print('[x] Exception %s ocurred when crawling %s' % (e.__class__.__name__, url))
+                print('\n[x] Exception %s ocurred when crawling %s' % (e.__class__.__name__, url))
             finally:
-                print("[+] Finished crawling %s" % url)
+                print("\n[+] Finished crawling %s" % url)
                 continue
