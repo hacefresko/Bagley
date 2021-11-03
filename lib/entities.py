@@ -113,6 +113,10 @@ class Domain:
     # Returns True if both domains are equal or if one belongs to a range of subdomains of other, else False
     @staticmethod
     def compareDomains(first, second):
+        if ':' in first:
+            first = first.split(':')[0]
+        if ':' in second:
+            second = second.split(':')[0]
         if first == second:
             return True
         elif first[0] == '.' and second[0] == '.':
@@ -461,11 +465,12 @@ class Request:
                 return header
         return None
 
-    # Returns True if request exists in database else False. If there are already some (10) requests with the same path and method 
-    # but different params/data with same key, it returns True to avoid saving same requests with different CSRFs, session values, etc.
-    # If requested file extension belongs is in config.EXTENSIONS_BLACKLIST, returns False
+    # Returns True if request exists in database else False. 
+    # If there are already some (10) requests with the same path and method but different params/data with same key, it returns True to avoid saving same requests with different CSRFs, session values, etc.
+    # If there are already requests to X but without cookies param, it returns False
+    # If requested file extension belongs to config.EXTENSIONS_BLACKLIST, returns False
     @staticmethod
-    def checkRequest(url, method, content_type, data):
+    def checkRequest(url, method, content_type=None, data=None, cookies=None):
         path = Path.parseURL(url)
         if not path:
             return False
@@ -506,7 +511,17 @@ class Request:
         else:
             query += ' AND data is Null'
 
-        return True if db.query_one(query, tuple(query_params)) else False
+        req = db.query_one(query, tuple(query_params))
+        if req:
+            # Check if there is one new cookie that has never been sent with a similar response
+            if cookies:
+                for c in cookies:
+                    if not db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (req[0], c.name)):
+                        return False
+            else:
+                return True
+        
+        return False
 
     # Returns False if extension is in blacklist from config.py, else True   
     @staticmethod
@@ -515,7 +530,7 @@ class Request:
         
     # Returns request if exists else None
     @staticmethod
-    def getRequest(url, method, content_type, data):
+    def getRequest(url, method, content_type=None, cookies=None, data=None):
         path = Path.parseURL(url)
         if not path:
             return None
@@ -539,10 +554,16 @@ class Request:
         else:
             query += ' AND data is Null '
 
-        request = db.query_one(query, tuple(query_params))
-        if not request:
-            return None
-        return Request(request[0], request[1], request[2], request[3], request[4], request[5])
+        requests = db.query_all(query, tuple(query_params))
+        for request in requests:
+            valid = True
+            for c in cookies:
+                if not db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
+                    valid = False
+                    break
+            if valid:
+                return Request(request[0], request[1], request[2], request[3], request[4], request[5])
+        return None
 
     # Yields requests or None if there are no requests. It continues infinetly until program stops
     @staticmethod
@@ -574,18 +595,17 @@ class Request:
         params = Request.__parseParams(urlparse(url).query)
         data = Request.__parseData(content_type, data) if method == 'POST' else None
 
-        if Request.checkRequest(url, method, content_type, data):
+        if Request.checkRequest(url, method, content_type, data, cookies):
             return None
 
         db = DB()
-        db.exec('INSERT INTO requests (path, params, method, data) VALUES (%d,%s,%s,%s)', (path.id, params, method, data))
-        request = Request.getRequest(url, method, content_type, data)
+        request = Request(db.exec_and_get_last_id('INSERT INTO requests (path, params, method, data) VALUES (%d,%s,%s,%s)', (path.id, params, method, data)), path.id, params, method, data, None)
 
         for element in headers + cookies:
             element.link(request)
 
         # Gets again the request in order to update headers, cookies and data from databse
-        return Request.getRequest(url, method, content_type, data)
+        return Request.getRequest(url, method, content_type, cookies, data)
 
     # Returns a list of requests whose params or data keys are the same as the request the function was called on
     def getSameKeysRequests(self):
@@ -830,7 +850,7 @@ class Cookie:
         for result in results:
             cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9])
             # If domain/range of subdomains and range of paths from cookie match with url
-            cookie_path = Path.parseURL(path.domain.name + cookie.path) if cookie.path != '/' else Path.parseURL(path.domain.name)
+            cookie_path = Path.parseURL(str(path) + cookie.path[1:]) if cookie.path != '/' else path
             if Domain.compareDomains(cookie.domain, path.domain.name) and path.checkParent(cookie_path):
                 return cookie
         return None
@@ -1003,7 +1023,25 @@ class Utils:
                     data.update({k:newValue})
         return data
 
-    # Substitutes all values whose keys match with match parameter to newValue. If match is None, it will substitute all values.
+    # Merges both lists of cookies. If the same cookie is on both lists, the chosen cookie is the one from cookies2
+    @staticmethod
+    def mergeCookies(cookies1, cookies2):
+        ret = []
+        names = []
+
+        ret.extend(cookies2)
+        ret.extend(cookies1)
+
+        # Traverse list of names. If a name is repeated, the repeated one will correspond to cookies1, so it's removed from result
+        for i,c in enumerate(ret):
+            if c.name not in names:
+                names.append(c.name)
+            else:
+                ret.pop(i)
+
+        return ret      
+
+    # Substitutes all values whose keys match with match parameter for newValue. If match is None, it will substitute all values.
     # It uses content_type header to know what type of POST data is, so it can be more precise
     # For multipart/form-data, it also substitutes the boundary since its value is usually random/partially random
     # If an exception occurs, a copy of the original data is returned

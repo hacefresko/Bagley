@@ -11,7 +11,7 @@ class Discoverer(threading.Thread):
 
     def __fuzzPath(self, url, headers, cookies, errcodes=[]):
         # Crawl all urls on the database that has not been crawled
-        if not Request.checkRequest(url, 'GET', None, None):
+        if not Request.checkRequest(url, 'GET'):
             self.crawler.addToQueue(url)
 
         delay = str(int((1/REQ_PER_SEC) * 1000)) + 'ms'
@@ -42,7 +42,7 @@ class Discoverer(threading.Thread):
             try:
                 code = int(line.split('(')[1].split(')')[0].split(':')[1].strip())
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
-                if int(code / 100) != 4 and not Request.checkRequest(discovered, 'GET', None, None):
+                if int(code / 100) != 4 and not Request.checkRequest(discovered, 'GET'):
                     print("[*] Path found! Queued %s to crawler" % discovered)
                     Path.insertPath(discovered)
                     self.crawler.addToQueue(discovered)
