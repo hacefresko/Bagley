@@ -35,6 +35,8 @@ class Discoverer(threading.Thread):
             command.append('-b')
             command.append(','.join(errcodes))
 
+        print("[+] Fuzzing path %s\n" % url)
+
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         line = process.stdout.readline().decode('utf-8', errors='ignore')
@@ -70,7 +72,7 @@ class Discoverer(threading.Thread):
             command.append('-b')
             command.append(','.join(errcodes))
 
-        print("[+] Fuzzing domain %s" % domain)
+        print("[+] Fuzzing domain %s\n" % domain)
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -103,7 +105,7 @@ class Discoverer(threading.Thread):
     def __findSubDomains(self,domain):
         command = [shutil.which('subfinder'), '-oJ', '-nC', '-silent', '-all', '-d', domain]
 
-        print("[+] Finding subdomains for %s" % domain)
+        print("[+] Finding subdomains for %s\n" % domain)
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
@@ -142,5 +144,4 @@ class Discoverer(threading.Thread):
                     time.sleep(5)
                     continue
                 
-                print("[+] Fuzzing path %s" % directory)
                 self.__fuzzPath(str(directory), directory.domain.headers, directory.domain.cookies)
