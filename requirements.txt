@@ -4,3 +4,4 @@ selenium
 selenium-wire
 mariadb
 pathlib
+iptools

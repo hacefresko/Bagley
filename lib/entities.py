@@ -1,4 +1,4 @@
-import hashlib, json, time, pathlib, socket
+import hashlib, json, time, pathlib, iptools
 from urllib.parse import urlparse, urlunparse
 
 import config
@@ -154,7 +154,7 @@ class Domain:
             return False
 
         # If domain is an IP
-        if Utils.isIP(domain.split(':')[0]) and db.query_one('SELECT name FROM domains WHERE name LIKE %s', (domain,)):
+        if iptools.ipv4.validate_ip(domain.split(':')[0]) and db.query_one('SELECT name FROM domains WHERE name LIKE %s', (domain,)):
             return True
         # If it is a domain name
         else:
@@ -1037,15 +1037,10 @@ class Utils:
         ret = []
         names = []
 
-        ret.extend(cookies2)
-        ret.extend(cookies1)
-
-        # Traverse list of names. If a name is repeated, the repeated one will correspond to cookies1, so it's removed from result
-        for i,c in enumerate(ret):
+        for c in cookies1 + cookies2:
             if c.name not in names:
                 names.append(c.name)
-            else:
-                ret.pop(i)
+                ret.append(c)
 
         return ret      
 

@@ -295,7 +295,6 @@ class Crawler (threading.Thread):
                             data = None
 
                         new_cookies = Utils.mergeCookies(cookies, main_response.cookies)
-
                         if Request.checkExtension(redirect_to) and not Request.checkRequest(redirect_to, method, data=data, cookies=new_cookies):
                             if Domain.checkScope(urlparse(redirect_to).netloc):
                                 print("[%d]   %s " % (code, redirect_to))
@@ -313,7 +312,8 @@ class Crawler (threading.Thread):
                 if not Domain.checkScope(domain):
                     continue
 
-                new_cookies = Utils.mergeCookies(cookies, main_response.cookies)
+                # Append all cookies set via dynamic request, since some websites use dynamic requests to set new cookies
+                cookies = Utils.mergeCookies(cookies, main_response.cookies)
 
                 # If resource is a JS file
                 if request.url[-3:] == '.js':
@@ -321,20 +321,20 @@ class Crawler (threading.Thread):
                     Script.insertScript(request.url, content, main_response)
                     continue
                 # If domain is in scope, request has not been done yet and resource is not an image
-                elif Request.checkExtension(request.url) and not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), new_cookies):
-                    if new_cookies:
-                        print(('['+method+']').ljust(8) + parent_url + '\t' + str([c.name for c in new_cookies]))
+                elif Request.checkExtension(request.url) and not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), cookies):
+                    if cookies:
+                        print(('['+method+']').ljust(8) + "DYNAMIC REQUEST " + request.url + '\t' + str([c.name for c in cookies]))
                     else:
-                        print(('['+method+']').ljust(8) + parent_url)
+                        print(('['+method+']').ljust(8) + "DYNAMIC REQUEST " + request.url)
                     req, resp = self.__processRequest(request)
                     
                     # If dynamic request responded with HTML, send it to analize
                     if resp and resp.body and bool(BeautifulSoup(resp.body, 'html.parser').find()):
-                        responses.append({'url': request.url, 'response':resp, 'cookies': new_cookies})
+                        responses.append({'url': request.url, 'response':resp})
 
         # Analyze all responses
         for response in responses:
-            self.__parseHTML(response['url'], response['cookies'], response['response'])
+            self.__parseHTML(response['url'], cookies, response['response'])
 
     def run(self):
         # Generator for domains
