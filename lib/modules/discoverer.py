@@ -43,7 +43,7 @@ class Discoverer(threading.Thread):
                 code = int(line.split('(')[1].split(')')[0].split(':')[1].strip())
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
                 if int(code / 100) != 4 and not Request.checkRequest(discovered, 'GET'):
-                    print("[*] Path found! Queued %s to crawler" % discovered)
+                    print("[FOUND] Path found! Queued %s to crawler" % discovered)
                     Path.insertPath(discovered)
                     self.crawler.addToQueue(discovered)
             except:
@@ -79,7 +79,7 @@ class Discoverer(threading.Thread):
             try:
                 discovered = line.split('Found: ')[1].rstrip()
                 if Domain.checkScope(discovered):
-                    print('[*] Domain found! Inserted %s to database' % discovered)
+                    print('[FOUND] Domain found! Inserted %s to database' % discovered)
                     Domain.insertDomain(discovered)
                     self.__subdomainTakeover(discovered)
             except:
@@ -112,7 +112,7 @@ class Discoverer(threading.Thread):
             try:
                 discovered = json.loads(line).get('host')
                 if Domain.checkScope(discovered):
-                    print('[*] Domain found! Inserted %s to database' % discovered)
+                    print('[FOUND] Domain found! Inserted %s to database' % discovered)
                     Domain.insertDomain(discovered)
                     self.__subdomainTakeover(discovered)
             except:
@@ -126,7 +126,7 @@ class Discoverer(threading.Thread):
 
         if result.stdout != '':
             Vulnerability.insertVuln('Subdomain Takeover', result.stdout)
-            print('[*] Subdomain Takeover found at %s!\n\n%s\n' % (domain, result.stdout))
+            print('[TAKEOVER] Subdomain Takeover found at %s!\n\n%s\n' % (domain, result.stdout))
         
     def run(self):
         directories = Path.getDirectories()

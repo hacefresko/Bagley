@@ -16,7 +16,7 @@ class Searcher (threading.Thread):
 
         try:
             for t in json.loads(result.stdout).get('technologies'):
-                tech = Technology.insertTech(t.get('name'), t.get('version'))
+                tech = Technology.insertTech(t.get('slug'), t.get('name'), t.get('version'))
                 tech.link(path)
         except:
             return

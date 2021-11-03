@@ -237,7 +237,7 @@ class Path:
 
         result = []
         for tech in techs:
-            result.append(Technology(tech[0], tech[1], tech[2]))
+            result.append(Technology(tech[0], tech[1], tech[2], tech[3]))
 
         return result
 
@@ -986,7 +986,7 @@ class Technology:
         return Technology(tech[0], tech[1], tech[2], tech[3]) if tech else None
 
     @staticmethod
-    def insertTech(slug, name, version):
+    def insertTech(slug, name, version=None):
         tech = Technology.getTech(name, version)
         if not tech:
             db = DB()
@@ -998,14 +998,6 @@ class Technology:
         db.exec('INSERT INTO path_technologies (path, tech) VALUES (%d, %d)', (path.id, self.id))
 
 class Utils:
-    @staticmethod
-    def isIP(ip):
-        try:
-            socket.inet_aton(ip)
-            return True
-        except:
-            return False
-
     @staticmethod
     def replaceURLencoded(data, match, newValue):
         if not data:
