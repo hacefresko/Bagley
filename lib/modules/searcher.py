@@ -9,13 +9,32 @@ class Searcher (threading.Thread):
 
     @staticmethod
     def __lookupCVEs(tech):
-        api = 'https://services.nvd.nist.gov/rest/json/cpes/1.0?addOns=cves&cpeMatchString='
-        cpe = tech.cpe + ':' + tech.version if tech.version else tech.cpe
-        r = requests.get(api + cpe)
+        vulns = []
+        api = 'https://services.nvd.nist.gov/rest/json/cpes/1.0?addOns=cves&startIndex=%d&cpeMatchString=%s&resultsPerPage=5'
+        cpe = tech.cpe + ':' + tech.version
+        fetched = 0
+        total_results = 1
+
+        while fetched < total_results:
+            url = api % (fetched, cpe)
+            r = requests.get(url)
+            if not r.ok:
+                print('[ERROR] There was a problem requesting %s' % url)
+                break
+            j = json.loads(r.text)
+
+            total_results = j.get('totalResults')
+
+            for c in j.get('result').get('cpes'):
+                fetched += 1
+                for v in c.get('vulnerabilities'):
+                    if v not in vulns:
+                        vulns.append(v)
         
-        # Get CVEs
-        # Insert CVEs in db
-        # Link them to technologies
+        if len(vulns) > 0:
+            pass
+            # Insert CVEs in db
+            # Link them to technologies
 
     @staticmethod
     def __wappalyzer(path):
@@ -26,7 +45,7 @@ class Searcher (threading.Thread):
 
         try:
             for t in json.loads(result.stdout).get('technologies'):
-                if t.get('cpe'):
+                if t.get('cpe') and t.get('version'):
                     tech = Technology.getTech(t.get('cpe'), t.get('version'))
                     if not tech:
                         tech = Technology.insertTech(t.get('cpe'), t.get('name'), t.get('version'))
@@ -34,11 +53,12 @@ class Searcher (threading.Thread):
                     tech.link(path)
 
                     cves = tech.getCVEs()
-                    for cve in cves:
-                        if tech.version:
-                            print('[CVE] Found vulnerability of %s of %s at %s' % (cve, tech.name, str(path)))
-                        else:
-                            print('[CVE] Some versions of %s are vulnerable to %s at %s' % (tech.name, cve, str(path)))
+                    if len(cves) > 0:
+                        print('[CVE] The following vulnerabilities were found in %s version %s at %s\n' % (tech.name, tech.version, str(path)))
+                        for cve in cves:
+                            print(cve)
+                        print()
+                        
         except:
             return
 

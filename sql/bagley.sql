@@ -145,7 +145,7 @@ CREATE TABLE technologies (
     id INT PRIMARY KEY AUTO_INCREMENT,
     cpe TEXT NOT NULL,
     name TEXT NOT NULL,
-    version TEXT
+    version TEXT NOT NULL
 );
 
 CREATE TABLE path_technologies (
