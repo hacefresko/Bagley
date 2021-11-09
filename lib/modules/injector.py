@@ -1,6 +1,6 @@
 import threading, subprocess, time, shutil
 
-from config import *
+import config
 from lib.entities import *
 
 class Injector (threading.Thread):
@@ -10,7 +10,7 @@ class Injector (threading.Thread):
     @staticmethod
     def __sqli(request):
         url = str(request.path) + ('?' + request.params if request.params else '')
-        delay = str(1/REQ_PER_SEC)
+        delay = str(1/config.REQ_PER_SEC)
         command = [shutil.which('sqlmap'), '--level', '3', '--delay=' + delay, '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method]
 
         # Add POST data
@@ -39,10 +39,10 @@ class Injector (threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "---" in result.stdout:
-            Vulnerability.insertVuln('SQLi', result.stdout)
+            Vulnerability.insert('SQLi', result.stdout)
             print("[SQLi] SQL injection found in %s!\n\n%s\n" % (url, result.stdout))
         elif "[WARNING] false positive or unexploitable injection point detected" in result.stdout:
-            Vulnerability.insertVuln('pSQLi', result.stdout)
+            Vulnerability.insert('pSQLi', result.stdout)
             print("[SQLi] Possible SQL injection found in %s! But sqlmap couldn't exploit it\n\n%s\n" % (url, result.stdout))
 
     @staticmethod
@@ -79,7 +79,7 @@ class Injector (threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "[POC]" in result.stdout:
-            Vulnerability.insertVuln('XSS', result.stdout)
+            Vulnerability.insert('XSS', result.stdout)
             print("[XSS] Cross Site Scripting found in %s!\n\n%s\n" % (url, result.stdout))
 
     @staticmethod
@@ -115,7 +115,7 @@ class Injector (threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "[VLN]" in result.stdout:
-            Vulnerability.insertVuln('CRLFi', result.stdout)
+            Vulnerability.insert('CRLFi', result.stdout)
             print("[CRLFi] Carriage Return Line Feed injection found in %s!\n\n%s\n" % (url, result.stdout))
 
     @staticmethod
@@ -149,12 +149,12 @@ class Injector (threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "Tplmap identified the following injection point" in result.stdout:
-            Vulnerability.insertVuln('SSTI', result.stdout)
+            Vulnerability.insert('SSTI', result.stdout)
             print("[SSTI] Server Side Template Injection found in %s!\n\n%s\n" % (url, result.stdout))
 
     def run(self):
         tested = []
-        for request in Request.getRequests():
+        for request in Request.yieldAll():
             if not request:
                 time.sleep(5)
                 continue
@@ -169,4 +169,4 @@ class Injector (threading.Thread):
                 Injector.__sqli(request)
 
             # Add request with same keys in POST/GET data to tested list
-            tested = [*[request.id for request in request.getSameKeysRequests()], *tested]
+            tested = [*[request.id for request in request.getSameKeys()], *tested]

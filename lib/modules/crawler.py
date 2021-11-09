@@ -6,7 +6,7 @@ from seleniumwire.utils import decode
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 
-from config import *
+import config, lib.utils as utils
 from lib.entities import *
 
 class Crawler (threading.Thread):
@@ -33,7 +33,7 @@ class Crawler (threading.Thread):
         self.driver = webdriver.Chrome(options=opts)
 
         # Set timeout
-        self.driver.set_page_load_timeout(TIMEOUT)
+        self.driver.set_page_load_timeout(config.TIMEOUT)
 
     def addToQueue(self, url):
         self.queue.append(url)
@@ -71,21 +71,21 @@ class Crawler (threading.Thread):
     # so the first time a domain is inserted they get inserted with it in the database
     def __processRequest(self, request):
         url = request.url
-        Path.insertPath(url)
+        Path.insert(url)
 
         request_cookies = []
         if request.headers.get('cookie'):
             for cookie in request.headers.get('cookie').split('; '):
-                c = Cookie.getCookie(cookie.split('=')[0], cookie.split('=')[1], url)
+                c = Cookie.get(cookie.split('=')[0], cookie.split('=')[1], url)
                 if c:
                     request_cookies.append(c)
             del request.headers['cookie']
 
         request_headers = []
         for k,v in request.headers.items():
-            request_headers.append(Header.insertHeader(k, v))
+            request_headers.append(Header.insert(k, v))
 
-        processed_request = Request.insertRequest(url, request.method, request_headers, request_cookies, request.body.decode('utf-8', errors='ignore'))
+        processed_request = Request.insert(url, request.method, request_headers, request_cookies, request.body.decode('utf-8', errors='ignore'))
         
         if not processed_request:
             return (False, False)
@@ -112,7 +112,7 @@ class Crawler (threading.Thread):
                     else:
                         cookie.update({'name': attribute.split('=')[0].lower()})
                         cookie.update({'value': attribute.split('=')[1]})
-                c = Cookie.insertCookie(cookie.get('name'), cookie.get('value'), cookie.get('domain'), cookie.get('path'), cookie.get('expires'), cookie.get('max-age'), cookie.get('httponly'), cookie.get('secure'), cookie.get('samesite'))
+                c = Cookie.insert(cookie.get('name'), cookie.get('value'), cookie.get('domain'), cookie.get('path'), cookie.get('expires'), cookie.get('max-age'), cookie.get('httponly'), cookie.get('secure'), cookie.get('samesite'))
                 if c:
                     response_cookies.append(c)
 
@@ -120,10 +120,10 @@ class Crawler (threading.Thread):
         
         response_headers = []
         for k,v in response.headers.items():
-            response_headers.append(Header.insertHeader(k,v))
+            response_headers.append(Header.insert(k,v))
 
         decoded_body = decode(response.body, response.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
-        processed_response = Response.insertResponse(response.status_code, decoded_body, response_headers, response_cookies, processed_request)
+        processed_response = Response.insert(response.status_code, decoded_body, response_headers, response_cookies, processed_request)
 
         return (processed_request, processed_response)
 
@@ -143,7 +143,7 @@ class Crawler (threading.Thread):
                 url = urljoin(parent_url, path)
                 domain = urlparse(url).netloc
 
-                if Domain.checkScope(domain) and Request.checkExtension(url) and not Request.checkRequest(url, 'GET', cookies=cookies):
+                if Domain.checkScope(domain) and Request.checkExtension(url) and not Request.check(url, 'GET', cookies=cookies):
                     self.__crawl(url, 'GET', cookies=cookies)
                 
             elif element.name == 'form':
@@ -193,9 +193,9 @@ class Crawler (threading.Thread):
                             data = None
                     else:
                         content_type = 'application/x-www-form-urlencoded'
-                        headers = [Header.insertHeader('content-type', content_type)]
+                        headers = [Header.insert('content-type', content_type)]
 
-                    if Request.checkExtension(url) and not Request.checkRequest(url, method, content_type, data, cookies):
+                    if Request.checkExtension(url) and not Request.check(url, method, content_type, data, cookies):
                         self.__crawl(url, method, data, headers, cookies)
 
             elif element.name == 'script':
@@ -204,7 +204,7 @@ class Crawler (threading.Thread):
                     if element.string is None:
                         continue
 
-                    Script.insertScript(None, element.string, response)
+                    Script.insert(None, element.string, response)
                 else:
                     src = urljoin(parent_url, src)
                     domain = urlparse(src).netloc
@@ -212,7 +212,7 @@ class Crawler (threading.Thread):
                         continue
 
                     content = requests.get(src).text
-                    Script.insertScript(src, content, response)
+                    Script.insert(src, content, response)
 
     # Main method of crawler. headers and cookies are extra ones to be appended to the ones corresponding to the domain
     def __crawl(self, parent_url, method, data=None, headers = [], cookies = []):
@@ -222,7 +222,7 @@ class Crawler (threading.Thread):
             print(('['+method+']').ljust(8) + parent_url)
 
         # Always inserts path into database since __crawl is only called if the path hasn't been crawled yet
-        path = Path.insertPath(parent_url)
+        path = Path.insert(parent_url)
         if not path:
             return
         domain = path.domain
@@ -294,8 +294,8 @@ class Crawler (threading.Thread):
                             method = 'GET'
                             data = None
 
-                        new_cookies = Utils.mergeCookies(cookies, main_response.cookies)
-                        if Request.checkExtension(redirect_to) and not Request.checkRequest(redirect_to, method, data=data, cookies=new_cookies):
+                        new_cookies = utils.mergeCookies(cookies, main_response.cookies)
+                        if Request.checkExtension(redirect_to) and not Request.check(redirect_to, method, data=data, cookies=new_cookies):
                             if Domain.checkScope(urlparse(redirect_to).netloc):
                                 print("[%d]   %s " % (code, redirect_to))
                                 self.__crawl(redirect_to, method, data, headers, new_cookies)
@@ -313,15 +313,15 @@ class Crawler (threading.Thread):
                     continue
 
                 # Append all cookies set via dynamic request, since some websites use dynamic requests to set new cookies
-                cookies = Utils.mergeCookies(cookies, main_response.cookies)
+                cookies = utils.mergeCookies(cookies, main_response.cookies)
 
                 # If resource is a JS file
                 if request.url[-3:] == '.js':
                     content = requests.get(request.url).text
-                    Script.insertScript(request.url, content, main_response)
+                    Script.insert(request.url, content, main_response)
                     continue
                 # If domain is in scope, request has not been done yet and resource is not an image
-                elif Request.checkExtension(request.url) and not Request.checkRequest(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), cookies):
+                elif Request.checkExtension(request.url) and not Request.check(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), cookies):
                     if cookies:
                         print(('['+method+']').ljust(8) + "DYNAMIC REQUEST " + request.url + '\t' + str([c.name for c in cookies]))
                     else:
@@ -338,13 +338,13 @@ class Crawler (threading.Thread):
 
     def run(self):
         # Generator for domains
-        domains = Domain.getDomains()
+        domains = Domain.yieldAll()
         while True:
             # Get url from queue. If queue is empty, get domain from database. If it's also
             # empty, sleeps for 5 seconds and starts again
             if len(self.queue) > 0:
                 url = self.queue.pop(0)
-                path = Path.insertPath(url)
+                path = Path.insert(url)
                 if not path:
                     continue
                 domain = path.domain
@@ -396,7 +396,7 @@ class Crawler (threading.Thread):
                     print("[*] HTTP protocol is used by %s" % http_request.url)
 
             # If url already in database, skip
-            if Request.checkRequest(url, 'GET'):
+            if Request.check(url, 'GET'):
                 continue
 
             try:

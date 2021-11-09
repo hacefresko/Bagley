@@ -1,7 +1,7 @@
-import threading, subprocess, json, shutil
+import threading, subprocess, json, shutil, time
 from urllib.parse import urljoin
 
-from config import *
+import config
 from lib.entities import *
 
 class Discoverer(threading.Thread):
@@ -11,11 +11,11 @@ class Discoverer(threading.Thread):
 
     def __fuzzPath(self, url, headers, cookies, errcodes=[]):
         # Crawl all urls on the database that has not been crawled
-        if not Request.checkRequest(url, 'GET'):
+        if not Request.check(url, 'GET'):
             self.crawler.addToQueue(url)
 
-        delay = str(int((1/REQ_PER_SEC) * 1000)) + 'ms'
-        command = [shutil.which('gobuster'), 'dir', '-q', '-w', DIR_FUZZING, '-u', url, '--delay', delay]
+        delay = str(int((1/config.REQ_PER_SEC) * 1000)) + 'ms'
+        command = [shutil.which('gobuster'), 'dir', '-q', '-w', config.DIR_FUZZING, '-u', url, '--delay', delay]
 
         # Add headers
         for header in headers:
@@ -44,9 +44,9 @@ class Discoverer(threading.Thread):
             try:
                 code = int(line.split('(')[1].split(')')[0].split(':')[1].strip())
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
-                if int(code / 100) != 4 and not Request.checkRequest(discovered, 'GET'):
+                if int(code / 100) != 4 and not Request.check(discovered, 'GET'):
                     print("[FOUND] Path found! Queued %s to crawler" % discovered)
-                    Path.insertPath(discovered)
+                    Path.insert(discovered)
                     self.crawler.addToQueue(discovered)
             except:
                 pass
@@ -66,7 +66,7 @@ class Discoverer(threading.Thread):
                     return
 
     def __fuzzSubDomain(self, domain, errcodes=[]):
-        command = [shutil.which('gobuster'), 'dns', '-q', '-w', DOMAIN_FUZZING, '-d', domain]
+        command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', domain]
         # Add errorcodes if specified
         if len(errcodes) != 0:
             command.append('-b')
@@ -82,7 +82,7 @@ class Discoverer(threading.Thread):
                 discovered = line.split('Found: ')[1].rstrip()
                 if Domain.checkScope(discovered):
                     print('[FOUND] Domain found! Inserted %s to database' % discovered)
-                    Domain.insertDomain(discovered)
+                    Domain.insert(discovered)
                     self.__subdomainTakeover(discovered)
             except:
                 pass
@@ -115,7 +115,7 @@ class Discoverer(threading.Thread):
                 discovered = json.loads(line).get('host')
                 if Domain.checkScope(discovered):
                     print('[FOUND] Domain found! Inserted %s to database' % discovered)
-                    Domain.insertDomain(discovered)
+                    Domain.insert(discovered)
                     self.__subdomainTakeover(discovered)
             except:
                 pass
@@ -127,12 +127,12 @@ class Discoverer(threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if result.stdout != '':
-            Vulnerability.insertVuln('Subdomain Takeover', result.stdout)
+            Vulnerability.insert('Subdomain Takeover', result.stdout)
             print('[TAKEOVER] Subdomain Takeover found at %s!\n\n%s\n' % (domain, result.stdout))
         
     def run(self):
-        directories = Path.getDirectories()
-        domains = Domain.getDomains()
+        directories = Path.yieldDirectories()
+        domains = Domain.yieldAll()
         while True:
             domain = next(domains)
             if domain and domain.name[0] == '.':

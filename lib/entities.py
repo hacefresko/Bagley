@@ -1,7 +1,7 @@
-import hashlib, json, time, pathlib, iptools
+import hashlib, pathlib, iptools
 from urllib.parse import urlparse, urlunparse
 
-import config
+import config, lib.utils as utils
 from .database import DB
 
 class Domain:
@@ -81,7 +81,7 @@ class Domain:
 
     # Returns domain identified by id or None if it does not exist
     @staticmethod
-    def getDomainById(id):
+    def getById(id):
         db = DB()
         domain = db.query_one('SELECT * FROM domains WHERE id = %d', (id,))
         if not domain:
@@ -90,7 +90,7 @@ class Domain:
 
     # Returns domain identified by the domain name or None if it does not exist
     @staticmethod
-    def getDomain(domain_name):
+    def get(domain_name):
         db = DB()
         domain = db.query_one('SELECT * FROM domains WHERE name = %s', (domain_name,))
         if not domain:
@@ -99,7 +99,7 @@ class Domain:
 
     # Yields domains or None if there are no requests. It continues infinetly until program stops
     @staticmethod
-    def getDomains():
+    def yieldAll():
         id = 1
         db = DB()
         while True:
@@ -112,7 +112,7 @@ class Domain:
 
     # Returns True if both domains are equal or if one belongs to a range of subdomains of other, else False
     @staticmethod
-    def compareDomains(first, second):
+    def compare(first, second):
         if ':' in first:
             first = first.split(':')[0]
         if ':' in second:
@@ -130,7 +130,7 @@ class Domain:
 
     # Returns True if domain exists in database (either inside or outside the scope)
     @staticmethod
-    def checkDomain(domain):
+    def check(domain):
         db = DB()
         return True if (db.query_one('SELECT name FROM domains WHERE name LIKE %s', (domain,)) or db.query_one('SELECT name FROM out_of_scope WHERE name LIKE %s', (domain,))) else False
 
@@ -181,10 +181,10 @@ class Domain:
 
     # Inserts domain if not already inserted
     @staticmethod
-    def insertDomain(domain_name):
+    def insert(domain_name):
         db = DB()
-        if Domain.checkDomain(domain_name):
-            return Domain.getDomain(domain_name)
+        if Domain.check(domain_name):
+            return Domain.get(domain_name)
 
         domain = Domain(db.exec_and_get_last_id('INSERT INTO domains (name) VALUES (%s)', (domain_name,)), domain_name)
         
@@ -196,9 +196,9 @@ class Domain:
 
     # Inserts an out of scope domain if not already inserted neither in scope nor out
     @staticmethod
-    def insertOutOfScopeDomain(domain):
+    def insertOutOfScope(domain):
         db = DB()
-        if not Domain.checkDomain(domain):
+        if not Domain.check(domain):
             db.exec('INSERT INTO out_of_scope (name) VALUES (%s)', (domain,))
 
 class Path:
@@ -206,8 +206,8 @@ class Path:
         self.id = id
         self.protocol = protocol
         self.element = element
-        self.parent = Path.getPath(parent)
-        self.domain = Domain.getDomainById(domain)
+        self.parent = Path.get(parent)
+        self.domain = Domain.getById(domain)
         self.technologies = self.__getTechs()
 
     def __eq__(self, other):
@@ -243,7 +243,7 @@ class Path:
 
     # Returns path if path specified by protocol, element, parent and domain exists else None
     @staticmethod
-    def __getPath(protocol, element, parent, domain):
+    def __get(protocol, element, parent, domain):
         db = DB()
 
         query = 'SELECT * FROM paths WHERE protocol = %s AND domain = %s '
@@ -302,7 +302,7 @@ class Path:
         if child.parent == path.parent:
             return True
         while child.parent:
-            child = Path.getPath(child.parent.id)
+            child = Path.get(child.parent.id)
             if child and child.parent == path.parent:
                 return True
 
@@ -310,14 +310,14 @@ class Path:
 
     # Returns path corresponding to id or False if it does not exist
     @staticmethod
-    def getPath(id):
+    def get(id):
         db = DB()
         path = db.query_one('SELECT id, protocol, element, parent, domain FROM paths WHERE id = %d', (id,))
         return Path(path[0], path[1], path[2], path[3], path[4]) if path else None
 
     # Yields paths
     @staticmethod
-    def getPaths():
+    def yieldAll():
         id = 0
         db = DB()
         while True:
@@ -330,7 +330,7 @@ class Path:
 
     # Yields paths corresponding to directories or False if there are no requests. It continues infinetly until program stops
     @staticmethod
-    def getDirectories():
+    def yieldDirectories():
         id = 0
         db = DB()
         while True:
@@ -350,14 +350,14 @@ class Path:
         if not protocol:
             return None
 
-        domain = Domain.getDomain(parsedURL['domain'])
+        domain = Domain.get(parsedURL['domain'])
         if not domain:
             return None
 
         # Iterate over each domain/file from URL
         parent = None
         for i, element in enumerate(parsedURL['elements']):
-            path = Path.__getPath(protocol, element, parent, domain)
+            path = Path.__get(protocol, element, parent, domain)
             if not path:
                 return None
             if i == len(parsedURL['elements']) - 1:
@@ -367,7 +367,7 @@ class Path:
     # Inserts each path inside the URL if not already inserted and returns last inserted path (last element from URL).
     # If domain is not in scope, returns None. If domain is in scope but not in database, inserts it
     @staticmethod
-    def insertPath(url):
+    def insert(url):
         db = DB()
         parsedURL = Path.__parseURL(url)
 
@@ -375,14 +375,14 @@ class Path:
 
         if not Domain.checkScope(parsedURL['domain']):
             return None
-        domain = Domain.insertDomain(parsedURL['domain'])
+        domain = Domain.insert(parsedURL['domain'])
 
         # Iterate over each domain/file from URL
         parent = None
         for i, element in enumerate(parsedURL['elements']):
-            path = Path.__getPath(protocol, element, parent, domain)
+            path = Path.__get(protocol, element, parent, domain)
             if not path:
-                path = Path.getPath(db.exec_and_get_last_id('INSERT INTO paths (protocol, element, parent, domain) VALUES (%s,%s,%d,%d)', (protocol, element, parent.id if parent else None, domain.id)))
+                path = Path.get(db.exec_and_get_last_id('INSERT INTO paths (protocol, element, parent, domain) VALUES (%s,%s,%d,%d)', (protocol, element, parent.id if parent else None, domain.id)))
             if i == len(parsedURL['elements']) - 1:
                 return path
             parent = path
@@ -391,11 +391,11 @@ class Path:
 class Request:
     def __init__(self, id, path_id, params, method, data, response_hash):
         self.id = id
-        self.path = Path.getPath(path_id)
+        self.path = Path.get(path_id)
         self.params = params
         self.method = method
         self.data = data
-        self.response = Response.getResponse(response_hash)
+        self.response = Response.get(response_hash)
         self.headers = self.__getHeaders()
         self.cookies = self.__getCookies()
 
@@ -445,7 +445,7 @@ class Request:
             return None
         new_params = params
         for word in config.PARAMS_BLACKLIST:
-            new_params = Utils.replaceURLencoded(new_params, word, word)
+            new_params = utils.replaceURLencoded(new_params, word, word)
         return new_params
 
     # Tries to parse data substituting all keys containing terms in blacklist by those terms. Returns None if data does not exist
@@ -455,7 +455,7 @@ class Request:
             return None
         new_data = data
         for word in config.PARAMS_BLACKLIST:
-            new_data = Utils.substitutePOSTData(content_type, new_data, word, word)
+            new_data = utils.substitutePOSTData(content_type, new_data, word, word)
         return new_data
 
     # Returns specified header if request has it, else None
@@ -470,7 +470,7 @@ class Request:
     # If there are already requests to X but without cookies param, it returns False
     # If requested file extension belongs to config.EXTENSIONS_BLACKLIST, returns False
     @staticmethod
-    def checkRequest(url, method, content_type=None, data=None, cookies=[]):
+    def check(url, method, content_type=None, data=None, cookies=[]):
         path = Path.parseURL(url)
         if not path:
             return False
@@ -487,10 +487,10 @@ class Request:
 
             if params:
                 query += ' AND params LIKE %s'
-                query_params.append(Utils.replaceURLencoded(params, None, '%'))
+                query_params.append(utils.replaceURLencoded(params, None, '%'))
             if data:
                 query += ' AND data LIKE %s'
-                query_params.append(Utils.substitutePOSTData(content_type, data, None, '%'))
+                query_params.append(utils.substitutePOSTData(content_type, data, None, '%'))
             result = db.query_all(query, tuple(query_params))
 
             if len(result) >= 10:
@@ -541,7 +541,7 @@ class Request:
         
     # Returns request if exists else None
     @staticmethod
-    def getRequest(url, method, content_type=None, cookies=None, data=None):
+    def get(url, method, content_type=None, cookies=None, data=None):
         path = Path.parseURL(url)
         if not path:
             return None
@@ -578,7 +578,7 @@ class Request:
 
     # Yields requests or None if there are no requests. It continues infinetly until program stops
     @staticmethod
-    def getRequests():
+    def yieldAll():
         id = 1
         db = DB()
         while True:
@@ -593,7 +593,7 @@ class Request:
     # to the same path and method but with different data/params values for the same keys, it returns None.
     # Path corresponding to url must already be inserted
     @staticmethod
-    def insertRequest(url, method, headers, cookies, data):
+    def insert(url, method, headers, cookies, data):
         path = Path.parseURL(url)
         if not path or not Request.checkExtension(url):
             return None
@@ -606,7 +606,7 @@ class Request:
         params = Request.__parseParams(urlparse(url).query)
         data = Request.__parseData(content_type, data) if method == 'POST' else None
 
-        if Request.checkRequest(url, method, content_type, data, cookies):
+        if Request.check(url, method, content_type, data, cookies):
             return None
 
         db = DB()
@@ -616,10 +616,10 @@ class Request:
             element.link(request)
 
         # Gets again the request in order to update headers, cookies and data from databse
-        return Request.getRequest(url, method, content_type, cookies, data)
+        return Request.get(url, method, content_type, cookies, data)
 
     # Returns a list of requests whose params or data keys are the same as the request the function was called on
-    def getSameKeysRequests(self):
+    def getSameKeys(self):
         if not self.params and not self.data:
             return []
 
@@ -628,10 +628,10 @@ class Request:
         query_params = [self.path.id, self.method]
         if self.params:
             query += ' AND params LIKE %s'
-            query_params.append(Utils.replaceURLencoded(self.params, None, '%'))
+            query_params.append(utils.replaceURLencoded(self.params, None, '%'))
         if self.data:
             query += ' AND data LIKE %s'
-            query_params.append(Utils.substitutePOSTData(self.getHeader('content-type').value if self.getHeader('content-type') else None, self.data, None, '%'))
+            query_params.append(utils.substitutePOSTData(self.getHeader('content-type').value if self.getHeader('content-type') else None, self.data, None, '%'))
 
         db = DB()
         result = db.query_all(query, tuple(query_params))
@@ -692,7 +692,7 @@ class Response:
 
     # Returns True if response exists, else False
     @staticmethod
-    def checkResponse(code, body, headers, cookies):
+    def check(code, body, headers, cookies):
         if not body:
             body = None
 
@@ -701,7 +701,7 @@ class Response:
     
     # Returns response if exists, else False
     @staticmethod
-    def getResponse(response_hash):
+    def get(response_hash):
         db = DB()
         response = db.query_one('SELECT * FROM responses WHERE hash = %s', (response_hash,))
         if not response:
@@ -710,7 +710,7 @@ class Response:
 
     # Returns response hash if response succesfully inserted. Else, returns False. Also links header + cookies.
     @staticmethod
-    def insertResponse(code, body, headers, cookies, request):
+    def insert(code, body, headers, cookies, request):
         if not isinstance(request, Request):
             return None
 
@@ -719,20 +719,20 @@ class Response:
 
         db = DB()
 
-        if Response.checkResponse(code, body, headers, cookies):
+        if Response.check(code, body, headers, cookies):
             response_hash = Response.__hashResponse(code, body, headers, cookies)
         else:
             response_hash = Response.__hashResponse(code, body, headers, cookies)
 
             db.exec('INSERT INTO responses (hash, code, content) VALUES (%s,%d,%s)', (response_hash, code, body))
             
-            response = Response.getResponse(response_hash)
+            response = Response.get(response_hash)
             for element in headers + cookies:
                 element.link(response)
             
         db.exec('UPDATE requests SET response = %s WHERE id = %d', (response_hash, request.id))
 
-        return Response.getResponse(response_hash)
+        return Response.get(response_hash)
 
     # Returns specified header if request has it, else None
     def getHeader(self, key):
@@ -764,7 +764,7 @@ class Header:
 
     # Returns header or False if it does not exist  
     @staticmethod
-    def getHeader(key, value):
+    def get(key, value):
         key, value = Header.__parseHeader(key, value)
         db = DB()
         result = db.query_one('SELECT * FROM headers WHERE header_key = %s AND value = %s', (key, value))
@@ -775,9 +775,9 @@ class Header:
 
     # Inserts header if not inserted and returns it
     @staticmethod
-    def insertHeader(key, value, blacklist=True):
+    def insert(key, value, blacklist=True):
         key, value = Header.__parseHeader(key, value, blacklist)
-        header = Header.getHeader(key, value)
+        header = Header.get(key, value)
         if not header:
             db = DB()
             header = Header(db.exec_and_get_last_id('INSERT INTO headers (header_key, value) VALUES (%s,%s)', (key, value)), key, value)
@@ -840,7 +840,7 @@ class Cookie:
 
     # Returns cookie if there is a cookie with name and value whose cookie_path and cookie_domain match with url, else None
     @staticmethod
-    def getCookie(name, value, url):
+    def get(name, value, url):
         path = Path.parseURL(url)
         if not path:
             return None
@@ -857,15 +857,15 @@ class Cookie:
             cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9])
             # If domain/range of subdomains and range of paths from cookie match with url
             cookie_path = Path.parseURL(str(path) + cookie.path[1:]) if cookie.path != '/' else path
-            if Domain.compareDomains(cookie.domain, path.domain.name) and path.checkParent(cookie_path):
+            if Domain.compare(cookie.domain, path.domain.name) and path.checkParent(cookie_path):
                 return cookie
         return None
 
     # Inserts cookie if not already inserted and returns it. 
     # blacklist parameter indicates if cookie value must be removed if value of cookie is blacklisted
-    # checkDomain parameter indicates if domain must be checked
+    # check parameter indicates if domain must be checked
     @staticmethod
-    def insertCookie(name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite, blacklist=True):
+    def insert(name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite, blacklist=True):
         if not Domain.checkScope(cookie_domain, False):
             return None
 
@@ -898,7 +898,7 @@ class Script:
     def __init__(self, hash, content, path_id):
         self.hash = hash
         self.content = content
-        self.path = Path.getPath(path_id)
+        self.path = Path.get(path_id)
 
     # Returns hash of the script specified by url and content
     @staticmethod 
@@ -907,7 +907,7 @@ class Script:
 
     # Returns script by url and content or False if it does not exist   
     @staticmethod 
-    def getScript(url, content):
+    def get(url, content):
         db = DB()
 
         result = db.query_one('SELECT * FROM scripts WHERE hash = %s', (Script.__getHash(url, content),))
@@ -917,12 +917,12 @@ class Script:
 
     # Inserts script if not already inserted, links it to the corresponding response if exists and returns it
     @staticmethod 
-    def insertScript(url, content, response):
+    def insert(url, content, response):
         if not isinstance(response, Response):
             return None
 
         if url is not None:
-            path = Path.insertPath(url)
+            path = Path.insert(url)
             # If path does not belong to the scope (stored domains)
             if not path:
                 return None
@@ -931,11 +931,11 @@ class Script:
             path = None
 
         db = DB()
-        script = Script.getScript(url, content)
+        script = Script.get(url, content)
         if not script:
             # Cannot use lastrowid since scripts table does not have INTEGER PRIMARY KEY but TEXT PRIMARY KEY (hash)
             db.exec('INSERT INTO scripts (hash, path, content) VALUES (%s,%d,%s)', (Script.__getHash(url, content), path, content))
-            script = Script.getScript(url, content)
+            script = Script.get(url, content)
         db.exec('INSERT INTO response_scripts (response, script) VALUES (%s,%s)', (response.hash, script.hash))
 
         return script
@@ -947,20 +947,20 @@ class Vulnerability:
         self.description = description
 
     @staticmethod
-    def getVuln(id):
+    def get(id):
         db = DB()
         vuln = db.query_one('SELECT * FROM vulnerabilities WHERE id = %d', (id,))
         return Vulnerability(vuln[0], vuln[1], vuln[2]) if vuln else None
 
     @staticmethod
-    def getVulnsByType(vuln_type):
+    def getByType(vuln_type):
         db = DB()
         vuln = db.query_one('SELECT * FROM vulnerabilities WHERE type = %s', (vuln_type,))
         return Vulnerability(vuln[0], vuln[1], vuln[2]) if vuln else None
 
 
     @staticmethod
-    def insertVuln(vuln_type, description):
+    def insert(vuln_type, description):
         db = DB()
         return Vulnerability(db.exec_and_get_last_id('INSERT INTO vulnerabilities (type, description) VALUES (%s,%s)', (vuln_type, description)), vuln_type, description)
 
@@ -972,7 +972,7 @@ class Technology:
         self.version = version
 
     @staticmethod
-    def getTech(cpe, version):
+    def get(cpe, version):
         db = DB()
         query = 'SELECT * FROM technologies WHERE cpe = %s '
         if version:
@@ -984,7 +984,7 @@ class Technology:
         return Technology(tech[0], tech[1], tech[2], tech[3]) if tech else None
 
     @staticmethod
-    def getTechById(id):
+    def getById(id):
         db = DB()
         tech = db.query_one('SELECT * FROM technologies WHERE id = %d', (id,))
         return Technology(tech[0], tech[1], tech[2], tech[3]) if tech else None
@@ -999,8 +999,8 @@ class Technology:
         return result
 
     @staticmethod
-    def insertTech(cpe, name, version=None):
-        tech = Technology.getTech(name, version)
+    def insert(cpe, name, version=None):
+        tech = Technology.get(name, version)
         if not tech:
             db = DB()
             tech = Technology(db.exec_and_get_last_id('INSERT INTO technologies (cpe, name, version) VALUES (%s, %s, %s)', (cpe, name, version)), cpe, name, version)
@@ -1013,112 +1013,19 @@ class Technology:
 class CVE:
     def __init__(self, id, tech):
         self.id = id
-        self.tech = Technology.getTechById(tech)
+        self.tech = Technology.getById(tech)
 
     @staticmethod
-    def getCVE(id):
+    def get(id):
         db = DB()
         cve = db.query_one('SELECT * FROM cves WHERE id = %s', (id,))
         return CVE(cve[0], cve[1]) if cve else None
 
     @staticmethod
-    def insertCVE(id, tech):
+    def insert(id, tech):
         db = DB()
-        cve = CVE.getCVE(id)
+        cve = CVE.get(id)
         if not cve:
             db = DB()
             cve = CVE(db.exec_and_get_last_id('INSERT INTO cves (id, tech) VALUES (%s, %d)', (id, tech.id)), tech.id)
         return cve
-
-class Utils:
-    @staticmethod
-    def replaceURLencoded(data, match, newValue):
-        if not data:
-            return None
-        new_data = ''
-        for p in data.split('&'):
-            if len(p.split('=')) == 1:
-                return data
-            elif match is None or match.lower() in p.split('=')[0].lower():
-                new_data += p.split('=')[0]
-                new_data += '=' + newValue + '&'
-            else:
-                new_data += p + '&'
-        return new_data[:-1]
-
-    @staticmethod
-    def replaceJSON(data, match, newValue):
-        for k,v in data.items():
-            if isinstance(v, dict):
-                data.update({k:Utils.replaceJSON(v, match, newValue)})
-            else:
-                if match is None or match.lower() in k.lower():
-                    data.update({k:newValue})
-        return data
-
-    # Merges both lists of cookies. If the same cookie is on both lists, the chosen cookie is the one from cookies2
-    @staticmethod
-    def mergeCookies(cookies1, cookies2):
-        ret = []
-        names = []
-
-        for c in cookies1 + cookies2:
-            if c.name not in names:
-                names.append(c.name)
-                ret.append(c)
-
-        return ret      
-
-    # Substitutes all values whose keys match with match parameter for newValue. If match is None, it will substitute all values.
-    # It uses content_type header to know what type of POST data is, so it can be more precise
-    # For multipart/form-data, it also substitutes the boundary since its value is usually random/partially random
-    # If an exception occurs, a copy of the original data is returned
-    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
-    @staticmethod
-    def substitutePOSTData(content_type, data, match, newValue):
-        boundary_substitute = 'BOUNDARY'
-
-        if not data:
-            return None
-        
-        try:
-            if 'multipart/form-data' in content_type:
-                # If data has already been parsed so boundary has changed
-                if '--'+boundary_substitute in data:
-                    boundary = '--'+boundary_substitute
-                else:
-                    boundary = '--' + content_type.split('; ')[1].split('=')[1]
-
-                new_data = '--'+boundary_substitute
-                for fragment in data.split(boundary)[1:-1]:
-                    name = fragment.split('\r\n')[1].split('; ')[1].split('=')[1].strip('"')
-                    content = fragment.split('\r\n')[3]
-
-                    try:
-                        new_content = json.dumps(Utils.replaceJSON(json.loads(content), match, newValue))
-                    except:
-                        new_content = Utils.replaceURLencoded(content, match, newValue)
-                    
-                    if not new_content:
-                        if match.lower() in name.lower() or match is None:
-                            new_content = newValue
-                        else:
-                            new_content = content
-                    
-                    new_data += fragment.split('name="')[0] + 'name="' + name + '"; ' + "; ".join(fragment.split('\r\n')[1].split('; ')[2:]) + '\r\n\r\n' + new_content + '\r\n--'+boundary_substitute
-                new_data += '--'
-
-                return new_data
-            elif 'application/json' in content_type:
-                return json.dumps(Utils.replaceJSON(json.loads(data), match, newValue))
-            elif 'application/x-www-form-urlencoded' in content_type:
-                return Utils.replaceURLencoded(data, match, newValue)
-            else:
-                try:
-                    return json.dumps(Utils.replaceJSON(json.loads(data), match, newValue)).replace('"%"', '%') # If  match is %, then it must match all values in db, no tonly strings, so quotes must be removed
-                except:
-                    return  Utils.replaceURLencoded(data, match, newValue)
-                
-        except Exception as e:
-            print('[x] Exception %s ocurred when parsing POST data' % (e.__class__.__name__))
-            return data

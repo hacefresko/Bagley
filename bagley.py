@@ -88,11 +88,11 @@ except FileNotFoundError:
 crawler = lib.modules.Crawler()
 crawler.start()
 
-#discoverer = lib.modules.Discoverer(crawler)
-#discoverer.start()
-#
-#injector = lib.modules.Injector()
-#injector.start()
+discoverer = lib.modules.Discoverer(crawler)
+discoverer.start()
+
+injector = lib.modules.Injector()
+injector.start()
 
 searcher = lib.modules.Searcher()
 searcher.start()
@@ -114,17 +114,17 @@ while True:
         domain = entry.get('domain')
         if not domain:
             continue
-        if not Domain.checkDomain(domain):
+        if not Domain.check(domain):
             print("[+] Target found: %s" % domain)
 
             # Insert domain
-            d = Domain.insertDomain(domain)
+            d = Domain.insert(domain)
             
             # Get and insert headers
             json_headers = entry.get('headers')
             if json_headers:
                 for k,v in json_headers.items():
-                    header = Header.insertHeader(k,v, False)
+                    header = Header.insert(k,v, False)
                     if header:
                         d.add(header)
 
@@ -132,7 +132,7 @@ while True:
             json_cookies = entry.get('cookies')
             if json_cookies:
                 for c in json_cookies:
-                    cookie = Cookie.insertCookie(c.get('name'), c.get('value'), c.get('domain'), '/', None, None, None, None, None, False)
+                    cookie = Cookie.insert(c.get('name'), c.get('value'), c.get('domain'), '/', None, None, None, None, None, False)
                     if cookie:
                         d.add(cookie)
 
@@ -141,7 +141,7 @@ while True:
                 excluded = entry.get('excluded')
                 if excluded:
                     for e in excluded:
-                        Domain.insertOutOfScopeDomain(e)
+                        Domain.insertOutOfScope(e)
 
             # Add to queue
             if entry.get("queue"):

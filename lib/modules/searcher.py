@@ -1,6 +1,6 @@
-import threading, subprocess, shutil, requests
+import threading, subprocess, shutil, requests, time, json
 
-from config import *
+import config
 from lib.entities import *
 
 class Searcher (threading.Thread):
@@ -33,13 +33,13 @@ class Searcher (threading.Thread):
         
         print('[CVE] Vulnerabilities found at %s %s\n' % (tech.name, tech.version))
         for v in vulns:
-            CVE.insertCVE(v, tech)
+            CVE.insert(v, tech)
             print(v)
         print()
 
     @staticmethod
     def __wappalyzer(path):
-        delay = str(int((1/REQ_PER_SEC) * 1000))
+        delay = str(int((1/config.REQ_PER_SEC) * 1000))
         command = [shutil.which('wappalyzer'), '--probe', '--delay='+delay, str(path)]
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
@@ -47,9 +47,9 @@ class Searcher (threading.Thread):
         try:
             for t in json.loads(result.stdout).get('technologies'):
                 if t.get('cpe') and t.get('version'):
-                    tech = Technology.getTech(t.get('cpe'), t.get('version'))
+                    tech = Technology.get(t.get('cpe'), t.get('version'))
                     if not tech:
-                        tech = Technology.insertTech(t.get('cpe'), t.get('name'), t.get('version'))
+                        tech = Technology.insert(t.get('cpe'), t.get('name'), t.get('version'))
                         Searcher.__lookupCVEs(tech)
                     tech.link(path)
 
@@ -60,7 +60,7 @@ class Searcher (threading.Thread):
             return
 
     def run(self):
-        for path in Path.getPaths():
+        for path in Path.yieldAll():
             if not path:
                 time.sleep(5)
                 continue
