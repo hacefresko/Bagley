@@ -31,10 +31,8 @@ class Searcher (threading.Thread):
                     if v not in vulns:
                         vulns.append(v)
         
-        if len(vulns) > 0:
-            pass
-            # Insert CVEs in db
-            # Link them to technologies
+        for v in vulns:
+            CVE.insertCVE(v, tech)
 
     @staticmethod
     def __wappalyzer(path):
@@ -57,8 +55,7 @@ class Searcher (threading.Thread):
                         print('[CVE] The following vulnerabilities were found in %s version %s at %s\n' % (tech.name, tech.version, str(path)))
                         for cve in cves:
                             print(cve)
-                        print()
-                        
+                        print()          
         except:
             return
 

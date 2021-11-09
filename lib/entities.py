@@ -400,7 +400,7 @@ class Request:
         self.cookies = self.__getCookies()
 
     def __str__(self):
-        result = "%s %s HTTP/1.1\r\n" % (self.method, urlparse(str(self.path)).path + ('?' + params) if params else '')
+        result = "%s %s HTTP/1.1\r\n" % (self.method, urlparse(str(self.path)).path + ('?' + self.params) if self.params else '')
         for header in self.headers:
             result += "%s\r\n" % (str(header))
         if len(self.cookies) != 0:
@@ -660,7 +660,6 @@ class Response:
     # Returns the list of headers of the response
     def __getHeaders(self):
         db = DB()
-    
         headers = db.query_all('SELECT * FROM headers INNER JOIN response_headers on id = header WHERE response = %s', (self.hash,))
 
         result = []
@@ -672,7 +671,6 @@ class Response:
     # Returns the list of cookies of the response
     def __getCookies(self):
         db = DB()
-    
         cookies = db.query_all('SELECT * FROM cookies INNER JOIN response_cookies on id = cookie WHERE response = %s', (self.hash,))
 
         result = []
@@ -986,6 +984,21 @@ class Technology:
         return Technology(tech[0], tech[1], tech[2], tech[3]) if tech else None
 
     @staticmethod
+    def getTechById(id):
+        db = DB()
+        tech = db.query_one('SELECT * FROM technologies WHERE id = %d', (id,))
+        return Technology(tech[0], tech[1], tech[2], tech[3]) if tech else None
+
+    def getCVEs(self):
+        db = DB()
+        cves = db.query_all("SELECT * FROM cves WHERE tech = %d", (self.id))
+        
+        result = []
+        for cve in cves:
+            result.append(cve)
+        return result
+
+    @staticmethod
     def insertTech(cpe, name, version=None):
         tech = Technology.getTech(name, version)
         if not tech:
@@ -996,6 +1009,26 @@ class Technology:
     def link(self, path):
         db = DB()
         db.exec('INSERT INTO path_technologies (path, tech) VALUES (%d, %d)', (path.id, self.id))
+
+class CVE:
+    def __init__(self, id, tech):
+        self.id = id
+        self.tech = Technology.getTechById(tech)
+
+    @staticmethod
+    def getCVE(id):
+        db = DB()
+        cve = db.query_one('SELECT * FROM cves WHERE id = %s', (id,))
+        return CVE(cve[0], cve[1]) if cve else None
+
+    @staticmethod
+    def insertCVE(id, tech):
+        db = DB()
+        cve = CVE.getCVE(id)
+        if not cve:
+            db = DB()
+            cve = CVE(db.exec_and_get_last_id('INSERT INTO cves (id, tech) VALUES (%s, %d)', (id, tech.id)), tech.id)
+        return cve
 
 class Utils:
     @staticmethod
