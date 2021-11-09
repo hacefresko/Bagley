@@ -991,7 +991,7 @@ class Technology:
 
     def getCVEs(self):
         db = DB()
-        cves = db.query_all("SELECT * FROM cves WHERE tech = %d", (self.id))
+        cves = db.query_all("SELECT * FROM cves WHERE tech = %d", (self.id,))
         
         result = []
         for cve in cves:

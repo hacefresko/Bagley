@@ -88,11 +88,11 @@ except FileNotFoundError:
 crawler = lib.modules.Crawler()
 crawler.start()
 
-discoverer = lib.modules.Discoverer(crawler)
-discoverer.start()
-
-injector = lib.modules.Injector()
-injector.start()
+#discoverer = lib.modules.Discoverer(crawler)
+#discoverer.start()
+#
+#injector = lib.modules.Injector()
+#injector.start()
 
 searcher = lib.modules.Searcher()
 searcher.start()
