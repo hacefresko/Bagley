@@ -41,7 +41,7 @@ Scope options:
 
 *   Injector: Tests SQLi with [Sqlmap](https://github.com/sqlmapproject/sqlmap), XSS with [DalFox](https://github.com/hahwul/dalfox), CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz) and SSTI with [Tplmap](https://github.com/epinna/tplmap) on GET and POST parameters.
 
-*   Searcher: Gets the technologies used by the application with [Wappalyzer](https://github.com/AliasIO/wappalyzer)
+*   Searcher: Gets the technologies used by the application with [Wappalyzer](https://github.com/AliasIO/wappalyzer) and looks for known vulnerabilities in the [NVD](https://nvd.nist.gov/) via its [API](https://nvd.nist.gov/developers/products)
 
 ## External requirements
 #### All of these requirements must be available in one of the PATH directories so Bagley can call them wherever it's executed
