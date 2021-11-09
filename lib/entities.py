@@ -472,7 +472,7 @@ class Request:
     @staticmethod
     def check(url, method, content_type=None, data=None, cookies=[]):
         path = Path.parseURL(url)
-        if not path:
+        if not path or not Request.checkExtension(url):
             return False
 
         params = Request.__parseParams(urlparse(url).query) if urlparse(url).query else None
@@ -592,6 +592,7 @@ class Request:
     # Inserts request and links headers and cookies. If request is already inserted or there are too many requests 
     # to the same path and method but with different data/params values for the same keys, it returns None.
     # Path corresponding to url must already be inserted
+    # If requested file extension belongs to config.EXTENSIONS_BLACKLIST, returns None
     @staticmethod
     def insert(url, method, headers, cookies, data):
         path = Path.parseURL(url)
