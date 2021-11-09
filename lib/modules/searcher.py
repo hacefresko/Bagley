@@ -31,11 +31,12 @@ class Searcher (threading.Thread):
                     if v not in vulns:
                         vulns.append(v)
         
-        print('[CVE] Vulnerabilities found at %s %s\n' % (tech.name, tech.version))
-        for v in vulns:
-            CVE.insert(v, tech)
-            print(v)
-        print()
+        if len(vulns) > 0:
+            print('[CVE] Vulnerabilities found at %s %s\n' % (tech.name, tech.version))
+            for v in vulns:
+                CVE.insert(v, tech)
+                print(v)
+            print()
 
     @staticmethod
     def __wappalyzer(path):
