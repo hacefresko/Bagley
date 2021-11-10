@@ -28,7 +28,7 @@ class Searcher (threading.Thread):
             for c in j.get('result').get('cpes'):
                 fetched += 1
                 for v in c.get('vulnerabilities'):
-                    if v not in vulns:
+                    if v != '' and v not in vulns:
                         vulns.append(v)
         
         if len(vulns) > 0:
