@@ -14,6 +14,22 @@ def checkDependences():
             return False
     return True
 
+def initDB():
+    db = DB()
+    statement = ''
+    for line in open(config.DB_SCRIPT):
+        if re.match(r'--', line):
+            continue
+        if not re.search(r';$', line):  # keep appending lines that don't end in ';'
+            statement = statement + line
+        else:  # when you get a line ending in ';' then exec statement and reset for next statement
+            statement = statement + line
+            try:
+                db.exec(statement)
+            except Exception as e:
+                print('[x] MySQLError when executing %s' % config.DB_SCRIPT)
+            statement = ''
+
 # Called when Ctrl+C
 def sigint_handler(sig, frame):
     print('\n[SIGINT] Ending execution...')
@@ -84,24 +100,10 @@ if not checkDependences():
     exit()
 
 # Start db
-db = DB()
-print("[+] Starting database")
-statement = ''
-for line in open(config.DB_SCRIPT):
-    if re.match(r'--', line):
-        continue
-    if not re.search(r';$', line):  # keep appending lines that don't end in ';'
-        statement = statement + line
-    else:  # when you get a line ending in ';' then exec statement and reset for next statement
-        statement = statement + line
-        try:
-            db.exec(statement)
-        except Exception as e:
-            print('[x] MySQLError when executing %s' % config.DB_SCRIPT)
-        statement = ''
+print("[+] Initializing database")
+initDB()
 
-# Parse scope file
-print("[+] Parsing scope file: %s" % scope_file_name)
+# Check if file can be opened (and open it)
 try:
     scope_file = open(scope_file_name, 'r')
 except FileNotFoundError:
@@ -127,6 +129,7 @@ searcher.start()
 threads.append(searcher)
 
 # Parse scope file
+print("[+] Parsing scope file: %s" % scope_file_name)
 while True:
     line = scope_file.readline()
     if not line:

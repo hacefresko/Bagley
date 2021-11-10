@@ -537,7 +537,7 @@ class Request:
     # Returns False if extension is in blacklist from config.py, else True   
     @staticmethod
     def checkExtension(url):
-        return False if pathlib.Path(url.split('?')[0]).suffix in config.EXTENSIONS_BLACKLIST else True
+        return False if pathlib.Path(url.split('?')[0]).suffix.lower() in config.EXTENSIONS_BLACKLIST else True
         
     # Returns request if exists else None
     @staticmethod

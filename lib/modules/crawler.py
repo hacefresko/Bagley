@@ -329,9 +329,9 @@ class Crawler (threading.Thread):
                 # If domain is in scope, request has not been done yet and resource is not an image
                 elif Request.checkExtension(request.url) and not Request.check(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), cookies):
                     if cookies:
-                        print(('['+method+']').ljust(8) + "DYNAMIC REQUEST " + request.url + '\t' + str([c.name for c in cookies]))
+                        print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url + '\t' + str([c.name for c in cookies]))
                     else:
-                        print(('['+method+']').ljust(8) + "DYNAMIC REQUEST " + request.url)
+                        print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url)
                     req, resp = self.__processRequest(request)
                     
                     # If dynamic request responded with HTML, send it to analize
