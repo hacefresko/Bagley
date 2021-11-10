@@ -1,4 +1,4 @@
-import threading, subprocess, json, shutil, time
+import threading, subprocess, json, shutil, time, socket
 from urllib.parse import urljoin
 
 import config
@@ -116,10 +116,17 @@ class Discoverer(threading.Thread):
         while line:
             try:
                 discovered = json.loads(line).get('host')
-                if Domain.checkScope(discovered):
-                    print('[FOUND] Domain found! Inserted %s to database' % discovered)
-                    Domain.insert(discovered)
-                    self.__subdomainTakeover(discovered)
+                # Sometimes output frome some sources is Domain\nDomain\nDomain...
+                for d in discovered.split('\n'):
+                    try:
+                        # Check if domain really exist, since subfinder does not check it
+                        socket.gethostbyname(d)
+                        if Domain.checkScope(d):
+                            print('[FOUND] Domain found! Inserted %s to database' % d)
+                            Domain.insert(d)
+                            self.__subdomainTakeover(d)
+                    except:
+                        continue
             except:
                 pass
             finally:
