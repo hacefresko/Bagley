@@ -261,7 +261,8 @@ class Crawler (threading.Thread):
                 if cookies :
                     try:
                         for cookie in cookies:
-                            self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain": cookie.domain})
+                            if cookie.domain == str(domain):
+                                self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain": cookie.domain})
                     except:
                         # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
                         print("[ERROR] %s is a cookie-averse document" % parent_url)
@@ -319,7 +320,8 @@ class Crawler (threading.Thread):
                     continue
 
                 # Append all cookies set via dynamic request, since some websites use dynamic requests to set new cookies
-                cookies = utils.mergeCookies(cookies, main_response.cookies)
+                if main_response:
+                    cookies = utils.mergeCookies(cookies, main_response.cookies)
 
                 # If resource is a JS file
                 if request.url[-3:] == '.js':
@@ -405,23 +407,23 @@ class Crawler (threading.Thread):
             if Request.check(url, 'GET'):
                 continue
 
-            try:
-                # Add headers/cookies inputed by the user
-                print("[+] Started crawling %s" % url)
-                if domain.headers:
-                    print("[+] Headers used:\n")
-                    for header in domain.headers:
-                        print(header)
-                    print()
-                if domain.cookies:
-                    print("[+] Cookies used:\n")
-                    for cookie in domain.cookies:
-                        print(cookie)
-                    print()
-                
-                self.__crawl(url, 'GET', headers=domain.headers, cookies=domain.cookies)
-            except Exception as e:
-                print('[x] Exception %s ocurred when crawling %s' % (e.__class__.__name__, url))
-            finally:
-                print("[+] Finished crawling %s" % url)
-                continue
+            #try:
+            # Add headers/cookies inputed by the user
+            print("[+] Started crawling %s" % url)
+            if domain.headers:
+                print("[+] Headers used:\n")
+                for header in domain.headers:
+                    print(header)
+                print()
+            if domain.cookies:
+                print("[+] Cookies used:\n")
+                for cookie in domain.cookies:
+                    print(cookie)
+                print()
+            
+            self.__crawl(url, 'GET', headers=domain.headers, cookies=domain.cookies)
+            #except Exception as e:
+            #    print('[ERROR] Exception %s ocurred when crawling %s' % (e.__class__.__name__, url))
+            #finally:
+            print("[+] Finished crawling %s" % url)
+            continue
