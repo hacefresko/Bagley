@@ -1,7 +1,16 @@
-import os, signal, datetime, getopt, sys, time, json, re
+import os, signal, datetime, getopt, sys, time, json, re, shutil
 
 from lib.entities import *
 import lib.modules
+
+def checkDependences():
+    dependences = ['chromedriver', 'mariadb', 'chromedriver', 'gobuster', 'subfinder', 'subjack', 'sqlmap', 'dalfox', 'crlfuzz', 'tplmap', 'wappalyzer']
+    for d in dependences:
+        if not shutil.which(d):
+            print("[x] %s not found in PATH" % d)
+            return False
+    return True
+
 
 # Called when Ctrl+C
 def sigint_handler(sig, frame):
@@ -40,7 +49,6 @@ title = '''
                   @@@*=*@@@
 
 '''
-
 print(title)
 
 try:
@@ -57,8 +65,12 @@ try:
 except Exception:
     print('[x] Usage: ' + os.path.basename(__file__) + ' -S <scope file>')
     exit()
-
 print("[+] Starting time: %s" % datetime.datetime.now())
+
+print("[+] Checking dependences")
+# Check dependences
+if not checkDependences():
+    exit()
 
 # Import SQL file
 db = DB()
