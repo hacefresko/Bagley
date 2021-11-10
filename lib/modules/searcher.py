@@ -32,11 +32,11 @@ class Searcher (threading.Thread):
                         vulns.append(v)
         
         if len(vulns) > 0:
-            print('[CVE] Vulnerabilities found at %s %s\n' % (tech.name, tech.version))
+            str = '[CVE] Vulnerabilities found at %s %s\n' % (tech.name, tech.version)
             for v in vulns:
                 CVE.insert(v, tech)
-                print(v)
-            print()
+                str += v + "\n"
+            print(str)
 
     @staticmethod
     def __wappalyzer(path):

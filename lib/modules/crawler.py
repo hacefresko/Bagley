@@ -412,11 +412,10 @@ class Crawler (threading.Thread):
                     for cookie in domain.cookies:
                         print(cookie)
                     print()
-                print()
                 
                 self.__crawl(url, 'GET', headers=domain.headers, cookies=domain.cookies)
             except Exception as e:
-                print('\n[x] Exception %s ocurred when crawling %s' % (e.__class__.__name__, url))
+                print('[x] Exception %s ocurred when crawling %s' % (e.__class__.__name__, url))
             finally:
-                print("\n[+] Finished crawling %s" % url)
+                print("[+] Finished crawling %s" % url)
                 continue
