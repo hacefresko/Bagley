@@ -5,9 +5,10 @@ import config
 from lib.entities import *
 
 class Discoverer(threading.Thread):
-    def __init__(self, crawler):
+    def __init__(self, stop, crawler):
         threading.Thread.__init__(self)
         self.crawler = crawler
+        self.stop = stop
 
     def __fuzzPath(self, url, headers, cookies, errcodes=[]):
         # Crawl all urls on the database that has not been crawled
@@ -35,7 +36,9 @@ class Discoverer(threading.Thread):
             command.append('-b')
             command.append(','.join(errcodes))
 
-        print("[+] Fuzzing path %s" % url)
+        # If function hasn't been called by itself
+        if len(errcodes) == 0:
+            print("[+] Fuzzing path %s" % url)
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -133,7 +136,7 @@ class Discoverer(threading.Thread):
     def run(self):
         directories = Path.yieldDirectories()
         domains = Domain.yieldAll()
-        while True:
+        while not self.stop.is_set():
             domain = next(domains)
             if domain and domain.name[0] == '.':
                 self.__findSubDomains(domain.name[1:])
@@ -143,5 +146,4 @@ class Discoverer(threading.Thread):
                 if not directory:
                     time.sleep(5)
                     continue
-                
                 self.__fuzzPath(str(directory), directory.domain.headers, directory.domain.cookies)

@@ -1,4 +1,4 @@
-import threading, time, requests, traceback
+import threading, time, requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from seleniumwire import webdriver
@@ -10,8 +10,10 @@ import config, lib.utils as utils
 from lib.entities import *
 
 class Crawler (threading.Thread):
-    def __init__(self):
+    def __init__(self, stop):
         threading.Thread.__init__(self)
+
+        self.stop = stop
 
         # Init queue for other modules to send urls to crawl
         self.queue = []
@@ -216,6 +218,10 @@ class Crawler (threading.Thread):
 
     # Main method of crawler. headers and cookies are extra ones to be appended to the ones corresponding to the domain
     def __crawl(self, parent_url, method, data=None, headers = [], cookies = []):
+        # If execution is stopped
+        if self.stop.is_set():
+            return
+        
         if cookies:
             print(('['+method+']').ljust(8) + parent_url + '\t' + str([c.name for c in cookies]))
         else:
@@ -339,7 +345,7 @@ class Crawler (threading.Thread):
     def run(self):
         # Generator for domains
         domains = Domain.yieldAll()
-        while True:
+        while not self.stop.is_set():
             # Get url from queue. If queue is empty, get domain from database. If it's also
             # empty, sleeps for 5 seconds and starts again
             if len(self.queue) > 0:

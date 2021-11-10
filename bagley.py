@@ -1,7 +1,10 @@
-import os, signal, datetime, getopt, sys, time, json, re, shutil
+import os, signal, datetime, getopt, sys, time, json, re, shutil, threading, io
 
 from lib.entities import *
 import lib.modules
+
+threads = []
+stopThread = threading.Event()
 
 def checkDependences():
     dependences = ['chromedriver', 'mariadb', 'chromedriver', 'gobuster', 'subfinder', 'subjack', 'sqlmap', 'dalfox', 'crlfuzz', 'tplmap', 'wappalyzer']
@@ -11,15 +14,23 @@ def checkDependences():
             return False
     return True
 
-
 # Called when Ctrl+C
 def sigint_handler(sig, frame):
-    print('\n[x] SIGINT: Exiting...')
+    print('\n[SIGINT] Ending execution...')
 
+    # Supress output
+    sys.stdout = io.BytesIO()
+    sys.stderr = io.BytesIO()
+
+    # Close scope fd
     scope_file.close()
 
+    # Kill threads
+    stopThread.set()
+    for thread in threads:
+        thread.join()
+
     quit()
-signal.signal(signal.SIGINT, sigint_handler)
 
 title = '''
 
@@ -67,12 +78,12 @@ except Exception:
     exit()
 print("[+] Starting time: %s" % datetime.datetime.now())
 
-print("[+] Checking dependences")
 # Check dependences
+print("[+] Checking dependences")
 if not checkDependences():
     exit()
 
-# Import SQL file
+# Start db
 db = DB()
 print("[+] Starting database")
 statement = ''
@@ -89,25 +100,31 @@ for line in open(config.DB_SCRIPT):
             print('[x] MySQLError when executing %s' % config.DB_SCRIPT)
         statement = ''
 
+# Parse scope file
 print("[+] Parsing scope file: %s" % scope_file_name)
 try:
     scope_file = open(scope_file_name, 'r')
 except FileNotFoundError:
     print('[x] Scope file not found')
     exit()
+signal.signal(signal.SIGINT, sigint_handler)
 
 # Init all modules
-crawler = lib.modules.Crawler()
+crawler = lib.modules.Crawler(stopThread)
 crawler.start()
+threads.append(crawler)
 
-discoverer = lib.modules.Discoverer(crawler)
+discoverer = lib.modules.Discoverer(stopThread, crawler)
 discoverer.start()
+threads.append(discoverer)
 
-injector = lib.modules.Injector()
+injector = lib.modules.Injector(stopThread)
 injector.start()
+threads.append(injector)
 
-searcher = lib.modules.Searcher()
+searcher = lib.modules.Searcher(stopThread)
 searcher.start()
+threads.append(searcher)
 
 # Parse scope file
 while True:

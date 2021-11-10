@@ -4,8 +4,9 @@ import config
 from lib.entities import *
 
 class Searcher (threading.Thread):
-    def __init__(self):
+    def __init__(self, stop):
         threading.Thread.__init__(self)
+        self.stop = stop
 
     @staticmethod
     def __lookupCVEs(tech):
@@ -61,7 +62,9 @@ class Searcher (threading.Thread):
             return
 
     def run(self):
-        for path in Path.yieldAll():
+        paths = Path.yieldAll()
+        while not self.stop.is_set():
+            path = next(paths)
             if not path:
                 time.sleep(5)
                 continue

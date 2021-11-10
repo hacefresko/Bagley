@@ -4,8 +4,9 @@ import config
 from lib.entities import *
 
 class Injector (threading.Thread):
-    def __init__(self):
+    def __init__(self, stop):
         threading.Thread.__init__(self)
+        self.stop = stop
 
     @staticmethod
     def __sqli(request):
@@ -154,7 +155,9 @@ class Injector (threading.Thread):
 
     def run(self):
         tested = []
-        for request in Request.yieldAll():
+        requests = Request.yieldAll()
+        while not self.stop.is_set():
+            request = next(requests)
             if not request:
                 time.sleep(5)
                 continue
