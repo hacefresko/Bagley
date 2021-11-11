@@ -467,7 +467,7 @@ class Request:
 
     # Returns True if request exists in database else False. 
     # If there are already some (10) requests with the same path and method but different params/data with same key, it returns True to avoid saving same requests with different CSRFs, session values, etc.
-    # If there are already requests to X but without cookies param, it returns False
+    # If there are already requests to X but without cookies belonging to this domain inside cookies, it returns False
     # If requested file extension belongs to config.EXTENSIONS_BLACKLIST, returns False
     @staticmethod
     def check(url, method, content_type=None, data=None, cookies=[]):
@@ -512,26 +512,15 @@ class Request:
             query += ' AND data is Null'
 
         requests = db.query_all(query, tuple(query_params))
+
+        # Among all cookies passed, check if there is anyone matching domain and path that has never been stored with this request
         for request in requests:
             existing_cookies = 0
             for c in cookies:
-                if db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
+                if c.domain == str(path.domain) and db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
                     existing_cookies += 1
             if existing_cookies == len(cookies):
                 return True
-        return False
-
-
-        for request in requests:
-            # Check if there is at least one new cookie that has never been sent with a similar response
-            valid = True
-            for c in cookies:
-                if db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
-                    valid = False
-                    break
-            if valid:
-                return True
-        
         return False
 
     # Returns False if extension is in blacklist from config.py, else True   
@@ -569,7 +558,7 @@ class Request:
         for request in requests:
             valid = True
             for c in cookies:
-                if not db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
+                if c.domain == str(path.domain) and not db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
                     valid = False
                     break
             if valid:
@@ -613,8 +602,12 @@ class Request:
         db = DB()
         request = Request(db.exec_and_get_last_id('INSERT INTO requests (path, params, method, data) VALUES (%d,%s,%s,%s)', (path.id, params, method, data)), path.id, params, method, data, None)
 
-        for element in headers + cookies:
-            element.link(request)
+        for h in headers:
+            h.link(request)
+
+        for c in cookies:
+            if c.domain == str(path.domain):
+                c.link(request)
 
         # Gets again the request in order to update headers, cookies and data from databse
         return Request.get(url, method, content_type, cookies, data)

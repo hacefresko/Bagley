@@ -69,12 +69,13 @@ class Crawler (threading.Thread):
         """, path, data, headers_dict)
 
     # Inserts in the database the request and its response if url belongs to the scope. 
-    # Returns (request, response). Headers and cookies params are extra headers and cookies added to the request
-    # so the first time a domain is inserted they get inserted with it in the database
+    # Returns (request, response).
     def __processRequest(self, request):
         url = request.url
         Path.insert(url)
 
+        # Since all cookies set by responses belonging to the scope are stored previously,
+        # cookies sent by requests which are not in db don't belong to scope
         request_cookies = []
         if request.headers.get('cookie'):
             for cookie in request.headers.get('cookie').split('; '):
@@ -221,17 +222,21 @@ class Crawler (threading.Thread):
         # If execution is stopped
         if self.stop.is_set():
             return
-        
-        if cookies:
-            print(('['+method+']').ljust(8) + parent_url + '\t' + str([c.name for c in cookies]))
-        else:
-            print(('['+method+']').ljust(8) + parent_url)
 
         # Always inserts path into database since __crawl is only called if the path hasn't been crawled yet
         path = Path.insert(parent_url)
         if not path:
             return
         domain = path.domain
+        
+        req_cookies = []
+        for c in cookies:
+            if c.domain == str(domain):
+                req_cookies.append(c)
+        if req_cookies:
+            print(('['+method+']').ljust(8) + parent_url + '\t' + str(req_cookies))
+        else:
+            print(('['+method+']').ljust(8) + parent_url)
 
         # Needed for selenium to insert cookies with their domains correctly https://stackoverflow.com/questions/41559510/selenium-chromedriver-add-cookie-invalid-domain-error
         if cookies:
@@ -288,6 +293,8 @@ class Crawler (threading.Thread):
                 if not main_request or not main_response:
                     return
 
+                cookies = utils.mergeCookies(cookies, main_response.cookies)
+
                 # Follow redirect if 3xx response is received
                 code = main_response.code
                 if code//100 == 3:
@@ -301,14 +308,12 @@ class Crawler (threading.Thread):
                             method = 'GET'
                             data = None
 
-                        new_cookies = utils.mergeCookies(cookies, main_response.cookies)
-                        if Request.checkExtension(redirect_to) and not Request.check(redirect_to, method, data=data, cookies=new_cookies):
+                        if Request.checkExtension(redirect_to) and not Request.check(redirect_to, method, data=data, cookies=cookies):
                             if Domain.checkScope(urlparse(redirect_to).netloc):
                                 print("[%d]   %s " % (code, redirect_to))
-                                self.__crawl(redirect_to, method, data, headers, new_cookies)
+                                self.__crawl(redirect_to, method, data, headers, cookies)
                             else:
                                 print("[%d]   %s [OUT OF SCOPE]" % (code, redirect_to))
-                    
                     return
 
                 responses.append({'url': parent_url, 'response':main_response})
@@ -326,8 +331,12 @@ class Crawler (threading.Thread):
                     continue
                 # If domain is in scope, request has not been done yet and resource is not an image
                 elif Request.checkExtension(request.url) and not Request.check(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), cookies):
-                    if cookies:
-                        print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url + '\t' + str([c.name for c in cookies]))
+                    req_cookies = []
+                    for c in cookies:
+                        if c.domain == str(domain):
+                            req_cookies.append(c)
+                    if req_cookies:
+                        print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url + '\t' + str(req_cookies))
                     else:
                         print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url)
                     
