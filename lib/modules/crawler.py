@@ -68,8 +68,7 @@ class Crawler (threading.Thread):
         post(arguments[0], arguments[1], arguments[2]);
         """, path, data, headers_dict)
 
-    # Inserts in the database the request and its response if url belongs to the scope. 
-    # Returns (request, response).
+    # Inserts in the database the request if url belongs to the scope. request is a request selenium-wire object
     def __processRequest(self, request):
         url = request.url
         Path.insert(url)
@@ -88,38 +87,40 @@ class Crawler (threading.Thread):
         for k,v in request.headers.items():
             request_headers.append(Header.insert(k, v))
 
-        processed_request = Request.insert(url, request.method, request_headers, request_cookies, request.body.decode('utf-8', errors='ignore'))
-        
-        if not processed_request:
-            return (False, False)
+        return Request.insert(url, request.method, request_headers, request_cookies, request.body.decode('utf-8', errors='ignore'))
+
+    # Inserts cookies set by response (set-cookie header)
+    def __processCookies(self, request):
+        response_cookies = []
+        response = request.response
+        if not response:
+            time.sleep(5)
+            response = request.response
+            if not response:
+                return None
+
+        if response.headers.get_all('set-cookie'):
+            for raw_cookie in response.headers.get_all('set-cookie'):
+                c = Cookie.insertRaw(request.url, raw_cookie)
+                if c:
+                    response_cookies.append(c)
+
+            del response.headers['set-cookie']
+
+        return response_cookies
+
+    # Inserts in the database the response if url belongs to the scope. request is a request selenium-wire object
+    def __processResponse(self, request, processed_request):
+        url = request.url
 
         response = request.response
         if not response:
             time.sleep(5)
             response = request.response
             if not response:
-                return (processed_request, False)
+                return False
 
-        response_cookies = []
-        if response.headers.get_all('set-cookie'):
-            for raw_cookie in response.headers.get_all('set-cookie'):
-                # Default values for cookie attributes
-                domain = urlparse(url).netloc if ':' not in urlparse(url).netloc else urlparse(url).netloc.split(':')[0]
-                cookie = {'expires':'session', 'max-age':'session', 'domain': domain, 'path': '/', 'secure': False, 'httponly': False, 'samesite':'lax'}
-                for attribute in raw_cookie.split(';'):
-                    attribute = attribute.strip()
-                    if len(attribute.split('=')) == 1:
-                        cookie.update({attribute.lower(): True})
-                    elif attribute.split('=')[0].lower() in ['expires', 'max-age', 'domain', 'path', 'samesite']:
-                        cookie.update({attribute.split('=')[0].lower(): attribute.split('=')[1].lower()})
-                    else:
-                        cookie.update({'name': attribute.split('=')[0].lower()})
-                        cookie.update({'value': attribute.split('=')[1]})
-                c = Cookie.insert(cookie.get('name'), cookie.get('value'), cookie.get('domain'), cookie.get('path'), cookie.get('expires'), cookie.get('max-age'), cookie.get('httponly'), cookie.get('secure'), cookie.get('samesite'))
-                if c:
-                    response_cookies.append(c)
-
-            del response.headers['set-cookie']
+        response_cookies = self.__processCookies(request)
         
         response_headers = []
         for k,v in response.headers.items():
@@ -128,7 +129,7 @@ class Crawler (threading.Thread):
         decoded_body = decode(response.body, response.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
         processed_response = Response.insert(response.status_code, decoded_body, response_headers, response_cookies, processed_request)
 
-        return (processed_request, processed_response)
+        return processed_response
 
     # Traverse the HTML looking for paths to crawl
     def __parseHTML(self, parent_url, cookies, response):
@@ -217,7 +218,7 @@ class Crawler (threading.Thread):
                     content = requests.get(src).text
                     Script.insert(src, content, response)
 
-    # Main method of crawler
+    # Main method of crawler. Cookies is the collection of cookies gathered
     def __crawl(self, parent_url, method, data=None, headers = [], cookies = []):
         # If execution is stopped
         if self.stop.is_set():
@@ -229,9 +230,11 @@ class Crawler (threading.Thread):
             return
         domain = path.domain
         
+        # Cookies that can be sent in this request
         req_cookies = []
         for c in cookies:
-            if c.domain == str(domain):
+            cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
+            if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
                 req_cookies.append(c)
         if req_cookies:
             print(('['+method+']').ljust(8) + parent_url + '\t' + str(req_cookies))
@@ -245,6 +248,7 @@ class Crawler (threading.Thread):
         # Delete all previous requests so they don't pollute the results
         del self.driver.requests
 
+        # Request resource
         try:
             if method == 'GET':
                 # Add headers inputed by the user, associated to the domain via a request interceptor
@@ -265,8 +269,9 @@ class Crawler (threading.Thread):
                 # Add cookies  inputed by the user, associated to the domain to request
                 if cookies :
                     try:
-                        for cookie in cookies:
-                            if cookie.domain == str(domain):
+                        for cookie in req_cookies:
+                            cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
+                            if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
                                 self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain": cookie.domain})
                     except:
                         # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
@@ -274,7 +279,7 @@ class Crawler (threading.Thread):
 
                 self.driver.get(parent_url)
             elif method == 'POST':
-                self.__post(parent_url, data, headers, cookies)
+                self.__post(parent_url, data, headers, req_cookies)
         except Exception as e:
             print('[ERROR] Exception %s ocurred when requesting %s' % (e.__class__.__name__, parent_url))
             return
@@ -285,14 +290,20 @@ class Crawler (threading.Thread):
         main_request = None
         main_response = None
 
-        # Capture all requests
+        # Process all requests
         for request in self.driver.iter_requests():
+
             # Main request
             if request.url == parent_url and main_request is None and main_response is None:
-                main_request, main_response = self.__processRequest(request)
-                if not main_request or not main_response:
+                main_request = self.__processRequest(request)
+                if not main_request:
                     return
 
+                main_response = self.__processResponse(request, main_request)
+                if not main_response:
+                    return
+
+                # Add new cookies to gathered cookies
                 cookies = utils.mergeCookies(cookies, main_response.cookies)
 
                 # Follow redirect if 3xx response is received
@@ -321,34 +332,41 @@ class Crawler (threading.Thread):
             # Dynamic requests      
             else:
                 domain = urlparse(request.url).netloc
-                if not Domain.checkScope(domain):
-                    continue
+                if Domain.checkScope(domain):
 
-                # If resource is a JS file
-                if request.url[-3:] == '.js':
-                    content = requests.get(request.url).text
-                    Script.insert(request.url, content, main_response)
-                    continue
-                # If domain is in scope, request has not been done yet and resource is not an image
-                elif Request.checkExtension(request.url) and not Request.check(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), cookies):
-                    req_cookies = []
-                    for c in cookies:
-                        if c.domain == str(domain):
-                            req_cookies.append(c)
-                    if req_cookies:
-                        print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url + '\t' + str(req_cookies))
-                    else:
-                        print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url)
-                    
-                    req, resp = self.__processRequest(request)
+                    # If resource is a JS file
+                    if request.url[-3:] == '.js':
+                        content = requests.get(request.url).text
+                        Script.insert(request.url, content, main_response)
+                        continue
 
-                    if resp:
-                        # Append all cookies set via dynamic request, since some websites use dynamic requests to set new cookies
-                        cookies = utils.mergeCookies(cookies, resp.cookies)
+                    elif Request.checkExtension(request.url) and not Request.check(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), cookies):
+                        req_cookies = []
+                        for c in cookies:
+                            cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
+                            if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
+                                req_cookies.append(c)
+                        if req_cookies:
+                            print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url + '\t' + str(req_cookies))
+                        else:
+                            print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url)
                         
-                        # If dynamic request responded with HTML, send it to analize
-                        if resp.body and bool(BeautifulSoup(resp.body, 'html.parser').find()):
-                            responses.append({'url': request.url, 'response':resp})
+                        req = self.__processRequest(request)
+                        resp = self.__processResponse(request, req)
+
+                        if resp:
+                            # Append all cookies set via dynamic request, since some websites use dynamic requests to set new cookies
+                            cookies = utils.mergeCookies(cookies, resp.cookies)
+                            
+                            # If dynamic request responded with HTML, send it to analize
+                            if resp.body and bool(BeautifulSoup(resp.body, 'html.parser').find()):
+                                responses.append({'url': request.url, 'response':resp})
+                                continue
+
+                # If not in scope or request already done, just process the cookies as other pages may set other cookies
+                resp_cookies = self.__processCookies(request)
+                if resp_cookies:
+                    cookies = utils.mergeCookies(cookies, resp_cookies)
 
         # Analyze all responses
         for response in responses:

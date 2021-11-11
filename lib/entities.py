@@ -163,13 +163,13 @@ class Domain:
                 return True
 
             # Construct array with starting and interspersed dots i.e example.com => ['.','example','.','com']
-            parts = domain.split('.')
-            dot_interspersed_parts = (['.']*(2*len(parts)-1))
-            dot_interspersed_parts[::2] = parts
-            if dot_interspersed_parts[0] == '':
-                dot_interspersed_parts = dot_interspersed_parts[1:]
-            elif dot_interspersed_parts[0] != '.':
-                dot_interspersed_parts.insert(0, '.')
+        parts = domain.split('.')
+        dot_interspersed_parts = (['.']*(2*len(parts)-1))
+        dot_interspersed_parts[::2] = parts
+        if dot_interspersed_parts[0] == '':
+            dot_interspersed_parts = dot_interspersed_parts[1:]
+        elif dot_interspersed_parts[0] != '.':
+            dot_interspersed_parts.insert(0, '.')
 
             for i in range(len(dot_interspersed_parts)):
                 check = ''.join(dot_interspersed_parts[i:])
@@ -186,9 +186,7 @@ class Domain:
         if Domain.check(domain_name):
             return Domain.get(domain_name)
 
-        domain = Domain(db.exec_and_get_last_id('INSERT INTO domains (name) VALUES (%s)', (domain_name,)), domain_name)
-        
-        return domain
+        return Domain(db.exec_and_get_last_id('INSERT INTO domains (name) VALUES (%s)', (domain_name,)), domain_name)
 
     # Links cookie or header (element) to domain
     def add(self, element):
@@ -513,13 +511,19 @@ class Request:
 
         requests = db.query_all(query, tuple(query_params))
 
-        # Among all cookies passed, check if there is anyone matching domain and path that has never been stored with this request
+        # Among all cookies passed, check if there is anyone matching domain that has never been stored with this request
+        req_cookies = []
+        for c in cookies:
+            cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
+            if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
+                req_cookies.append(c)
+        
         for request in requests:
             existing_cookies = 0
-            for c in cookies:
-                if c.domain == str(path.domain) and db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
+            for c in req_cookies:
+                if db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
                     existing_cookies += 1
-            if existing_cookies == len(cookies):
+            if existing_cookies == len(req_cookies):
                 return True
         return False
 
@@ -555,10 +559,17 @@ class Request:
             query += ' AND data is Null '
 
         requests = db.query_all(query, tuple(query_params))
+
+        req_cookies = []
+        for c in cookies:
+            cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
+            if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
+                req_cookies.append(c)
+
         for request in requests:
             valid = True
-            for c in cookies:
-                if c.domain == str(path.domain) and not db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
+            for c in req_cookies:
+                if not db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
                     valid = False
                     break
             if valid:
@@ -606,7 +617,8 @@ class Request:
             h.link(request)
 
         for c in cookies:
-            if c.domain == str(path.domain):
+            cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
+            if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
                 c.link(request)
 
         # Gets again the request in order to update headers, cookies and data from databse
@@ -794,12 +806,12 @@ class Header:
             return False
 
 class Cookie:
-    def __init__(self, id, name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite):
+    def __init__(self, id, name, value, domain, path, expires, maxage, httponly, secure, samesite):
         self.id = id
         self.name = name 
-        self.domain = cookie_domain
+        self.domain = domain
         self.value = value
-        self.path = cookie_path
+        self.path = path
         self.expires = expires
         self.maxage = maxage
         self.httponly = httponly
@@ -812,27 +824,50 @@ class Cookie:
     def __str__(self):
         return self.name + '=' + self.value
 
-    # Returns a formatted tupple with name and value
-    @staticmethod
-    def __parseCookie(name, value):
-        for term in config.PARAMS_BLACKLIST:
-            if term in name:
-                value = term
-        return (name, value)
-
     # Returns True if exists or None if it does not exist   
     @staticmethod 
-    def __getCookie(name, value, cookie_domain, cookie_path):
-        if cookie_domain and not Domain.checkScope(cookie_domain, False):
-            return None
-        
+    def __get(name, value, domain, path, expires, maxage, httponly, secure, samesite):
         db = DB()
-        cookie = db.query_one('SELECT * FROM cookies WHERE name = %s AND value = %s AND domain = %s AND path = %s', (name, value, cookie_domain, cookie_path))
+        cookie = db.query_one('SELECT * FROM cookies WHERE name = %s AND value = %s AND domain = %s AND path = %s AND expires = %s AND maxage = %s AND httponly = %s AND secure = %s AND samesite = %s', (name, value, domain, path, expires, maxage, httponly, secure, samesite))
         if not cookie:
             return None
         return Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9])
 
-    # Returns cookie if there is a cookie with name and value whose cookie_path and cookie_domain match with url, else None
+    # Inserts cookie. If already inserted, returns None.
+    @staticmethod
+    def insert(name, value, domain, path, expires, maxage, httponly, secure, samesite):
+        cookie = Cookie.__get(name, value, domain, path, expires, maxage, httponly, secure, samesite)
+        if cookie:
+            return None
+        db = DB()
+        id = db.exec_and_get_last_id('INSERT INTO cookies (name, value, domain, path, expires, maxage, httponly, secure, samesite) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)', [name, value, domain, path, expires, maxage, httponly, secure, samesite])
+        return Cookie(id, name, value, domain, path, expires, maxage, httponly, secure, samesite)
+
+    # Inserts cookie from the raw string. If already inserted, returns None.
+    @staticmethod
+    def insertRaw(url, raw_cookie):
+        if not raw_cookie:
+            return None
+        
+        # Default values for cookie attributes
+        domain = urlparse(url).netloc if ':' not in urlparse(url).netloc else urlparse(url).netloc.split(':')[0]
+        cookie = {'expires':'session', 'max-age':'session', 'domain': domain, 'path': '/', 'secure': False, 'httponly': False, 'samesite':'lax'}
+        for attribute in raw_cookie.split(';'):
+            attribute = attribute.strip()
+            if len(attribute.split('=')) == 1:
+                cookie.update({attribute.lower(): True})
+            elif attribute.split('=')[0].lower() in ['expires', 'max-age', 'domain', 'path', 'samesite']:
+                cookie.update({attribute.split('=')[0].lower(): attribute.split('=')[1].lower()})
+            else:
+                cookie.update({'name': attribute.split('=')[0].lower()})
+                cookie.update({'value': attribute.split('=')[1]})
+
+        if not cookie.get('name') and not cookie.get('value'):
+            return None
+
+        return Cookie.insert(cookie.get('name'), cookie.get('value'), cookie.get('domain'), cookie.get('path'), cookie.get('expires'), cookie.get('max-age'), cookie.get('httponly'), cookie.get('secure'), cookie.get('samesite'))
+
+    # Return cookie if name and value matches and url matches with domain and path
     @staticmethod
     def get(name, value, url):
         path = Path.parseURL(url)
@@ -840,13 +875,8 @@ class Cookie:
             return None
         db = DB()
 
-        # First, try to get cookie as is, in case it was a session cookie added in the beggining in the scope file.
-        # In case there is no such cookie in db, try to get it parsed
         results = db.query_all('SELECT * FROM cookies WHERE name = %s AND value = %s', (name, value))
-        if not results:
-            name, value = Cookie.__parseCookie(name, value)
-            results = db.query_all('SELECT * FROM cookies WHERE name = %s AND value = %s', (name, value))
-        
+
         for result in results:
             cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9])
             # If domain/range of subdomains and range of paths from cookie match with url
@@ -854,23 +884,6 @@ class Cookie:
             if Domain.compare(cookie.domain, path.domain.name) and path.checkParent(cookie_path):
                 return cookie
         return None
-
-    # Inserts cookie if not already inserted and returns it. 
-    # blacklist parameter indicates if cookie value must be removed if value of cookie is blacklisted
-    # check parameter indicates if domain must be checked
-    @staticmethod
-    def insert(name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite, blacklist=True):
-        if not Domain.checkScope(cookie_domain, False):
-            return None
-
-        if blacklist:
-            name, value = Cookie.__parseCookie(name, value)
-        cookie = Cookie.__getCookie(name, value, cookie_domain, cookie_path)
-        if not cookie:
-            db = DB()
-            id = db.exec_and_get_last_id('INSERT INTO cookies (name, value, domain, path, expires, maxage, httponly, secure, samesite) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)', [name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite])
-            cookie = Cookie(id, name, value, cookie_domain, cookie_path, expires, maxage, httponly, secure, samesite)
-        return cookie
 
     # Links the cookie to the specified target. If target is not a request nor a response, returns False
     def link(self, target):
