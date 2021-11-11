@@ -216,7 +216,7 @@ class Crawler (threading.Thread):
                     content = requests.get(src).text
                     Script.insert(src, content, response)
 
-    # Main method of crawler. headers and cookies are extra ones to be appended to the ones corresponding to the domain
+    # Main method of crawler
     def __crawl(self, parent_url, method, data=None, headers = [], cookies = []):
         # If execution is stopped
         if self.stop.is_set():
@@ -311,17 +311,13 @@ class Crawler (threading.Thread):
                     
                     return
 
-                responses.append({'url': parent_url, 'response':main_response, 'headers': headers, 'cookies': cookies})
+                responses.append({'url': parent_url, 'response':main_response})
 
             # Dynamic requests      
             else:
                 domain = urlparse(request.url).netloc
                 if not Domain.checkScope(domain):
                     continue
-
-                # Append all cookies set via dynamic request, since some websites use dynamic requests to set new cookies
-                if main_response:
-                    cookies = utils.mergeCookies(cookies, main_response.cookies)
 
                 # If resource is a JS file
                 if request.url[-3:] == '.js':
@@ -334,11 +330,16 @@ class Crawler (threading.Thread):
                         print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url + '\t' + str([c.name for c in cookies]))
                     else:
                         print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url)
-                    req, resp = self.__processRequest(request)
                     
-                    # If dynamic request responded with HTML, send it to analize
-                    if resp and resp.body and bool(BeautifulSoup(resp.body, 'html.parser').find()):
-                        responses.append({'url': request.url, 'response':resp})
+                    req, resp = self.__processRequest(request)
+
+                    if resp:
+                        # Append all cookies set via dynamic request, since some websites use dynamic requests to set new cookies
+                        cookies = utils.mergeCookies(cookies, resp.cookies)
+                        
+                        # If dynamic request responded with HTML, send it to analize
+                        if resp.body and bool(BeautifulSoup(resp.body, 'html.parser').find()):
+                            responses.append({'url': request.url, 'response':resp})
 
         # Analyze all responses
         for response in responses:
