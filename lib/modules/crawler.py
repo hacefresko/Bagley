@@ -473,23 +473,23 @@ class Crawler (threading.Thread):
             if Request.check(url, 'GET'):
                 continue
 
-            #try:
-            # Add headers/cookies inputed by the user
-            print("[+] Started crawling %s" % url)
-            if domain.headers:
-                print("[+] Headers used:\n")
-                for header in domain.headers:
-                    print(header)
-                print()
-            if domain.cookies:
-                print("[+] Cookies used:\n")
-                for cookie in domain.cookies:
-                    print(cookie)
-                print()
-            
-            self.__crawl(url, 'GET', headers=domain.headers, cookies=domain.cookies)
-            #except Exception as e:
-            #    print('[ERROR] Exception %s ocurred when crawling %s' % (e.__class__.__name__, url))
-            #finally:
-            print("[+] Finished crawling %s" % url)
-            continue
+            try:
+                # Add headers/cookies inputed by the user
+                print("[+] Started crawling %s" % url)
+                if domain.headers:
+                    print("[+] Headers used:\n")
+                    for header in domain.headers:
+                        print(header)
+                    print()
+                if domain.cookies:
+                    print("[+] Cookies used:\n")
+                    for cookie in domain.cookies:
+                        print(cookie)
+                    print()
+                
+                self.__crawl(url, 'GET', headers=domain.headers, cookies=domain.cookies)
+            except Exception as e:
+                print('[ERROR] Exception %s ocurred when crawling %s' % (e.__class__.__name__, url))
+            finally:
+                print("[+] Finished crawling %s" % url)
+                continue
