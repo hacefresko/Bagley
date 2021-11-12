@@ -179,12 +179,12 @@ class Domain:
                     return True
         return False
 
-    # Inserts domain if not already inserted
+    # Inserts domain. If already inserted, returns None
     @staticmethod
     def insert(domain_name):
         db = DB()
-        if Domain.check(domain_name):
-            return Domain.get(domain_name)
+        if Domain.get(domain_name):
+            return None
 
         return Domain(db.exec_and_get_last_id('INSERT INTO domains (name) VALUES (%s)', (domain_name,)), domain_name)
 
@@ -263,7 +263,8 @@ class Path:
         
         return Path(path[0], path[1], path[2], path[3], path[4]) if path else None
 
-    # Returns a dict with protocol, domain and a list elements with each element from the URL. URL must have protocol, domain and elements in order to get parsed correctly.
+    # Returns a dict with protocol, domain and a list elements with each element from the URL.
+    # If there is an error parsing, returns None
     @staticmethod
     def __parseURL(url):
         result = {}
@@ -285,7 +286,7 @@ class Path:
         # Get elements after http://example.com/ and subsitute '' by None
         result['elements'] = [None if i=='' else i for i in urlparse(url).path.split('/')[1:]]
 
-        return result
+        return result if result['protocol'] != '' and result['domain'] != '' else None
 
     # Returns True if path is parent of current Object, else False
     def checkParent(self, path):
@@ -343,9 +344,7 @@ class Path:
     @staticmethod
     def parseURL(url):
         parsedURL = Path.__parseURL(url)
-
-        protocol = parsedURL['protocol']
-        if not protocol:
+        if not parsedURL:
             return None
 
         domain = Domain.get(parsedURL['domain'])
@@ -355,7 +354,7 @@ class Path:
         # Iterate over each domain/file from URL
         parent = None
         for i, element in enumerate(parsedURL['elements']):
-            path = Path.__get(protocol, element, parent, domain)
+            path = Path.__get(parsedURL['protocol'], element, parent, domain)
             if not path:
                 return None
             if i == len(parsedURL['elements']) - 1:
@@ -363,17 +362,21 @@ class Path:
             parent = path
 
     # Inserts each path inside the URL if not already inserted and returns last inserted path (last element from URL).
-    # If domain is not in scope, returns None. If domain is in scope but not in database, inserts it
+    # If domain is not in scope or there is an error parsing url, returns None. If domain is in scope but not in database, inserts it
     @staticmethod
     def insert(url):
         db = DB()
         parsedURL = Path.__parseURL(url)
+        if not parsedURL:
+            return None
 
         protocol = parsedURL['protocol']
 
         if not Domain.checkScope(parsedURL['domain']):
             return None
-        domain = Domain.insert(parsedURL['domain'])
+        domain = Domain.get(parsedURL['domain'])
+        if not domain:
+            domain = Domain.insert(parsedURL['domain'])
 
         # Iterate over each domain/file from URL
         parent = None
@@ -657,7 +660,7 @@ class Response:
 
     # Returns response hash
     @staticmethod
-    def __hashResponse(code, body, headers, cookies):
+    def hash(code, body, headers, cookies):
         to_hash = str(body) + str(code)
         for element in headers + cookies:
             to_hash += str(element)
@@ -703,7 +706,7 @@ class Response:
             body = None
 
         db = DB()
-        return True if db.query_one('SELECT * FROM responses WHERE hash = %s', (Response.__hashResponse(code, body, headers, cookies),)) else False
+        return True if db.query_one('SELECT * FROM responses WHERE hash = %s', (Response.hash(code, body, headers, cookies),)) else False
     
     # Returns response if exists, else False
     @staticmethod
@@ -714,7 +717,9 @@ class Response:
             return None
         return Response(response[0], response[1], response[2])
 
-    # Returns response hash if response succesfully inserted. Else, returns False. Also links header + cookies.
+    # Returns response hash if response succesfully inserted. 
+    # If an error occur or response already inserted, returns None. 
+    # Also links header + cookies.
     @staticmethod
     def insert(code, body, headers, cookies, request):
         if not isinstance(request, Request):
@@ -726,19 +731,26 @@ class Response:
         db = DB()
 
         if Response.check(code, body, headers, cookies):
-            response_hash = Response.__hashResponse(code, body, headers, cookies)
-        else:
-            response_hash = Response.__hashResponse(code, body, headers, cookies)
+            return None
 
-            db.exec('INSERT INTO responses (hash, code, content) VALUES (%s,%d,%s)', (response_hash, code, body))
-            
-            response = Response.get(response_hash)
-            for element in headers + cookies:
-                element.link(response)
-            
-        db.exec('UPDATE requests SET response = %s WHERE id = %d', (response_hash, request.id))
+        response_hash = Response.hash(code, body, headers, cookies)
+
+        db.exec('INSERT INTO responses (hash, code, content) VALUES (%s,%d,%s)', (response_hash, code, body))
+        
+        response = Response.get(response_hash)
+        for element in headers + cookies:
+            element.link(response)
 
         return Response.get(response_hash)
+
+    # Links response to request. If target not a request, return False, else True
+    def link(self, request):
+        if not isinstance(request, Request):
+            return False
+
+        db = DB()
+        db.exec('UPDATE requests SET response = %s WHERE id = %d', (self.hash, request.id))
+        return True
 
     # Returns specified header if request has it, else None
     def getHeader(self, key):
@@ -779,14 +791,14 @@ class Header:
         
         return Header(result[0], result[1], result[2])
 
-    # Inserts header if not inserted and returns it
+    # Inserts header and returns it. If header already inserted, return None
     @staticmethod
     def insert(key, value, blacklist=True):
         key, value = Header.__parseHeader(key, value, blacklist)
-        header = Header.get(key, value)
-        if not header:
-            db = DB()
-            header = Header(db.exec_and_get_last_id('INSERT INTO headers (header_key, value) VALUES (%s,%s)', (key, value)), key, value)
+        if Header.get(key, value):
+            return None
+        db = DB()
+        header = Header(db.exec_and_get_last_id('INSERT INTO headers (header_key, value) VALUES (%s,%s)', (key, value)), key, value)
         return header
 
     # Links the header to the specified target. If target is not a request nor a response, returns False
@@ -925,30 +937,33 @@ class Script:
             return None
         return Script(result[0], result[1], result[2])
 
-    # Inserts script if not already inserted, links it to the corresponding response if exists and returns it
-    @staticmethod 
-    def insert(url, content, response):
-        if not isinstance(response, Response):
-            return None
-
+    # Inserts script. If already inserted, returns None
+    def insert(url, content):
         if url is not None:
             path = Path.insert(url)
-            # If path does not belong to the scope (stored domains)
             if not path:
                 return None
             path = path.id
         else:
             path = None
 
+        if Script.get(url, content):
+            return None
         db = DB()
-        script = Script.get(url, content)
-        if not script:
-            # Cannot use lastrowid since scripts table does not have INTEGER PRIMARY KEY but TEXT PRIMARY KEY (hash)
-            db.exec('INSERT INTO scripts (hash, path, content) VALUES (%s,%d,%s)', (Script.__getHash(url, content), path, content))
-            script = Script.get(url, content)
-        db.exec('INSERT INTO response_scripts (response, script) VALUES (%s,%s)', (response.hash, script.hash))
+        # Cannot use lastrowid since scripts table does not have INTEGER PRIMARY KEY but TEXT PRIMARY KEY (hash)
+        db.exec('INSERT INTO scripts (hash, path, content) VALUES (%s,%d,%s)', (Script.__getHash(url, content), path, content))
+        
+        return Script.get(url, content)
 
-        return script
+    # Links script to response. If not response, returns False
+    def link(self, response):
+        if not isinstance(response, Response):
+            return False
+
+        db = DB()
+        db.exec('INSERT INTO response_scripts (response, script) VALUES (%s,%s)', (response.hash, self.hash))
+
+        return True
 
 class Vulnerability:
     def __init__(self, id, vuln_type, description):
@@ -1010,10 +1025,10 @@ class Technology:
 
     @staticmethod
     def insert(cpe, name, version=None):
-        tech = Technology.get(name, version)
-        if not tech:
-            db = DB()
-            tech = Technology(db.exec_and_get_last_id('INSERT INTO technologies (cpe, name, version) VALUES (%s, %s, %s)', (cpe, name, version)), cpe, name, version)
+        if Technology.get(name, version):
+            return None
+        db = DB()
+        tech = Technology(db.exec_and_get_last_id('INSERT INTO technologies (cpe, name, version) VALUES (%s, %s, %s)', (cpe, name, version)), cpe, name, version)
         return tech
 
     def link(self, path):
@@ -1033,9 +1048,8 @@ class CVE:
 
     @staticmethod
     def insert(id, tech):
+        if CVE.get(id):
+            return None
         db = DB()
-        cve = CVE.get(id)
-        if not cve:
-            db = DB()
-            cve = CVE(db.exec_and_get_last_id('INSERT INTO cves (id, tech) VALUES (%s, %d)', (id, tech.id)), tech.id)
+        cve = CVE(db.exec_and_get_last_id('INSERT INTO cves (id, tech) VALUES (%s, %d)', (id, tech.id)), tech.id)
         return cve

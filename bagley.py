@@ -151,6 +151,8 @@ while True:
 
             # Insert domain
             d = Domain.insert(domain)
+            if not domain:
+                continue
             
             # Get and insert headers
             json_headers = entry.get('headers')

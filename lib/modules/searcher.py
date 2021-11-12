@@ -35,8 +35,8 @@ class Searcher (threading.Thread):
         if len(vulns) > 0:
             str = '[CVE] Vulnerabilities found at %s %s\n' % (tech.name, tech.version)
             for v in vulns:
-                CVE.insert(v, tech)
-                str += v + "\n"
+                if CVE.insert(v, tech):
+                    str += v + "\n"
             print(str)
 
     @staticmethod
@@ -52,12 +52,15 @@ class Searcher (threading.Thread):
                     tech = Technology.get(t.get('cpe'), t.get('version'))
                     if not tech:
                         tech = Technology.insert(t.get('cpe'), t.get('name'), t.get('version'))
-                        Searcher.__lookupCVEs(tech)
-                    tech.link(path)
+                        if tech:
+                            Searcher.__lookupCVEs(tech)
 
-                    cves = tech.getCVEs()
-                    if len(cves) > 0:
-                        print("[CVE] %s uses vulnerable %s %s" % (str(path), tech.name, tech.version))
+                    if tech:
+                        tech.link(path)
+
+                        cves = tech.getCVEs()
+                        if len(cves) > 0:
+                            print("[CVE] %s uses vulnerable %s %s" % (str(path), tech.name, tech.version))
         except:
             return
 

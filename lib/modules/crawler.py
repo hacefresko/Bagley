@@ -68,10 +68,13 @@ class Crawler (threading.Thread):
         post(arguments[0], arguments[1], arguments[2]);
         """, path, data, headers_dict)
 
-    # Inserts in the database the request if url belongs to the scope. request is a request selenium-wire object
+    # Inserts in the database the request if url belongs to the scope
+    # If an error occur, returns None
+    # request is a request selenium-wire object
     def __processRequest(self, request):
         url = request.url
-        Path.insert(url)
+        if not Path.insert(url):
+            return None
 
         # Since all cookies set by responses belonging to the scope are stored previously,
         # cookies sent by requests which are not in db don't belong to scope
@@ -85,7 +88,12 @@ class Crawler (threading.Thread):
 
         request_headers = []
         for k,v in request.headers.items():
-            request_headers.append(Header.insert(k, v))
+            h = Header.get(k,v)
+            if not h:
+                h = Header.insert(k,v)
+            if h:
+                request_headers.append(h)
+
 
         return Request.insert(url, request.method, request_headers, request_cookies, request.body.decode('utf-8', errors='ignore'))
 
@@ -124,12 +132,20 @@ class Crawler (threading.Thread):
         
         response_headers = []
         for k,v in response.headers.items():
-            response_headers.append(Header.insert(k,v))
+            h = Header.get(k,v)
+            if not h:
+                h = Header.insert(k,v)
+            if h:
+                response_headers.append(h)
 
         decoded_body = decode(response.body, response.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
-        processed_response = Response.insert(response.status_code, decoded_body, response_headers, response_cookies, processed_request)
+        
+        response_hash = Response.hash(response.status_code, response.body, response_headers, response_cookies)
+        resp = Response.get(response_hash)
+        if not resp:
+            resp = Response.insert(response.status_code, decoded_body, response_headers, response_cookies, processed_request)
 
-        return processed_response
+        return resp
 
     # Traverse the HTML looking for paths to crawl
     def __parseHTML(self, parent_url, cookies, response):
@@ -197,7 +213,11 @@ class Crawler (threading.Thread):
                             data = None
                     else:
                         content_type = 'application/x-www-form-urlencoded'
-                        headers = [Header.insert('content-type', content_type)]
+                        h = Header.get('content-type', content_type)
+                        if not h:
+                            h = Header.insert('content-type', content_type)
+                        
+                        headers = [h] if h else []
 
                     if Request.checkExtension(url) and not Request.check(url, method, content_type, data, cookies):
                         self.__crawl(url, method, data, headers, cookies)
@@ -208,7 +228,12 @@ class Crawler (threading.Thread):
                     if element.string is None:
                         continue
 
-                    Script.insert(None, element.string, response)
+                    s = Script.get(None, element.string)
+                    if not s:
+                        s = Script.insert(None, element.string)
+                    if s:
+                        s.link(response)
+
                 else:
                     src = urljoin(parent_url, src)
                     domain = urlparse(src).netloc
@@ -216,7 +241,11 @@ class Crawler (threading.Thread):
                         continue
 
                     content = requests.get(src).text
-                    Script.insert(src, content, response)
+                    s = Script.get(src, content)
+                    if not s:
+                        s = Script.insert(src, content)
+                    if s:
+                        s.link(response)
 
     # Main method of crawler. Cookies is the collection of cookies gathered
     def __crawl(self, parent_url, method, data=None, headers = [], cookies = []):
@@ -337,7 +366,12 @@ class Crawler (threading.Thread):
                     # If resource is a JS file
                     if request.url[-3:] == '.js':
                         content = requests.get(request.url).text
-                        Script.insert(request.url, content, main_response)
+                        s = Script.get(request.url, content)
+                        if not s:
+                            s = Script.insert(request.url, content)
+                        if s:
+                            s.link(main_response)
+                            
                         continue
 
                     elif Request.checkExtension(request.url) and not Request.check(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), cookies):
@@ -361,7 +395,7 @@ class Crawler (threading.Thread):
                             # If dynamic request responded with HTML, send it to analize
                             if resp.body and bool(BeautifulSoup(resp.body, 'html.parser').find()):
                                 responses.append({'url': request.url, 'response':resp})
-                                continue
+                        continue
 
                 # If not in scope or request already done, just process the cookies as other pages may set other cookies
                 resp_cookies = self.__processCookies(request)

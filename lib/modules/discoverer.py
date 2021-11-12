@@ -48,9 +48,9 @@ class Discoverer(threading.Thread):
                 code = int(line.split('(')[1].split(')')[0].split(':')[1].strip())
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
                 if int(code / 100) != 4 and not Request.check(discovered, 'GET'):
-                    print("[FOUND] Path found! Queued %s to crawler" % discovered)
-                    Path.insert(discovered)
-                    self.crawler.addToQueue(discovered)
+                    if Path.insert(discovered):
+                        print("[FOUND] Path found! Queued %s to crawler" % discovered)
+                        self.crawler.addToQueue(discovered)
             except:
                 pass
             finally:
