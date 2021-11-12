@@ -241,15 +241,15 @@ class Crawler (threading.Thread):
         else:
             print(('['+method+']').ljust(8) + parent_url)
 
-        # Needed for selenium to insert cookies with their domains correctly https://stackoverflow.com/questions/41559510/selenium-chromedriver-add-cookie-invalid-domain-error
-        if cookies:
-            self.driver.get(parent_url)
-
-        # Delete all previous requests so they don't pollute the results
-        del self.driver.requests
-
         # Request resource
         try:
+            # Needed for selenium to insert cookies with their domains correctly https://stackoverflow.com/questions/41559510/selenium-chromedriver-add-cookie-invalid-domain-error
+            if cookies:
+                self.driver.get(parent_url)
+
+            # Delete all previous requests so they don't pollute the results
+            del self.driver.requests
+
             if method == 'GET':
                 # Add headers inputed by the user, associated to the domain via a request interceptor
                 if headers:
