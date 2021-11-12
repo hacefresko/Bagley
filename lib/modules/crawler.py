@@ -142,6 +142,8 @@ class Crawler (threading.Thread):
         resp = Response.get(response_hash)
         if not resp:
             resp = Response.insert(response.status_code, decoded_body, response_headers, response_cookies, processed_request)
+        if resp:
+            resp.link(processed_request)
 
         return resp
 
