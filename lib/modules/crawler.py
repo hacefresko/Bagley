@@ -235,9 +235,9 @@ class Crawler (threading.Thread):
         for c in cookies:
             cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
             if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
-                req_cookies.append(c)
+                req_cookies.append(c.name)
         if req_cookies:
-            print(('['+method+']').ljust(8) + parent_url + '\t' + str(req_cookies))
+            print(('['+method+']').ljust(8) + parent_url + '\t' + str([c.name for c in req_cookies]))
         else:
             print(('['+method+']').ljust(8) + parent_url)
 
@@ -347,7 +347,7 @@ class Crawler (threading.Thread):
                             if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
                                 req_cookies.append(c)
                         if req_cookies:
-                            print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url + '\t' + str(req_cookies))
+                            print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url + '\t' + str([c.name for c in req_cookies]))
                         else:
                             print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url)
                         
