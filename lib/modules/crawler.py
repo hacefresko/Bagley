@@ -235,7 +235,7 @@ class Crawler (threading.Thread):
         for c in cookies:
             cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
             if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
-                req_cookies.append(c.name)
+                req_cookies.append(c)
         if req_cookies:
             print(('['+method+']').ljust(8) + parent_url + '\t' + str([c.name for c in req_cookies]))
         else:
