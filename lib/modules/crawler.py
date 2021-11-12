@@ -119,8 +119,6 @@ class Crawler (threading.Thread):
 
     # Inserts in the database the response if url belongs to the scope. request is a request selenium-wire object
     def __processResponse(self, request, processed_request):
-        url = request.url
-
         response = request.response
         if not response:
             time.sleep(5)
@@ -239,13 +237,16 @@ class Crawler (threading.Thread):
                     domain = urlparse(src).netloc
                     if not Domain.checkScope(domain):
                         continue
-
-                    content = requests.get(src).text
-                    s = Script.get(src, content)
-                    if not s:
-                        s = Script.insert(src, content)
-                    if s:
-                        s.link(response)
+                    try:
+                        content = requests.get(src).text
+                        s = Script.get(src, content)
+                        if not s:
+                            s = Script.insert(src, content)
+                        if s:
+                            s.link(response)
+                    except:
+                        print("[x] Error fething script %s" % src)
+                        continue
 
     # Main method of crawler. Cookies is the collection of cookies gathered
     def __crawl(self, parent_url, method, data=None, headers = [], cookies = []):
@@ -365,7 +366,8 @@ class Crawler (threading.Thread):
 
                     # If resource is a JS file
                     if request.url[-3:] == '.js':
-                        content = requests.get(request.url).text
+                        resp = request.response
+                        content = decode(resp.body, resp.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
                         s = Script.get(request.url, content)
                         if not s:
                             s = Script.insert(request.url, content)
@@ -420,7 +422,7 @@ class Crawler (threading.Thread):
                 domain = path.domain
 
                 try:
-                    initial_request = requests.get(url, allow_redirects=False)
+                    requests.get(url, allow_redirects=False)
                 except requests.exceptions.SSLError:
                     print("[x] SSL certificate validation failed for %s" % (url))
                     continue
