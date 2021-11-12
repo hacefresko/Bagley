@@ -36,7 +36,7 @@ class Searcher (threading.Thread):
             str = '[CVE] Vulnerabilities found at %s %s\n' % (tech.name, tech.version)
             for v in vulns:
                 if CVE.insert(v, tech):
-                    str += v + "\n"
+                    str += "\t" + v + "\n"
             print(str)
 
     @staticmethod
@@ -57,10 +57,6 @@ class Searcher (threading.Thread):
 
                     if tech:
                         tech.link(path)
-
-                        cves = tech.getCVEs()
-                        if len(cves) > 0:
-                            print("[CVE] %s uses vulnerable %s %s" % (str(path), tech.name, tech.version))
         except:
             return
 
