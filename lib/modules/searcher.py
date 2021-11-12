@@ -32,11 +32,13 @@ class Searcher (threading.Thread):
                     if v != '' and v not in vulns:
                         vulns.append(v)
         
-        if len(vulns) > 0:
-            str = '[CVE] Vulnerabilities found at %s %s\n' % (tech.name, tech.version)
-            for v in vulns:
-                if CVE.insert(v, tech):
-                    str += "\t" + v + "\n"
+        str = ""
+        for v in vulns:
+            if CVE.insert(v, tech):
+                str += "\t" + v + "\n"
+        
+        if str != '':
+            print('[CVE] Vulnerabilities found at %s %s\n' % (tech.name, tech.version))
             print(str)
 
     @staticmethod
