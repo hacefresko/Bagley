@@ -862,6 +862,9 @@ class Cookie:
                 cookie.update({'name': attribute.split('=')[0].lower()})
                 cookie.update({'value': attribute.split('=')[1]})
 
+        if cookie.get('expires') != 'session':
+            cookie['expires'] = 'date'
+
         if not cookie.get('name') and not cookie.get('value'):
             return None
 
