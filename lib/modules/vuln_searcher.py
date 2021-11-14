@@ -3,7 +3,7 @@ import threading, subprocess, shutil, requests, time, json
 import config
 from lib.entities import *
 
-class Searcher (threading.Thread):
+class Vuln_Searcher (threading.Thread):
     def __init__(self, stop):
         threading.Thread.__init__(self)
         self.stop = stop
@@ -55,7 +55,7 @@ class Searcher (threading.Thread):
                     if not tech:
                         tech = Technology.insert(t.get('cpe'), t.get('name'), t.get('version'))
                         if tech:
-                            Searcher.__lookupCVEs(tech)
+                            Vuln_Searcher.__lookupCVEs(tech)
 
                     if tech:
                         tech.link(path)
@@ -70,4 +70,4 @@ class Searcher (threading.Thread):
                 time.sleep(5)
                 continue
 
-            Searcher.__wappalyzer(path)
+            Vuln_Searcher.__wappalyzer(path)

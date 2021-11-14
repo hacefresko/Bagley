@@ -35,13 +35,17 @@ Scope options:
 
 ## Available modules
 
+Each modules is ran on a different thread
+
 *   Crawler: Crawls all resources rendering JavaScript (including dynamic requests made to APIs, other domains inside the scope, etc.).
 
-*   Discoverer: Searches for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and fuzzes subdomains and resources with [Gobuster](https://github.com/OJ/gobuster). When a subdomain is found, it checks if it's vulnerable to Subdomain Takeover with [Subjack](https://github.com/haccer/subjack). Every discover asset is sent to the crawler.
+*   Domain and Path Finder: Searches for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and fuzzes subdomains and resources with [Gobuster](https://github.com/OJ/gobuster). When a subdomain is found, it checks if it's vulnerable to Subdomain Takeover with [Subjack](https://github.com/haccer/subjack). Every discover asset is sent to the crawler.
 
 *   Injector: Tests SQLi with [Sqlmap](https://github.com/sqlmapproject/sqlmap), XSS with [DalFox](https://github.com/hahwul/dalfox), CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz) and SSTI with [Tplmap](https://github.com/epinna/tplmap) on GET and POST parameters.
 
-*   Searcher: Gets the technologies used by the application with [Wappalyzer](https://github.com/AliasIO/wappalyzer) and looks for known vulnerabilities in the [NVD](https://nvd.nist.gov/) via its [API](https://nvd.nist.gov/developers/products)
+*   Vulnerability Vuln_Searcher: Gets the technologies used by the application with [Wappalyzer](https://github.com/AliasIO/wappalyzer) and looks for known vulnerabilities in the [NVD](https://nvd.nist.gov/) via its [API](https://nvd.nist.gov/developers/products)
+
+*   Analyzer: Analyzes responses and scripts looking for API keys, based on a pattern list made with [SecretFinder](https://github.com/m4ll0k/SecretFinder) pattern list and [Dalfox](https://github.com/hahwul/dalfox) greeping list
 
 ## External requirements
 #### All of these requirements must be available in one of the PATH directories so Bagley can call them wherever it's executed

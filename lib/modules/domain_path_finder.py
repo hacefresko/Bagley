@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 import config
 from lib.entities import *
 
-class Discoverer(threading.Thread):
+class Domain_Path_Finder(threading.Thread):
     def __init__(self, stop, crawler):
         threading.Thread.__init__(self)
         self.crawler = crawler

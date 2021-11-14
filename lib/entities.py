@@ -535,6 +535,14 @@ class Request:
     def checkExtension(url):
         return False if pathlib.Path(url.split('?')[0]).suffix.lower() in config.EXTENSIONS_BLACKLIST else True
         
+    @staticmethod
+    def getById(id):
+        db = DB()
+        request = db.query_one('SELECT * FROM requests WHERE id = %d', (id,))
+        if not request:
+            return None
+        return Request(request[0], request[1], request[2], request[3], request[4], request[5])
+    
     # Returns request if exists else None
     @staticmethod
     def get(url, method, content_type=None, cookies=None, data=None):
@@ -650,7 +658,8 @@ class Request:
         return requests
 
 class Response:
-    def __init__(self, hash, code, body):
+    def __init__(self, id, hash, code, body):
+        self.id = id
         self.hash = hash
         self.code = code
         self.body = body
@@ -695,7 +704,7 @@ class Response:
 
         result = []
         for script in scripts:
-            result.append(Script(script[0], script[1], script[2]))
+            result.append(Script(script[0], script[1], script[2], script[3]))
 
         return result
 
@@ -715,7 +724,7 @@ class Response:
         response = db.query_one('SELECT * FROM responses WHERE hash = %s', (response_hash,))
         if not response:
             return None
-        return Response(response[0], response[1], response[2])
+        return Response(response[0], response[1], response[2], response[3])
 
     # Returns response hash if response succesfully inserted. 
     # If an error occur or response already inserted, returns None. 
@@ -758,6 +767,28 @@ class Response:
             if header.key == key:
                 return header
         return None
+
+    # Returns list of request that responded with this response
+    def getRequests(self):
+        result = []
+        db = DB()
+        requests = db.query_all("SELECT id FROM requests WHERE response = %s", (self.hash,))
+        for r in requests:
+            result.append(Request.getById(r[0]))
+        return result
+
+    # Yields response or None if there are no responses. It continues infinetly until program stops
+    @staticmethod
+    def yieldAll():
+        id = 1
+        db = DB()
+        while True:
+            response = db.query_one('SELECT * FROM responses WHERE id = %d', (id,))
+            if not response:
+                yield None
+                continue
+            id += 1
+            yield Response(response[0], response[1], response[2], response[3])
 
 class Header:
     def __init__(self, id, key, value):
@@ -917,7 +948,8 @@ class Cookie:
             return False
 
 class Script:
-    def __init__(self, hash, content, path_id):
+    def __init__(self, id, hash, content, path_id):
+        self.id = id
         self.hash = hash
         self.content = content
         self.path = Path.get(path_id)
@@ -935,7 +967,7 @@ class Script:
         result = db.query_one('SELECT * FROM scripts WHERE hash = %s', (Script.__getHash(url, content),))
         if not result:
             return None
-        return Script(result[0], result[1], result[2])
+        return Script(result[0], result[1], result[2], result[3])
 
     # Inserts script. If already inserted, returns None
     def insert(url, content):
@@ -964,6 +996,19 @@ class Script:
         db.exec('INSERT INTO response_scripts (response, script) VALUES (%s,%s)', (response.hash, self.hash))
 
         return True
+
+    # Yields scripts or None if there are no scripts. It continues infinetly until program stops
+    @staticmethod
+    def yieldAll():
+        id = 1
+        db = DB()
+        while True:
+            script = db.query_one('SELECT * FROM scripts WHERE id = %d', (id,))
+            if not script:
+                yield None
+                continue
+            id += 1
+            yield Script(script[0], script[1], script[2], script[3])
 
 class Vulnerability:
     def __init__(self, id, vuln_type, description):

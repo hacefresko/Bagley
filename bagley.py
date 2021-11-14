@@ -116,17 +116,21 @@ crawler = lib.modules.Crawler(stopThread)
 crawler.start()
 threads.append(crawler)
 
-discoverer = lib.modules.Discoverer(stopThread, crawler)
-discoverer.start()
-threads.append(discoverer)
+domain_path_finder = lib.modules.Domain_Path_Finder(stopThread, crawler)
+domain_path_finder.start()
+threads.append(domain_path_finder)
 
 injector = lib.modules.Injector(stopThread)
 injector.start()
 threads.append(injector)
 
-searcher = lib.modules.Searcher(stopThread)
-searcher.start()
-threads.append(searcher)
+vuln_searcher = lib.modules.Vuln_Searcher(stopThread)
+vuln_searcher.start()
+threads.append(vuln_searcher)
+
+analyzer = lib.modules.Analyzer(stopThread)
+analyzer.start()
+threads.append(analyzer)
 
 # Parse scope file
 print("[+] Parsing scope file: %s" % scope_file_name)

@@ -41,6 +41,7 @@ CREATE TABLE paths (
 );
 
 CREATE TABLE responses (
+    id INT UNIQUE KEY AUTO_INCREMENT,
     hash VARCHAR(255) PRIMARY KEY,
     code INT NOT NULL,
     content LONGTEXT
@@ -77,6 +78,7 @@ CREATE TABLE cookies (
 );
 
 CREATE TABLE scripts (
+    id INT UNIQUE KEY AUTO_INCREMENT,
     hash VARCHAR(255) PRIMARY KEY,
     path INT,
     content LONGTEXT,
