@@ -43,7 +43,7 @@ Each modules is ran on a different thread
 
 *   Injector: Tests SQLi with [Sqlmap](https://github.com/sqlmapproject/sqlmap), XSS with [DalFox](https://github.com/hahwul/dalfox), CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz) and SSTI with [Tplmap](https://github.com/epinna/tplmap) on GET and POST parameters.
 
-*   Vulnerability Vuln_Searcher: Gets the technologies used by the application with [Wappalyzer](https://github.com/AliasIO/wappalyzer) and looks for known vulnerabilities in the [NVD](https://nvd.nist.gov/) via its [API](https://nvd.nist.gov/developers/products)
+*   Vulnerability Searcher: Gets the technologies used by the application with [Wappalyzer](https://github.com/AliasIO/wappalyzer) and looks for known vulnerabilities in the [NVD](https://nvd.nist.gov/) via its [API](https://nvd.nist.gov/developers/products)
 
 *   Analyzer: Analyzes responses and scripts looking for API keys, based on a pattern list made with [SecretFinder](https://github.com/m4ll0k/SecretFinder) pattern list and [Dalfox](https://github.com/hahwul/dalfox) greeping list
 
