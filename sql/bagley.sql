@@ -140,7 +140,8 @@ CREATE TABLE response_scripts (
 CREATE TABLE vulnerabilities (
     id INT PRIMARY KEY AUTO_INCREMENT,
     type TEXT,
-    description TEXT
+    description TEXT,
+    element TEXT
 );
 
 CREATE TABLE technologies (

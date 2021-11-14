@@ -24,14 +24,12 @@ class Analyzer (threading.Thread):
             'mailgun-api':                      r'key-[0-9a-zA-Z]{32}',
             'mailchamp-api':                    r'[0-9a-f]{32}-us[0-9]{1,2}',
             'picatic-api':                      r'sk_live_[0-9a-z]{32}',
-            'google-oauth-id':                  r'[0-9(+-[0-9A-Za-z_]{32}.apps.googleusercontent.com',
             'google-api':                       r'AIza[0-9A-Za-z-_]{35}',
             'google-oauth':                     r'ya29\\.[0-9A-Za-z\\-_]+',
             'aws-access-key':                   r'AKIA[0-9A-Z]{16}',
             'amazon-mws-auth-token':            r'amzn\\.mws\\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
             'facebook-access-token':            r'EAACEdEose0cBA[0-9A-Za-z]+',
             'github-access-token':              r'[a-zA-Z0-9_-]*:[a-zA-Z0-9_\\-]+@github\\.com*',
-            'github':                           r"[gG][iI][tT][hH][uU][bB].*['|\"][0-9a-zA-Z]{35,40}['|\"]",
             'azure-storage':                    r'[a-zA-Z0-9_-]*\\.file.core.windows.net',
             'telegram-bot-api-key':             r'[0-9]+:AA[0-9A-Za-z\\-_]{33}',
             'square-access-token':              r'sq0atp-[0-9A-Za-z\\-_]{22}',
@@ -57,7 +55,7 @@ class Analyzer (threading.Thread):
                 for name, pattern in self.patterns.items():
                     for f in re.findall(pattern, script.content):
                         print("[KEYS] Found %s at script %s\n\n%s\n\n" % (name, str(script.path), f))
-                        Vulnerability.insert('Key Leak', name + ":" + f)
+                        Vulnerability.insert('Key Leak', name + ":" + f, str(script.path))
             else:
                 response = next(responses)
                 if not response or not response.body:
@@ -68,7 +66,6 @@ class Analyzer (threading.Thread):
                         paths = ''
                         for r in response.getRequests():
                             paths += str(r.path) + ', '
+                            Vulnerability.insert('Key Leak', name + ":" + f, str(r.path))
                         paths = paths[:-2]
                         print("[KEYS] Found %s at %s\n\n%s\n\n" % (name, paths, f))
-                        Vulnerability.insert('Key Leak', name + ":" + f)
-                

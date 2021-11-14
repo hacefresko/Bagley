@@ -40,10 +40,10 @@ class Injector (threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "---" in result.stdout:
-            Vulnerability.insert('SQLi', result.stdout)
+            Vulnerability.insert('SQLi', result.stdout, str(request.path))
             print("[SQLi] SQL injection found in %s!\n\n%s\n" % (url, result.stdout))
         elif "[WARNING] false positive or unexploitable injection point detected" in result.stdout:
-            Vulnerability.insert('pSQLi', result.stdout)
+            Vulnerability.insert('pSQLi', result.stdout, str(request.path))
             print("[SQLi] Possible SQL injection found in %s! But sqlmap couldn't exploit it\n\n%s\n" % (url, result.stdout))
 
     @staticmethod
@@ -80,7 +80,7 @@ class Injector (threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "[POC]" in result.stdout:
-            Vulnerability.insert('XSS', result.stdout)
+            Vulnerability.insert('XSS', result.stdout, str(request.path))
             print("[XSS] Cross Site Scripting found in %s!\n\n%s\n" % (url, result.stdout))
 
     @staticmethod
@@ -116,7 +116,7 @@ class Injector (threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "[VLN]" in result.stdout:
-            Vulnerability.insert('CRLFi', result.stdout)
+            Vulnerability.insert('CRLFi', result.stdout, str(request.path))
             print("[CRLFi] Carriage Return Line Feed injection found in %s!\n\n%s\n" % (url, result.stdout))
 
     @staticmethod
@@ -150,7 +150,7 @@ class Injector (threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "Tplmap identified the following injection point" in result.stdout:
-            Vulnerability.insert('SSTI', result.stdout)
+            Vulnerability.insert('SSTI', result.stdout, str(request.path))
             print("[SSTI] Server Side Template Injection found in %s!\n\n%s\n" % (url, result.stdout))
 
     def run(self):

@@ -10,7 +10,8 @@ class Domain_Path_Finder(threading.Thread):
         self.crawler = crawler
         self.stop = stop
 
-    def __fuzzPath(self, url, headers, cookies, errcodes=[]):
+    def __fuzzPath(self, path, headers, cookies, errcodes=[]):
+        url = str(path)
         # Crawl all urls on the database that has not been crawled
         if not Request.check(url, 'GET'):
             self.crawler.addToQueue(url)
@@ -69,13 +70,13 @@ class Domain_Path_Finder(threading.Thread):
                     return
 
     def __fuzzSubDomain(self, domain, errcodes=[]):
-        command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', domain]
+        command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', str(domain)]
         # Add errorcodes if specified
         if len(errcodes) != 0:
             command.append('-b')
             command.append(','.join(errcodes))
 
-        print("[+] Fuzzing domain %s" % domain)
+        print("[+] Fuzzing domain %s" % str(domain))
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -101,14 +102,14 @@ class Domain_Path_Finder(threading.Thread):
                     # Repeat the execution with errorcodes
                     errcode = error.split('=>')[1].split('(')[0].strip()
                     errcodes.append(errcode)
-                    self.__fuzzPath(domain, errcodes)
+                    self.__fuzzPath(str(domain), errcodes)
                 except:
                     return
 
     def __findSubDomains(self,domain):
-        command = [shutil.which('subfinder'), '-oJ', '-nC', '-silent', '-all', '-d', domain]
+        command = [shutil.which('subfinder'), '-oJ', '-nC', '-silent', '-all', '-d', str(domain)]
 
-        print("[+] Finding subdomains for %s" % domain)
+        print("[+] Finding subdomains for %s" % str(domain))
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
@@ -133,12 +134,12 @@ class Domain_Path_Finder(threading.Thread):
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
 
     def __subdomainTakeover(self, domain):
-        command = [shutil.which('subjack'), '-a', '-m', '-d', domain]
+        command = [shutil.which('subjack'), '-a', '-m', '-d', str(domain)]
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if result.stdout != '':
-            Vulnerability.insert('Subdomain Takeover', result.stdout)
-            print('[TAKEOVER] Subdomain Takeover found at %s!\n\n%s\n' % (domain, result.stdout))
+            Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
+            print('[TAKEOVER] Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout))
         
     def run(self):
         directories = Path.yieldDirectories()
@@ -146,11 +147,11 @@ class Domain_Path_Finder(threading.Thread):
         while not self.stop.is_set():
             domain = next(domains)
             if domain and domain.name[0] == '.':
-                self.__findSubDomains(domain.name[1:])
-                self.__fuzzSubDomain(domain.name[1:])
+                self.__findSubDomains(domain)
+                self.__fuzzSubDomain(domain)
             else:
                 directory = next(directories)
                 if not directory:
                     time.sleep(5)
                     continue
-                self.__fuzzPath(str(directory), directory.domain.headers, directory.domain.cookies)
+                self.__fuzzPath(directory, directory.domain.headers, directory.domain.cookies)
