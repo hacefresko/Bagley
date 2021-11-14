@@ -1033,7 +1033,7 @@ class Vulnerability:
     @staticmethod
     def insert(vuln_type, description, element):
         db = DB()
-        return Vulnerability(db.exec_and_get_last_id('INSERT INTO vulnerabilities (type, description, element) VALUES (%s,%s, %d)', (vuln_type, description, element)), vuln_type, description)
+        return Vulnerability(db.exec_and_get_last_id('INSERT INTO vulnerabilities (type, description, element) VALUES (%s,%s, %d)', (vuln_type, description, element)), vuln_type, description, element)
 
 class Technology:
     def __init__(self, id, cpe, name, version):
