@@ -700,7 +700,7 @@ class Response:
     # Returns the list of scripts of the response
     def __getScripts(self):
         db = DB()
-        scripts = db.query_all('SELECT hash, content, path FROM scripts INNER JOIN response_scripts on hash = script WHERE response = %s', (self.hash,))
+        scripts = db.query_all('SELECT * FROM scripts INNER JOIN response_scripts on hash = script WHERE response = %s', (self.hash,))
 
         result = []
         for script in scripts:

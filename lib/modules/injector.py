@@ -50,7 +50,7 @@ class Injector (threading.Thread):
     def __xss(request):
         url = str(request.path) + ('?' + request.params if request.params else '')
         # Added delay 1 by default since it only accepts integer and it's a large enough delay
-        command = [shutil.which('dalfox'), 'url', url, '-S', '--no-color', '--delay', ' --skip-bav', '1']
+        command = [shutil.which('dalfox'), 'url', url, '-S', '--no-color', '--delay', '1', ' --skip-bav']
         
         # Add POST data
         if request.method == 'POST' and request.data:
