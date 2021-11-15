@@ -51,7 +51,7 @@ class Analyzer (threading.Thread):
         responses = Response.yieldAll()
         while not self.stop.is_set():
             script = next(scripts)
-            if script and script.content:
+            if script and script.path and script.content:
                 for name, pattern in self.patterns.items():
                     for f in re.findall(pattern, script.content):
                         print("[KEYS] Found %s at script %s\n\n%s\n\n" % (name, str(script.path), f))
