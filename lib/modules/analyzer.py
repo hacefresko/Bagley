@@ -41,8 +41,6 @@ class Analyzer (threading.Thread):
             'stripe-restricted-key':            r'rk_live_[0-9a-zA-Z]{24}',
             'json_web_token' :                  r'ey[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$',
             'paypal_braintree_access_token' :   r'access_token\$production\$[0-9a-z]{16}\$[0-9a-f]{32}',
-            'authorization_basic' :             r'basic\s*[a-zA-Z0-9=:_\+\/-]+',
-            'authorization_bearer' :            r'bearer\s*[a-zA-Z0-9_\-\.=:_\+\/]+',
             'authorization_api' :               r'api[key|\s*]+[a-zA-Z0-9_\-]+',
         }
 
