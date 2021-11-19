@@ -70,13 +70,14 @@ class Domain_Path_Finder(threading.Thread):
                     return
 
     def __fuzzSubDomain(self, domain, errcodes=[]):
-        command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', str(domain)]
+        delay = str(int(1/config.REQ_PER_SEC * 1000))
+        command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', delay]
         # Add errorcodes if specified
         if len(errcodes) != 0:
             command.append('-b')
             command.append(','.join(errcodes))
 
-        print("[+] Fuzzing domain %s" % str(domain))
+        print("[+] Fuzzing domain %s" % str(domain)[1:])
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -107,9 +108,9 @@ class Domain_Path_Finder(threading.Thread):
                     return
 
     def __findSubDomains(self,domain):
-        command = [shutil.which('subfinder'), '-oJ', '-nC', '-silent', '-all', '-d', str(domain)]
+        command = [shutil.which('subfinder'), '-oJ', '-nC', '-silent', '-all', '-d', str(domain)[1:]]
 
-        print("[+] Finding subdomains for %s" % str(domain))
+        print("[+] Finding subdomains for %s" % str(domain)[1:])
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         

@@ -24,7 +24,6 @@ class Analyzer (threading.Thread):
             'mailgun-api':                      r'key-[0-9a-zA-Z]{32}',
             'mailchamp-api':                    r'[0-9a-f]{32}-us[0-9]{1,2}',
             'picatic-api':                      r'sk_live_[0-9a-z]{32}',
-            'google-api':                       r'AIza[0-9A-Za-z-_]{35}',
             'google-oauth':                     r'ya29\\.[0-9A-Za-z\\-_]+',
             'aws-access-key':                   r'AKIA[0-9A-Z]{16}',
             'amazon-mws-auth-token':            r'amzn\\.mws\\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
@@ -40,8 +39,7 @@ class Analyzer (threading.Thread):
             'stripe-api-key':                   r'sk_live_[0-9a-zA-Z]{24}',
             'stripe-restricted-key':            r'rk_live_[0-9a-zA-Z]{24}',
             'json_web_token' :                  r'ey[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+/=]*$',
-            'paypal_braintree_access_token' :   r'access_token\$production\$[0-9a-z]{16}\$[0-9a-f]{32}',
-            'authorization_api' :               r'api[key|\s*]+[a-zA-Z0-9_\-]+',
+            'paypal_braintree_access_token' :   r'access_token\$production\$[0-9a-z]{16}\$[0-9a-f]{32}'
         }
 
     def run(self):

@@ -467,7 +467,7 @@ class Request:
         return None
 
     # Returns True if request exists in database else False. 
-    # If there are already some (10) requests with the same path and method but different params/data with same key, it returns True to avoid saving same requests with different CSRFs, session values, etc.
+    # If there are already some (5) requests with the same path and method but different params/data with same key, it returns True to avoid saving same requests with different CSRFs, session values, etc.
     # If there are already requests to X but without cookies belonging to this domain inside cookies, it returns False
     # If requested file extension belongs to config.EXTENSIONS_BLACKLIST, returns False
     @staticmethod
@@ -494,7 +494,7 @@ class Request:
                 query_params.append(utils.substitutePOSTData(content_type, data, None, '%'))
             result = db.query_all(query, tuple(query_params))
 
-            if len(result) >= 10:
+            if len(result) >= 5:
                 return True
 
         query = 'SELECT * FROM requests WHERE path = %d AND method = %s '
