@@ -70,7 +70,7 @@ class Domain_Path_Finder(threading.Thread):
                     return
 
     def __fuzzSubDomain(self, domain, errcodes=[]):
-        delay = str(int(1/config.REQ_PER_SEC * 1000))
+        delay = str(int(1/config.REQ_PER_SEC * 1000)) + 'ms'
         command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', delay]
         # Add errorcodes if specified
         if len(errcodes) != 0:
