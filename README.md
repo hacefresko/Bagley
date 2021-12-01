@@ -6,7 +6,7 @@ Bagley is a tool made for bug bounty enviroments to analize whole domains lookin
 
 ## Usage
 
-File config.py defines some global variables that you may have to change, such as path for the directory fuzzing wordlist or the DNS fuzzing wordlist
+File config.py defines some global variables that you may have to change, such as path for the directory fuzzing wordlist, the DNS fuzzing wordlist, the database parameters, etc. A database with the parameters specified in config.py must exist
 
 File specifying the scope must be provided with parameter -S. It must contain one target per line, in JSON format. The application will iterate over the targets inside the scope file and will scan all of them one by one. Once it's done, it will wait for the user to write more targets into the file.
 
