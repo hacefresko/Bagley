@@ -13,7 +13,12 @@ def checkDependences():
             print("[x] %s not found in PATH" % d)
             return False
 
-    return os.path.exists(config.DIR_FUZZING) and os.path.exists(config.DOMAIN_FUZZING)
+    files = [config.DIR_FUZZING,config.DOMAIN_FUZZING, config.DB_SCRIPT]
+    for f in files:
+        if not os.path.exists(f):
+            return False
+
+    return True
 
 def initDB():
     db = DB()
