@@ -12,7 +12,8 @@ def checkDependences():
         if not shutil.which(d):
             print("[x] %s not found in PATH" % d)
             return False
-    return True
+
+    return os.path.exists(config.DIR_FUZZING) and os.path.exists(config.DOMAIN_FUZZING)
 
 def initDB():
     db = DB()
