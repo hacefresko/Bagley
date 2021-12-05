@@ -168,7 +168,7 @@ class Injector (threading.Thread):
 
             if request.params or request.data:
                 content_type = request.getHeader('content-type')
-                if content_type and 'text/html' in content_type:
+                if content_type and 'text/html' in str(content_type):
                     Injector.__xss(request)
                 Injector.__ssti(request)
                 Injector.__sqli(request)

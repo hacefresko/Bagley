@@ -74,7 +74,7 @@ class Domain_Path_Finder(threading.Thread):
         command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', delay]
         # Add errorcodes if specified
         if len(errcodes) != 0:
-            command.append('-b')
+            command.append('-s')
             command.append(','.join(errcodes))
 
         print("[+] Fuzzing domain %s" % str(domain)[1:])
