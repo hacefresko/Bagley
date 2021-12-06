@@ -259,10 +259,10 @@ class Crawler (threading.Thread):
         
         # Supplied cookies that can be sent in this request
         req_cookies = []
-        for c in cookies:
-            cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
-            if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
-                req_cookies.append(c)
+        for cookie in cookies:
+            cookie_path = Path.parseURL(str(path) + cookie.path[1:]) if cookie.path != '/' else path
+            if Domain.compare(cookie.domain, str(path.domain)) and path.checkParent(cookie_path):
+                req_cookies.append(cookie)
 
         # Request resource
         try:
@@ -292,12 +292,12 @@ class Crawler (threading.Thread):
                 if cookies :
                     try:
                         for cookie in req_cookies:
-                            cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
-                            if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
+                            cookie_path = Path.parseURL(str(path) + cookie.path[1:]) if cookie.path != '/' else path
+                            if Domain.compare(cookie.domain, str(path.domain)) and path.checkParent(cookie_path):
                                 self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain": cookie.domain})
                     except:
                         # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
-                        print("[ERROR] %s is a cookie-averse document" % parent_url)
+                        print("[ERROR] Couldn't insert cookie %s for %s" % (str(cookie), parent_url))
 
                 self.driver.get(parent_url)
             elif method == 'POST':
@@ -323,7 +323,7 @@ class Crawler (threading.Thread):
                 cookies = utils.mergeCookies(cookies, main_request.cookies)
 
                 if cookies:
-                    print(('['+method+']').ljust(8) + parent_url + '\t' + str([c.name for c in cookies]))
+                    print(('['+method+']').ljust(8) + parent_url + '\t' + str([cookie.name for cookie in cookies]))
                 else:
                     print(('['+method+']').ljust(8) + parent_url)
 
@@ -377,12 +377,12 @@ class Crawler (threading.Thread):
 
                     elif Request.checkExtension(request.url) and not Request.check(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), cookies):
                         req_cookies = []
-                        for c in cookies:
-                            cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
-                            if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
-                                req_cookies.append(c)
+                        for cookie in cookies:
+                            cookie_path = Path.parseURL(str(path) + cookie.path[1:]) if cookie.path != '/' else path
+                            if Domain.compare(cookie.domain, str(path.domain)) and path.checkParent(cookie_path):
+                                req_cookies.append(cookie)
                         if req_cookies:
-                            print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url + '\t' + str([c.name for c in req_cookies]))
+                            print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url + '\t' + str([cookie.name for cookie in req_cookies]))
                         else:
                             print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url)
                         
