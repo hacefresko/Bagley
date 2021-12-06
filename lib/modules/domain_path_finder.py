@@ -85,7 +85,7 @@ class Domain_Path_Finder(threading.Thread):
         while line:
             try:
                 discovered = line.split('Found: ')[1].rstrip()
-                if Domain.checkScope(discovered):
+                if Domain.checkScope(discovered) and not Domain.get(discovered):
                     print('[FOUND] Domain found! Inserted %s to database' % discovered)
                     Domain.insert(discovered)
                     self.__subdomainTakeover(discovered)
@@ -123,7 +123,7 @@ class Domain_Path_Finder(threading.Thread):
                     try:
                         # Check if domain really exist, since subfinder does not check it
                         socket.gethostbyname(d)
-                        if Domain.checkScope(d):
+                        if Domain.checkScope(d) and not Domain.get(discovered):
                             print('[FOUND] Domain found! Inserted %s to database' % d)
                             Domain.insert(d)
                             self.__subdomainTakeover(d)
