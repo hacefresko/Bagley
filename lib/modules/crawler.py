@@ -364,7 +364,7 @@ class Crawler (threading.Thread):
                 if Domain.checkScope(domain):
 
                     # If resource is a JS file
-                    if request.url[-3:] == '.js':
+                    if request.url.split('?')[0][-3:] == '.js':
                         resp = request.response
                         content = decode(resp.body, resp.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
                         s = Script.get(request.url, content)
