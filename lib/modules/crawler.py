@@ -76,14 +76,14 @@ class Crawler (threading.Thread):
         if not Path.insert(url):
             return None
 
-        # Since all cookies set by responses belonging to the scope are stored previously,
-        # cookies sent by requests which are not in db don't belong to scope
+        # Add cookies to request. If not already inserted, insert them (cookies may be set via set-cookie or via JavaScript)
         request_cookies = []
         if request.headers.get('cookie'):
             for cookie in request.headers.get('cookie').split('; '):
                 c = Cookie.get(cookie.split('=')[0], cookie.split('=')[1], url)
-                if c:
-                    request_cookies.append(c)
+                if not c:
+                    c = Cookie.insertRaw(url, cookie)
+                request_cookies.append(c)
             del request.headers['cookie']
 
         request_headers = []
@@ -97,28 +97,12 @@ class Crawler (threading.Thread):
 
         return Request.insert(url, request.method, request_headers, request_cookies, request.body.decode('utf-8', errors='ignore'))
 
-    # Inserts cookies set by response (set-cookie header)
-    def __processCookies(self, request):
-        response_cookies = []
-        response = request.response
-        if not response:
-            time.sleep(5)
-            response = request.response
-            if not response:
-                return None
-
-        if response.headers.get_all('set-cookie'):
-            for raw_cookie in response.headers.get_all('set-cookie'):
-                c = Cookie.insertRaw(request.url, raw_cookie)
-                if c:
-                    response_cookies.append(c)
-
-            del response.headers['set-cookie']
-
-        return response_cookies
-
-    # Inserts in the database the response if url belongs to the scope. request is a request selenium-wire object
-    def __processResponse(self, request, processed_request):
+    # Inserts in the database the response if url belongs to the scope
+    # request is a request selenium-wire object
+    # If main is True and code != 3xx, response body will be gotten by self.driver.page_source (selenium always follows 
+    # redirects, so even though the response is 3xx, body given by self.driver.page_source will be the final one, and
+    # we want the inmediate response)
+    def __processResponse(self, request, processed_request, main=False):
         response = request.response
         if not response:
             time.sleep(5)
@@ -126,7 +110,15 @@ class Crawler (threading.Thread):
             if not response:
                 return False
 
-        response_cookies = self.__processCookies(request)
+        # Insert cookies set by set-cookie header
+        response_cookies = []
+        if response.headers.get_all('set-cookie'):
+            for raw_cookie in response.headers.get_all('set-cookie'):
+                c = Cookie.insertRaw(request.url, raw_cookie)
+                if c:
+                    response_cookies.append(c)
+
+            del response.headers['set-cookie']
         
         response_headers = []
         for k,v in response.headers.items():
@@ -136,12 +128,15 @@ class Crawler (threading.Thread):
             if h:
                 response_headers.append(h)
 
-        decoded_body = decode(response.body, response.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
+        if main and response.status_code//100 != 3:
+            body = self.driver.page_source
+        else:
+            body = decode(response.body, response.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
         
         response_hash = Response.hash(response.status_code, response.body, response_headers, response_cookies)
         resp = Response.get(response_hash)
         if not resp:
-            resp = Response.insert(response.status_code, decoded_body, response_headers, response_cookies, processed_request)
+            resp = Response.insert(response.status_code, body, response_headers, response_cookies, processed_request)
         if resp:
             resp.link(processed_request)
 
@@ -262,16 +257,12 @@ class Crawler (threading.Thread):
             return
         domain = path.domain
         
-        # Cookies that can be sent in this request
+        # Supplied cookies that can be sent in this request
         req_cookies = []
         for c in cookies:
             cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
             if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
                 req_cookies.append(c)
-        if req_cookies:
-            print(('['+method+']').ljust(8) + parent_url + '\t' + str([c.name for c in req_cookies]))
-        else:
-            print(('['+method+']').ljust(8) + parent_url)
 
         # Request resource
         try:
@@ -298,7 +289,6 @@ class Crawler (threading.Thread):
                             request.headers[header.key] = header.value
                     self.driver.request_interceptor = interceptor
 
-                # Add cookies  inputed by the user, associated to the domain to request
                 if cookies :
                     try:
                         for cookie in req_cookies:
@@ -330,33 +320,40 @@ class Crawler (threading.Thread):
                 main_request = self.__processRequest(request)
                 if not main_request:
                     return
+                cookies = utils.mergeCookies(cookies, main_request.cookies)
 
-                main_response = self.__processResponse(request, main_request)
+                if cookies:
+                    print(('['+method+']').ljust(8) + parent_url + '\t' + str([c.name for c in cookies]))
+                else:
+                    print(('['+method+']').ljust(8) + parent_url)
+
+                main_response = self.__processResponse(request, main_request, main=True)
                 if not main_response:
                     return
-
-                # Add new cookies to gathered cookies
                 cookies = utils.mergeCookies(cookies, main_response.cookies)
 
                 # Follow redirect if 3xx response is received
                 code = main_response.code
                 if code//100 == 3:
-                    redirect_to = main_response.getHeader('location').value
-                    if not redirect_to:
-                        print("[ERROR] Received %d but location header is not present" % code)
+                    if code == 304:
+                        print("[304] Chached response")
                     else:
-                        redirect_to = urljoin(parent_url, redirect_to)
+                        redirect_to = main_response.getHeader('location').value
+                        if not redirect_to:
+                            print("[ERROR] Received %d but location header is not present" % code)
+                        else:
+                            redirect_to = urljoin(parent_url, redirect_to)
 
-                        if code != 307 and code != 308:
-                            method = 'GET'
-                            data = None
+                            if code != 307 and code != 308:
+                                method = 'GET'
+                                data = None
 
-                        if Request.checkExtension(redirect_to) and not Request.check(redirect_to, method, data=data, cookies=cookies):
-                            if Domain.checkScope(urlparse(redirect_to).netloc):
-                                print("[%d]   %s " % (code, redirect_to))
-                                self.__crawl(redirect_to, method, data, headers, cookies)
-                            else:
-                                print("[%d]   %s [OUT OF SCOPE]" % (code, redirect_to))
+                            if Request.checkExtension(redirect_to) and not Request.check(redirect_to, method, data=data, cookies=cookies):
+                                if Domain.checkScope(urlparse(redirect_to).netloc):
+                                    print("[%d]   %s " % (code, redirect_to))
+                                    self.__crawl(redirect_to, method, data, headers, cookies)
+                                else:
+                                    print("[%d]   %s [OUT OF SCOPE]" % (code, redirect_to))
                     return
 
                 responses.append({'url': parent_url, 'response':main_response})
@@ -390,21 +387,17 @@ class Crawler (threading.Thread):
                             print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url)
                         
                         req = self.__processRequest(request)
-                        resp = self.__processResponse(request, req)
+                        if req:
+                            cookies = utils.mergeCookies(cookies, req.cookies)
 
-                        if resp:
-                            # Append all cookies set via dynamic request, since some websites use dynamic requests to set new cookies
+                        resp = self.__processResponse(request, req)
+                        if resp: 
                             cookies = utils.mergeCookies(cookies, resp.cookies)
-                            
+
                             # If dynamic request responded with HTML, send it to analize
                             if resp.body and bool(BeautifulSoup(resp.body, 'html.parser').find()):
                                 responses.append({'url': request.url, 'response':resp})
                         continue
-
-                # If not in scope or request already done, just process the cookies as other pages may set other cookies
-                resp_cookies = self.__processCookies(request)
-                if resp_cookies:
-                    cookies = utils.mergeCookies(cookies, resp_cookies)
 
         # Analyze all responses
         for response in responses:

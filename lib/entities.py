@@ -902,13 +902,13 @@ class Cookie:
             elif attribute.split('=')[0].lower() in ['expires', 'max-age', 'domain', 'path', 'samesite']:
                 cookie.update({attribute.split('=')[0].lower(): attribute.split('=')[1].lower()})
             else:
-                cookie.update({'name': attribute.split('=')[0].lower()})
+                cookie.update({'name': attribute.split('=')[0]})
                 cookie.update({'value': attribute.split('=')[1]})
 
         if cookie.get('expires') != 'session':
             cookie['expires'] = 'date'
 
-        if not cookie.get('name') and not cookie.get('value'):
+        if not cookie.get('name'):
             return None
 
         return Cookie.insert(cookie.get('name'), cookie.get('value'), cookie.get('domain'), cookie.get('path'), cookie.get('expires'), cookie.get('max-age'), cookie.get('httponly'), cookie.get('secure'), cookie.get('samesite'))

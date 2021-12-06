@@ -48,7 +48,9 @@ Each modules is ran on a different thread
 *   Analyzer: Analyzes responses and scripts looking for API keys, based on a pattern list made with [SecretFinder](https://github.com/m4ll0k/SecretFinder) pattern list and [Dalfox](https://github.com/hahwul/dalfox) greeping list
 
 ## External requirements
+
 #### All of these requirements must be available in one of the PATH directories so Bagley can call them wherever it's executed
+
 *   [Mariadb](https://mariadb.com/)
 *   [Chrome](https://www.google.com/chrome/)
 *   [ChromeDriver](https://chromedriver.chromium.org/downloads)
@@ -62,6 +64,7 @@ Each modules is ran on a different thread
 *   [Wappalyzer](https://github.com/AliasIO/wappalyzer)
 
 ## Useful documentation
+
 *   [MDN HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP)
 *   [Selenium](https://selenium-python.readthedocs.io/)
 *   [Selenium Wire](https://github.com/wkeeling/selenium-wire)
