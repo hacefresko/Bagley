@@ -18,10 +18,12 @@ class Crawler (threading.Thread):
         # Init queue for other modules to send urls to crawl
         self.queue = []
 
-        # Init selenium driver
+        # Init selenium driver http://www.assertselenium.com/java/list-of-chrome-driver-command-line-arguments/
         opts = Options()
         opts.headless = True
-        opts.add_argument('--no-proxy-server') # https://stackoverflow.com/questions/51503437/headless-chrome-web-driver-too-slow-and-unable-to-download-file
+        opts.incognito = True
+        opts.add_argument("--incognito")
+        opts.add_argument("--no-proxy-server") # https://stackoverflow.com/questions/51503437/headless-chrome-web-driver-too-slow-and-unable-to-download-file
         opts.add_argument("--proxy-server='direct://'")
         opts.add_argument("--proxy-bypass-list=*")
         opts.add_argument("start-maximized"); # https://stackoverflow.com/a/26283818/1689770
@@ -146,6 +148,10 @@ class Crawler (threading.Thread):
             if element.name == 'a':
                 path = element.get('href')
                 if not path:
+                    continue
+
+                # If href is not a url to another web page (http or https or a valid path -> https://www.rfc-editor.org/rfc/rfc3986#section-3.3)
+                if path.find(':') != -1 and path.split(':')[0].find('/') == -1 and path.split(':')[0] != 'http' and path.split(':')[0] != 'https':
                     continue
 
                 # Cut the html id selector from url
