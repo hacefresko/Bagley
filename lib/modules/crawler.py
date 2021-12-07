@@ -55,14 +55,11 @@ class Crawler (threading.Thread):
         # Third argument from open() means to request synchronously so selenium wait for it to be completed
         self.driver.execute_script("""
         function post(path, data, headers) {
-            var xhr = new XMLHttpRequest();
-            xhr.open("POST", path, false);
-
-            Object.keys(headers).forEach(function(key){
-                xhr.setRequestHeader(key, headers[key])
-            })
-
-            xhr.send(data)
+            fetch(path, {
+                method: 'POST',
+                headers: headers,
+                body: data
+            }).then((result)=>{return result;});
         }
         
         post(arguments[0], arguments[1], arguments[2]);
@@ -266,15 +263,10 @@ class Crawler (threading.Thread):
 
         # Request resource
         try:
-            # Needed for selenium to insert cookies with their domains correctly https://stackoverflow.com/questions/41559510/selenium-chromedriver-add-cookie-invalid-domain-error
-            if cookies:
-                self.driver.get(parent_url)
-
             # Delete all previous requests so they don't pollute the results
             del self.driver.requests
 
             if method == 'GET':
-                # Add headers inputed by the user, associated to the domain via a request interceptor
                 if headers:
                     # If we try to acces headers from interceptor by domain.headers, when another variable
                     # named domain is used, it will overwrite driver.headers so it will throw an exception.
@@ -294,9 +286,8 @@ class Crawler (threading.Thread):
                         for cookie in req_cookies:
                             cookie_path = Path.parseURL(str(path) + cookie.path[1:]) if cookie.path != '/' else path
                             if Domain.compare(cookie.domain, str(path.domain)) and path.checkParent(cookie_path):
-                                self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain": cookie.domain})
+                                self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value})
                     except:
-                        # https://developer.mozilla.org/en-US/docs/Web/WebDriver/Errors/InvalidCookieDomain
                         print("[ERROR] Couldn't insert cookie %s for %s" % (str(cookie), parent_url))
 
                 self.driver.get(parent_url)
