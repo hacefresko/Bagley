@@ -4,11 +4,12 @@ from urllib.parse import urljoin
 import config
 from lib.entities import *
 
-class Domain_Path_Finder(threading.Thread):
+class Finder(threading.Thread):
     def __init__(self, stop, crawler):
         threading.Thread.__init__(self)
         self.crawler = crawler
         self.stop = stop
+        self.analyzed = []
 
     def __fuzzPath(self, path, headers, cookies, errcodes=[]):
         url = str(path)
@@ -135,18 +136,21 @@ class Domain_Path_Finder(threading.Thread):
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
 
     def __subdomainTakeover(self, domain):
-        command = [shutil.which('subjack'), '-a', '-m', '-d', str(domain)]
-        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+        if domain not in self.analyzed:
+            command = [shutil.which('subjack'), '-a', '-m', '-d', str(domain)]
+            result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
-        if result.stdout != '':
-            Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
-            print('[TAKEOVER] Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout))
+            if result.stdout != '':
+                Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
+                print('[TAKEOVER] Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout))
+            self.analyzed.append(domain)
         
     def run(self):
         directories = Path.yieldDirectories()
         domains = Domain.yieldAll()
         while not self.stop.is_set():
             domain = next(domains)
+            self.__subdomainTakeover(domain)
             if domain and domain.name[0] == '.':
                 self.__findSubDomains(domain)
                 self.__fuzzSubDomain(domain)
