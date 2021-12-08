@@ -54,7 +54,6 @@ class Crawler (threading.Thread):
                 cookie_header += cookie.name + '=' + cookie.value + '; '
             headers_dict['cookie'] = cookie_header
 
-        # Third argument from open() means to request synchronously so selenium wait for it to be completed
         self.driver.execute_script("""
         function post(path, data, headers) {
             fetch(path, {
@@ -144,7 +143,7 @@ class Crawler (threading.Thread):
     # Traverse the HTML looking for paths to crawl
     def __parseHTML(self, parent_url, cookies, response):
         parser = BeautifulSoup(response.body, 'html.parser')
-        for element in parser(['a', 'form', 'script', 'frame']):
+        for element in parser(['a', 'form', 'script', 'iframe', 'button']):
             if element.name == 'a':
                 path = element.get('href')
                 if not path:
@@ -247,6 +246,44 @@ class Crawler (threading.Thread):
                     except:
                         print("[x] Error fething script %s" % src)
                         continue
+
+            elif element.name == 'iframe':
+                path = element.get('src')
+                if not path:
+                    continue
+
+                url = urljoin(parent_url, path)
+                domain = urlparse(url).netloc
+
+                if Domain.checkScope(domain) and Request.checkExtension(url) and not Request.check(url, 'GET', cookies=cookies):
+                    self.__crawl(url, 'GET', cookies=cookies)
+
+            elif element.name == 'button':
+                # If button belongs to a form                
+                if element.get('form') or element.get('type') == 'submit' or element.get('type') == 'reset':
+                    continue
+                
+                try:
+                    # Click the button and check if url has changed
+                    if element.get('id'):
+                        button_id = element.get('id')
+
+                        self.driver.get(parent_url)
+                        self.driver.execute_script("document.getElementById(arguments[0]).click();", button_id)
+
+                    elif element.get('class'):
+                        button_class = element.get('class')
+
+                        self.driver.get(parent_url)
+                        self.driver.execute_script("document.getElementsByClassName(arguments[0])[0].click();", button_class)
+                    
+                    if self.driver.current_url != parent_url:
+                        domain = urlparse(self.driver.current_url).netloc
+                        if Domain.checkScope(domain) and Request.checkExtension(self.driver.current_url) and not Request.check(self.driver.current_url, 'GET', cookies=cookies):
+                            self.__crawl(self.driver.current_url, 'GET', cookies=cookies)
+
+                except Exception as e:
+                    continue
 
     # Main method of crawler. Cookies is the collection of cookies gathered
     def __crawl(self, parent_url, method, data=None, headers = [], cookies = []):
