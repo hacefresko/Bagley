@@ -16,12 +16,17 @@ def replaceURLencoded(data, match, newValue):
 
 
 def replaceJSON(data, match, newValue):
-    for k,v in data.items():
-        if isinstance(v, dict):
-            data.update({k:replaceJSON(v, match, newValue)})
-        else:
-            if match is None or match.lower() in k.lower():
-                data.update({k:newValue})
+    if isinstance(data, dict):
+        for k,v in data.items():
+            if isinstance(v, dict):
+                data.update({k:replaceJSON(v, match, newValue)})
+            else:
+                if match is None or match.lower() in k.lower():
+                    data.update({k:newValue})
+    elif isinstance(data, list):
+        for e in data:
+            replaceJSON(e, match, newValue)
+
     return data
 
 # Merges both lists of cookies. If the same cookie is on both lists, the chosen cookie is the one from cookies2
