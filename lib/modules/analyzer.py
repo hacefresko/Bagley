@@ -33,7 +33,6 @@ class Analyzer (threading.Thread):
             'telegram-bot-api-key':             r'[0-9]+:AA[0-9A-Za-z\\-_]{33}',
             'square-access-token':              r'sq0atp-[0-9A-Za-z\\-_]{22}',
             'square-oauth-secret':              r'sq0csp-[0-9A-Za-z\\-_]{43}',
-            'twitter-access-token':             r'[tT][wW][iI][tT][tT][eE][rR].*[1-9][0-9]+-[0-9a-zA-Z]{40}',
             'twilio-api-key':                   r'SK[0-9a-fA-F]{32}',
             'braintree-token':                  r'access_token\\$production\\$[0-9a-z]{16}\\$[0-9a-f]{32}',
             'stripe-api-key':                   r'sk_live_[0-9a-zA-Z]{24}',
