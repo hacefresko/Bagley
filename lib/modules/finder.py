@@ -136,14 +136,14 @@ class Finder(threading.Thread):
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
 
     def __subdomainTakeover(self, domain):
-        if domain not in self.analyzed:
+        if str(domain) not in self.analyzed:
             command = [shutil.which('subjack'), '-a', '-m', '-d', str(domain)]
             result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
             if result.stdout != '':
                 Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
                 print('[TAKEOVER] Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout))
-            self.analyzed.append(domain)
+            self.analyzed.append(str(domain))
         
     def run(self):
         directories = Path.yieldDirectories()
