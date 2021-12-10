@@ -341,7 +341,7 @@ class Crawler (threading.Thread):
             return
 
         # List of responses to analyze
-        responses = []
+        resp_to_analyze = []
 
         main_request = None
         main_response = None
@@ -390,7 +390,7 @@ class Crawler (threading.Thread):
                                     print("[%d]   %s [OUT OF SCOPE]" % (code, redirect_to))
                     return
 
-                responses.append({'url': parent_url, 'response':main_response})
+                resp_to_analyze.append({'url': parent_url, 'response':main_response})
 
             # Dynamic requests      
             else:
@@ -430,12 +430,12 @@ class Crawler (threading.Thread):
 
                             # If dynamic request responded with HTML, send it to analize
                             if resp.body and bool(BeautifulSoup(resp.body, 'html.parser').find()):
-                                responses.append({'url': request.url, 'response':resp})
+                                resp_to_analyze.append({'url': request.url, 'response':resp})
                         continue
 
         # Analyze all responses
-        for response in responses:
-            self.__parseHTML(response['url'], cookies, response['response'])
+        for resp_to_analyze in resp_to_analyze:
+            self.__parseHTML(resp_to_analyze['url'], cookies, resp_to_analyze['response'])
 
     def run(self):
         # Generator for domains
@@ -455,7 +455,7 @@ class Crawler (threading.Thread):
                 except requests.exceptions.SSLError:
                     print("[x] SSL certificate validation failed for %s" % (url))
                     continue
-                except:
+                except Exception as e:
                     print("[x] Cannot request %s" % (url))
                     continue
             else:
@@ -485,9 +485,9 @@ class Crawler (threading.Thread):
                 if http_request and https_request:
                     url = http_request.url
                     self.addToQueue(https_request.url)
-                elif http_request:
+                elif http_request is not None:
                     url = http_request.url
-                elif https_request:
+                elif https_request is not None:
                     url = https_request.url
                 else:
                     print("[x] Cannot request %s" % domain_name)

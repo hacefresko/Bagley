@@ -1011,29 +1011,29 @@ class Script:
             yield Script(script[0], script[1], script[2], script[3])
 
 class Vulnerability:
-    def __init__(self, id, vuln_type, description, element):
+    def __init__(self, id, vuln_type, description, element, command):
         self.id = id
         self.type = vuln_type
         self.description = description
         self.path = element
+        self.command = command
 
     @staticmethod
     def get(id):
         db = DB()
         vuln = db.query_one('SELECT * FROM vulnerabilities WHERE id = %d', (id,))
-        return Vulnerability(vuln[0], vuln[1], vuln[2], vuln[3]) if vuln else None
+        return Vulnerability(vuln[0], vuln[1], vuln[2], vuln[3], vuln[4]) if vuln else None
 
     @staticmethod
     def getByType(vuln_type):
         db = DB()
         vuln = db.query_one('SELECT * FROM vulnerabilities WHERE type = %s', (vuln_type,))
-        return Vulnerability(vuln[0], vuln[1], vuln[2], vuln[3]) if vuln else None
-
+        return Vulnerability(vuln[0], vuln[1], vuln[2], vuln[3], vuln[4]) if vuln else None
 
     @staticmethod
-    def insert(vuln_type, description, element):
+    def insert(vuln_type, description, element, command=None):
         db = DB()
-        return Vulnerability(db.exec_and_get_last_id('INSERT INTO vulnerabilities (type, description, element) VALUES (%s,%s, %d)', (vuln_type, description, element)), vuln_type, description, element)
+        return Vulnerability(db.exec_and_get_last_id('INSERT INTO vulnerabilities (type, description, element, command) VALUES (%s,%s, %d, %s)', (vuln_type, description, element, command)), vuln_type, description, element, command)
 
 class Technology:
     def __init__(self, id, cpe, name, version):

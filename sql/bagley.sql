@@ -141,7 +141,8 @@ CREATE TABLE vulnerabilities (
     id INT PRIMARY KEY AUTO_INCREMENT,
     type TEXT,
     description TEXT,
-    element TEXT
+    element TEXT,
+    command TEXT
 );
 
 CREATE TABLE technologies (
