@@ -931,7 +931,7 @@ class Cookie:
         
         # Default values for cookie attributes
         path = Path.parseURL(url)
-        domain = path.domain
+        domain = str(path.domain)
         cookie = {"domain": domain}
         for attribute in raw_cookie.split(';'):
             attribute = attribute.strip()
@@ -945,8 +945,9 @@ class Cookie:
 
         if cookie.get('expires') and cookie.get('expires') != 'session':
             cookie['expires'] = 'date'
-        cookie_path = Path.parseURL(str(path) + cookie.path[1:]) if cookie.path != '/' else path
-        if not Domain.compare(cookie.domain, path.domain.name) or not path.checkParent(cookie_path):
+
+        cookie_path = Path.parseURL(str(path) + cookie.get('path')[1:]) if cookie.get('path') != '/' else path
+        if not Domain.compare(cookie.get('domain'), path.domain.name) or not path.checkParent(cookie_path):
             return None
 
         return Cookie.insert(cookie)
