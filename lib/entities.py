@@ -280,7 +280,7 @@ class Path:
             url = urlunparse(url_to_parse)
 
         # Get protocol
-        result['protocol'] = urlparse(url).scheme
+        result['protocol'] = urlparse(url).scheme.lower()
         # Get domain
         result['domain'] = urlparse(url).netloc
         # Get elements after http://example.com/ and subsitute '' by None
@@ -468,7 +468,7 @@ class Request:
 
     # Returns True if request exists in database else False. 
     # If there are already some (5) requests with the same path and method but different params/data with same key, it returns True to avoid saving same requests with different CSRFs, session values, etc.
-    # If there are already requests to X but without cookies belonging to this domain inside cookies, it returns False
+    # If there are already requests to X but without cookies belonging to this domain and path inside cookies, it returns False
     # If requested file extension belongs to config.EXTENSIONS_BLACKLIST, returns False
     @staticmethod
     def check(url, method, content_type=None, data=None, cookies=[]):
@@ -908,28 +908,29 @@ class Cookie:
         if cookie.get('expires') != 'session':
             cookie['expires'] = 'date'
 
-        if not cookie.get('name'):
-            return None
-
         return Cookie.insert(cookie.get('name'), cookie.get('value'), cookie.get('domain'), cookie.get('path'), cookie.get('expires'), cookie.get('max-age'), cookie.get('httponly'), cookie.get('secure'), cookie.get('samesite'))
 
-    # Return cookie if name and value matches and url matches with domain and path
+    # Return last inserted cookie whose name and url matches resectively with name and domain and path
     @staticmethod
-    def get(name, value, url):
+    def get(name, url):
+        last_cookie = None
+
         path = Path.parseURL(url)
         if not path:
             return None
         db = DB()
 
-        results = db.query_all('SELECT * FROM cookies WHERE name = %s AND value = %s', (name, value))
+        results = db.query_all('SELECT * FROM cookies WHERE name = %s', (name,))
 
         for result in results:
             cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9])
             # If domain/range of subdomains and range of paths from cookie match with url
             cookie_path = Path.parseURL(str(path) + cookie.path[1:]) if cookie.path != '/' else path
             if Domain.compare(cookie.domain, path.domain.name) and path.checkParent(cookie_path):
-                return cookie
-        return None
+                if last_cookie is None or last_cookie.id < cookie.id:
+                    last_cookie = cookie
+
+        return last_cookie
 
     # Links the cookie to the specified target. If target is not a request nor a response, returns False
     def link(self, target):
