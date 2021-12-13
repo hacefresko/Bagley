@@ -349,7 +349,6 @@ class Crawler (threading.Thread):
                 main_response = self.__processResponse(request, main_request, main=True)
                 if not main_response:
                     return
-                self.cookies = utils.mergeCookies(self.cookies, main_response.cookies)
 
                 # Follow redirect if 3xx response is received
                 code = main_response.code
@@ -403,8 +402,6 @@ class Crawler (threading.Thread):
 
                         resp = self.__processResponse(request, req)
                         if resp: 
-                            self.cookies = utils.mergeCookies(self.cookies, resp.cookies)
-
                             # If dynamic request responded with HTML, send it to analize
                             if resp.body and bool(BeautifulSoup(resp.body, 'html.parser').find()):
                                 resp_to_analyze.append({'url': request.url, 'response':resp})

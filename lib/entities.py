@@ -518,9 +518,9 @@ class Request:
         req_cookies = []
         for c in cookies:
             cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
-            if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
+            if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path) and (path.protocol == 'http' or (path.protocol == 'https' and c.secure)):
                 req_cookies.append(c)
-        
+
         for request in requests:
             existing_cookies = 0
             for c in req_cookies:
