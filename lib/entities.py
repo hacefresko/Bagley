@@ -1,6 +1,8 @@
 import hashlib, pathlib, iptools
 from urllib.parse import urlparse, urlunparse
 
+from requests.sessions import session
+
 import config, lib.utils as utils
 from .database import DB
 
@@ -876,39 +878,78 @@ class Cookie:
             return None
         return Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9])
 
-    # Inserts cookie. If already inserted, returns None.
+    def getDict(self):
+        result = {}
+
+        result['name'] = self.name
+        result['value'] = self.value if self.value else ''
+        if self.path != '/':
+            result['path'] = self.path
+        if self.expires != 'session':
+            result['expires'] = self.expires
+        if self.maxage != 'session':
+            result['max-age'] = self.maxage
+        if self.httponly:
+            result['httponly'] = True
+        if self.secure:
+            result['secure'] = True
+        if self.samesite != "lax":
+            result['samesite'] = self.samesite
+
+        return result
+
+    # Inserts cookie as a dictionary. If already inserted, returns None.
     @staticmethod
-    def insert(name, value, domain, path, expires, maxage, httponly, secure, samesite):
-        cookie = Cookie.__get(name, value, domain, path, expires, maxage, httponly, secure, samesite)
+    def insert(c):
+        if c.get("name") is None or c.get("value") is None or c.get("domain") is None:
+            return None
+        if c.get("path") is None:
+            c['path'] = '/'
+        if c.get('expires') is None:
+            c['expires'] = "session"
+        if c.get('max-age') is None:
+            c['max-age'] = "session"
+        if c.get("httponly") is None:
+            c['httponly'] = False
+        if c.get("secure") is None:
+            c['secure'] = False
+        if c.get("samesite") is None:
+            c['samesite'] = "lax"
+
+        cookie = Cookie.__get(c["name"], c["value"], c["domain"], c["path"], c["expires"], c["max-age"], c["httponly"], c["secure"], c["samesite"])
         if cookie:
             return None
         db = DB()
-        id = db.exec_and_get_last_id('INSERT INTO cookies (name, value, domain, path, expires, maxage, httponly, secure, samesite) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)', [name, value, domain, path, expires, maxage, httponly, secure, samesite])
-        return Cookie(id, name, value, domain, path, expires, maxage, httponly, secure, samesite)
+        id = db.exec_and_get_last_id('INSERT INTO cookies (name, value, domain, path, expires, maxage, httponly, secure, samesite) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)', (c["name"], c["value"], c["domain"], c["path"], c["expires"], c["max-age"], c["httponly"], c["secure"], c["samesite"]))
+        return Cookie(id, c["name"], c["value"], c["domain"], c["path"], c["expires"], c["max-age"], c["httponly"], c["secure"], c["samesite"])
 
-    # Inserts cookie from the raw string. If already inserted, returns None.
+    # Inserts cookie from the raw string. If already inserted or domain/path does not match with url, returns None.
     @staticmethod
     def insertRaw(url, raw_cookie):
         if not raw_cookie:
             return None
         
         # Default values for cookie attributes
-        domain = urlparse(url).netloc if ':' not in urlparse(url).netloc else urlparse(url).netloc.split(':')[0]
-        cookie = {'expires':'session', 'max-age':'session', 'domain': domain, 'path': '/', 'secure': False, 'httponly': False, 'samesite':'lax'}
+        path = Path.parseURL(url)
+        domain = path.domain
+        cookie = {"domain": domain}
         for attribute in raw_cookie.split(';'):
             attribute = attribute.strip()
             if len(attribute.split('=')) == 1:
-                cookie.update({attribute.lower(): True})
+                cookie[attribute.lower()] = True
             elif attribute.split('=')[0].lower() in ['expires', 'max-age', 'domain', 'path', 'samesite']:
-                cookie.update({attribute.split('=')[0].lower(): attribute.split('=')[1].lower()})
+                cookie[attribute.split('=')[0].lower()] = attribute.split('=')[1].lower()
             else:
-                cookie.update({'name': attribute.split('=')[0]})
-                cookie.update({'value': attribute.split('=')[1]})
+                cookie['name'] = attribute.split('=')[0]
+                cookie['value'] = attribute.split('=')[1]
 
-        if cookie.get('expires') != 'session':
+        if cookie.get('expires') and cookie.get('expires') != 'session':
             cookie['expires'] = 'date'
+        cookie_path = Path.parseURL(str(path) + cookie.path[1:]) if cookie.path != '/' else path
+        if not Domain.compare(cookie.domain, path.domain.name) or not path.checkParent(cookie_path):
+            return None
 
-        return Cookie.insert(cookie.get('name'), cookie.get('value'), cookie.get('domain'), cookie.get('path'), cookie.get('expires'), cookie.get('max-age'), cookie.get('httponly'), cookie.get('secure'), cookie.get('samesite'))
+        return Cookie.insert(cookie)
 
     # Return last inserted cookie whose name and url matches resectively with name and domain and path
     @staticmethod

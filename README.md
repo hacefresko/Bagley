@@ -24,7 +24,7 @@ Scope options:
 
 *   headers: Specifies the key and value of the headers that will be added to all requests when crawling the specified target.
 
-*   cookies: Specifies the name, value and domain of the cookies that will be sent with every request to the target. '/' will be used as path, everything else will be None.
+*   cookies: Specifies the cookies that will be sent with every request to the target. Fields `name`, `value` and `domain` are maandatory, the other ones are optional.
 
 *   queue: Specifies list of URLs to start crawling from. Domain must be already added.
 
@@ -39,7 +39,7 @@ Each modules is ran on a different thread
 
 *   Crawler: Crawls all resources rendering JavaScript (including dynamic requests made to APIs, other domains inside the scope, etc.).
 
-*   Domain and Path Finder: Searches for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and fuzzes subdomains and resources with [Gobuster](https://github.com/OJ/gobuster). When a subdomain is found, it checks if it's vulnerable to Subdomain Takeover with [Subjack](https://github.com/haccer/subjack). Every discover asset is sent to the crawler.
+*   Finder: Searches for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and fuzzes subdomains and resources with [Gobuster](https://github.com/OJ/gobuster). When a subdomain is found, it checks if it's vulnerable to Subdomain Takeover with [Subjack](https://github.com/haccer/subjack). Every discover asset is sent to the crawler.
 
 *   Injector: Tests SQLi with [Sqlmap](https://github.com/sqlmapproject/sqlmap), XSS with [DalFox](https://github.com/hahwul/dalfox), CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz) and SSTI with [Tplmap](https://github.com/epinna/tplmap) on GET and POST parameters.
 

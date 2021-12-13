@@ -84,7 +84,7 @@ class Crawler (threading.Thread):
                     driver_cookies = self.driver.get_cookies()
                     for dc in driver_cookies:
                         if dc.get("name") == cookie_name:
-                            c = Cookie.insert(dc.get('name'), dc.get('value'), dc.get('domain'), dc.get('path'), dc.get('expires'), dc.get('maxage'), dc.get('httponly'), dc.get('secure'), dc.get('samesite'))
+                            c = Cookie.insert(dc)
                     if c:
                         request_cookies.append(c)
             del request.headers['cookie']
@@ -341,6 +341,9 @@ class Crawler (threading.Thread):
 
             # Main request
             if request.url == parent_url and main_request is None and main_response is None:
+
+                # Only cookies sent in requests are merged because cookies coming in set-cookie headers may not be accepted by the browser. 
+                # It's easier to only take into account those which get directly accepted by only taking cookies from requests
                 main_request = self.__processRequest(request)
                 if not main_request:
                     return
@@ -483,8 +486,18 @@ class Crawler (threading.Thread):
                         print(header)
                     print()
                 if domain.cookies:
-                    print("[+] Cookies used:\n")
+                    valid = []
                     for cookie in domain.cookies:
+                        try:
+                            self.driver.get(url)
+                            self.driver.add_cookie(cookie.getDict())
+                            valid.append(cookie)
+                            del self.driver.requests
+                        except:
+                            print("[ERROR] Couldn't import cookie %s" % str(cookie))
+                    
+                    print("[+] Cookies used:\n")
+                    for cookie in valid:
                         print(cookie)
                     print()
                 

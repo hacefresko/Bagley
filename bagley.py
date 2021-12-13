@@ -176,7 +176,7 @@ while True:
             json_cookies = entry.get('cookies')
             if json_cookies:
                 for c in json_cookies:
-                    cookie = Cookie.insert(c.get('name'), c.get('value'), c.get('domain'), '/', None, None, None, None, None, False)
+                    cookie = Cookie.insert(c)
                     if cookie:
                         d.add(cookie)
 
