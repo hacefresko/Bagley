@@ -952,25 +952,33 @@ class Cookie:
 
         return Cookie.insert(cookie)
 
-    # Return last inserted cookie whose name and url matches resectively with name and domain and path
+    # Return last inserted cookie whose with name
+    # If URL is specified, url must macth domain and path of the cookie
     @staticmethod
-    def get(name, url):
-        last_cookie = None
-
-        path = Path.parseURL(url)
-        if not path:
-            return None
+    def get(name, url=None):
         db = DB()
+        last_cookie = None
 
         results = db.query_all('SELECT * FROM cookies WHERE name = %s', (name,))
 
+        if url:
+            path = Path.parseURL(url)
+            if not path:
+                return None
+
         for result in results:
             cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9])
-            # If domain/range of subdomains and range of paths from cookie match with url
-            cookie_path = Path.parseURL(str(path) + cookie.path[1:]) if cookie.path != '/' else path
-            if Domain.compare(cookie.domain, path.domain.name) and path.checkParent(cookie_path):
+            
+            if url:
+                # If domain/range of subdomains and range of paths from cookie match with url
+                cookie_path = Path.parseURL(str(path) + cookie.path[1:]) if cookie.path != '/' else path
+                if Domain.compare(cookie.domain, path.domain.name) and path.checkParent(cookie_path):
+                    if last_cookie is None or last_cookie.id < cookie.id:
+                        last_cookie = cookie
+            else:
                 if last_cookie is None or last_cookie.id < cookie.id:
                     last_cookie = cookie
+
 
         return last_cookie
 

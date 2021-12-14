@@ -80,13 +80,10 @@ class Crawler (threading.Thread):
                 if c and c.value == cookie.split('=')[1]:
                     request_cookies.append(c)
                 else:
-                    c = None
-                    driver_cookies = self.driver.get_cookies()
-                    for dc in driver_cookies:
-                        if dc.get("name") == cookie_name:
-                            c = Cookie.insert(dc)
-                    if c:
-                        request_cookies.append(c)
+                    for dc in self.cookies:
+                        if dc.name == cookie_name:
+                            request_cookies.append(dc)
+                        
             del request.headers['cookie']
 
         request_headers = []
@@ -145,7 +142,7 @@ class Crawler (threading.Thread):
         return resp
 
     # Traverse the HTML looking for paths to crawl
-    def __parseHTML(self, parent_url, response):
+    def __parseHTML(self, parent_url, response, headers):
         parser = BeautifulSoup(response.body, 'html.parser')
         for element in parser(['a', 'form', 'script', 'iframe', 'button']):
             if element.name == 'a':
@@ -165,7 +162,7 @@ class Crawler (threading.Thread):
                 domain = urlparse(url).netloc
 
                 if Domain.checkScope(domain) and Request.checkExtension(url) and not Request.check(url, 'GET', cookies=self.cookies):
-                    self.__crawl(url, 'GET')
+                    self.__crawl(url, 'GET', headers)
                 
             elif element.name == 'form':
                 form_id = element.get('id')
@@ -203,7 +200,7 @@ class Crawler (threading.Thread):
                             
                     data = data[:-1] if data != '' else None
                         
-                    headers = None
+                    req_headers = headers
                     # If form method is GET, append data to URL as params and set data and content type to None
                     if method == 'GET':
                         content_type = None
@@ -218,10 +215,10 @@ class Crawler (threading.Thread):
                         if not h:
                             h = Header.insert('content-type', content_type)
                         
-                        headers = [h] if h else []
+                        req_headers += [h]
 
                     if Request.checkExtension(url) and not Request.check(url, method, content_type, data, self.cookies):
-                        self.__crawl(url, method, data, headers)
+                        self.__crawl(url, method, data, req_headers)
 
             elif element.name == 'script':
                 src = element.get('src')
@@ -260,7 +257,7 @@ class Crawler (threading.Thread):
                 domain = urlparse(url).netloc
 
                 if Domain.checkScope(domain) and Request.checkExtension(url) and not Request.check(url, 'GET', cookies=self.cookies):
-                    self.__crawl(url, 'GET')
+                    self.__crawl(url, 'GET', headers)
 
             elif element.name == 'button':
                 # If button belongs to a form                
@@ -268,23 +265,38 @@ class Crawler (threading.Thread):
                     continue
                 
                 try:
-                    # Click the button and check if url has changed
+                    # Click the button
                     if element.get('id'):
                         button_id = element.get('id')
 
                         self.driver.get(parent_url)
+                        del self.driver.requests
                         self.driver.execute_script("document.getElementById(arguments[0]).click();", button_id)
 
                     elif element.get('class'):
                         button_class = element.get('class')
+                        if isinstance(button_class, list):
+                            button_class = ' '.join(button_class)
 
                         self.driver.get(parent_url)
+                        del self.driver.requests
                         self.driver.execute_script("document.getElementsByClassName(arguments[0])[0].click();", button_class)
                     
-                    if self.driver.current_url != parent_url:
+                    time.sleep(2)
+
+                    #Check if requests have been made
+                    if self.driver.requests[0]:
+                        req = self.driver.requests[0]
+                        data = req.body.decode('utf-8', errors='ignore')
+                        domain = urlparse(req.url).netloc
+                        if Domain.checkScope(domain) and Request.checkExtension(req.url) and not Request.check(req.url, req.method, req.headers.get_content_type(), data, self.cookies):
+                            self.__crawl(req.url, req.method, data, headers)
+
+                    #Else, check if at least the url has changed
+                    elif self.driver.current_url != parent_url:
                         domain = urlparse(self.driver.current_url).netloc
                         if Domain.checkScope(domain) and Request.checkExtension(self.driver.current_url) and not Request.check(self.driver.current_url, 'GET', cookies=self.cookies):
-                            self.__crawl(self.driver.current_url, 'GET')
+                            self.__crawl(self.driver.current_url, 'GET', headers)
 
                 except:
                     continue
@@ -330,6 +342,23 @@ class Crawler (threading.Thread):
             print('[ERROR] Exception %s ocurred when requesting %s' % (e.__class__.__name__, parent_url))
             return
 
+        # Copy browser cookies to local copy
+        self.cookies = []
+        for cookie in self.driver.get_cookies():
+            c = Cookie.get(cookie['name'])
+            if not c:
+                c = Cookie.insert(cookie)
+            if c:
+                self.cookies.append(c)
+            else:
+                pass
+
+        if len(self.driver.get_cookies()) != len(self.cookies):
+            print("Dirver cookies: %d" % len(self.driver.get_cookies()))
+            print(self.driver.get_cookies())
+            print()
+            print("Local cookies: %d" % len(self.cookies))
+
         # List of responses to analyze
         resp_to_analyze = []
 
@@ -347,7 +376,6 @@ class Crawler (threading.Thread):
                 main_request = self.__processRequest(request)
                 if not main_request:
                     return
-                self.cookies = utils.mergeCookies(self.cookies, main_request.cookies)
 
                 main_response = self.__processResponse(request, main_request, main=True)
                 if not main_response:
@@ -412,7 +440,7 @@ class Crawler (threading.Thread):
 
         # Analyze all responses
         for resp_to_analyze in resp_to_analyze:
-            self.__parseHTML(resp_to_analyze['url'], resp_to_analyze['response'])
+            self.__parseHTML(resp_to_analyze['url'], resp_to_analyze['response'], headers)
 
     def run(self):
         # Generator for domains
