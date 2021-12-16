@@ -374,8 +374,6 @@ class Path:
 
         protocol = parsedURL['protocol']
 
-        if not Domain.checkScope(parsedURL['domain']):
-            return None
         domain = Domain.get(parsedURL['domain'])
         if not domain:
             domain = Domain.insert(parsedURL['domain'])
@@ -869,15 +867,6 @@ class Cookie:
     def __str__(self):
         return self.name + '=' + self.value
 
-    # Returns True if exists or None if it does not exist   
-    @staticmethod 
-    def __get(name, value, domain, path, expires, maxage, httponly, secure, samesite):
-        db = DB()
-        cookie = db.query_one('SELECT * FROM cookies WHERE name = %s AND value = %s AND domain = %s AND path = %s AND expires = %s AND maxage = %s AND httponly = %s AND secure = %s AND samesite = %s', (name, value, domain, path, expires, maxage, httponly, secure, samesite))
-        if not cookie:
-            return None
-        return Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9])
-
     def getDict(self):
         result = {}
 
@@ -916,10 +905,13 @@ class Cookie:
         if c.get("samesite") is None:
             c['samesite'] = "lax"
 
-        cookie = Cookie.__get(c["name"], c["value"], c["domain"], c["path"], c["expires"], c["max-age"], c["httponly"], c["secure"], c["samesite"])
+        db = DB()
+
+        # Check if there is already a cookie like this (can have different value)
+        cookie = db.query_one('SELECT * FROM cookies WHERE name = %s AND domain = %s AND path = %s AND expires = %s AND maxage = %s AND httponly = %s AND secure = %s AND samesite = %s', (c["name"], c["domain"], c["path"], c["expires"], c["max-age"], c["httponly"], c["secure"], c["samesite"]))
         if cookie:
             return None
-        db = DB()
+        
         id = db.exec_and_get_last_id('INSERT INTO cookies (name, value, domain, path, expires, maxage, httponly, secure, samesite) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)', (c["name"], c["value"], c["domain"], c["path"], c["expires"], c["max-age"], c["httponly"], c["secure"], c["samesite"]))
         return Cookie(id, c["name"], c["value"], c["domain"], c["path"], c["expires"], c["max-age"], c["httponly"], c["secure"], c["samesite"])
 
@@ -978,7 +970,6 @@ class Cookie:
             else:
                 if last_cookie is None or last_cookie.id < cookie.id:
                     last_cookie = cookie
-
 
         return last_cookie
 
