@@ -516,10 +516,9 @@ class Request:
 
         # Among all cookies passed, check if there is anyone matching domain that has never been stored with this request
         req_cookies = []
-        for c in cookies:
-            cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
-            if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path) and (path.protocol == 'http' or (path.protocol == 'https' and c.secure)):
-                req_cookies.append(c)
+        for cookie in cookies:
+            if cookie.check(path):
+                req_cookies.append(cookie)
 
         for request in requests:
             existing_cookies = 0
@@ -572,10 +571,9 @@ class Request:
         requests = db.query_all(query, tuple(query_params))
 
         req_cookies = []
-        for c in cookies:
-            cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
-            if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
-                req_cookies.append(c)
+        for cookie in cookies:
+            if cookie.check(path):
+                req_cookies.append(cookie)
 
         for request in requests:
             valid = True
@@ -586,19 +584,6 @@ class Request:
             if valid:
                 return Request(request[0], request[1], request[2], request[3], request[4], request[5])
         return None
-
-    # Yields requests or None if there are no requests. It continues infinetly until program stops
-    @staticmethod
-    def yieldAll():
-        id = 1
-        db = DB()
-        while True:
-            request = db.query_one('SELECT * FROM requests WHERE id = %d', (id,))
-            if not request:
-                yield None
-                continue
-            id += 1
-            yield Request(request[0], request[1], request[2], request[3], request[4], request[5])
 
     # Inserts request and links headers and cookies. If request is already inserted or there are too many requests 
     # to the same path and method but with different data/params values for the same keys, it returns None.
@@ -627,13 +612,25 @@ class Request:
         for h in headers:
             h.link(request)
 
-        for c in cookies:
-            cookie_path = Path.parseURL(str(path) + c.path[1:]) if c.path != '/' else path
-            if Domain.compare(c.domain, str(path.domain)) and path.checkParent(cookie_path):
-                c.link(request)
+        for cookie in cookies:
+            if cookie.check(path):
+                cookie.link(request)
 
         # Gets again the request in order to update headers, cookies and data from databse
         return Request.get(url, method, content_type, cookies, data)
+
+    # Yields requests or None if there are no requests. It continues infinetly until program stops
+    @staticmethod
+    def yieldAll():
+        id = 1
+        db = DB()
+        while True:
+            request = db.query_one('SELECT * FROM requests WHERE id = %d', (id,))
+            if not request:
+                yield None
+                continue
+            id += 1
+            yield Request(request[0], request[1], request[2], request[3], request[4], request[5])
 
     # Returns a list of requests whose params or data keys are the same as the request the function was called on
     def getSameKeys(self):
@@ -857,8 +854,8 @@ class Cookie:
         self.path = path
         self.expires = expires
         self.maxage = maxage
-        self.httponly = httponly
-        self.secure = secure
+        self.httponly = True if httponly == 1 or httponly == True else False
+        self.secure = True if secure == 1 or secure == True else False
         self.samesite = samesite
 
     def __eq__(self, other):
@@ -892,16 +889,22 @@ class Cookie:
     def insert(c):
         if c.get("name") is None or c.get("value") is None or c.get("domain") is None:
             return None
+
         if c.get("path") is None:
             c['path'] = '/'
+
         if c.get('expires') is None:
             c['expires'] = "session"
+
         if c.get('max-age') is None:
             c['max-age'] = "session"
-        if c.get("httponly") is None:
+
+        if c.get("httponly") is None :
             c['httponly'] = False
-        if c.get("secure") is None:
+
+        if c.get("secure") is None :
             c['secure'] = False
+
         if c.get("samesite") is None:
             c['samesite'] = "lax"
 
@@ -938,11 +941,14 @@ class Cookie:
         if cookie.get('expires') and cookie.get('expires') != 'session':
             cookie['expires'] = 'date'
 
-        cookie_path = Path.parseURL(str(path) + cookie.get('path')[1:]) if cookie.get('path') != '/' else path
-        if not Domain.compare(cookie.get('domain'), path.domain.name) or not path.checkParent(cookie_path):
-            return None
+        if Domain.compare(cookie["domain"], str(path.domain)) and (path.protocol == 'http' or (path.protocol == 'https' and cookie["secure"])):
+            cookie_path = Path.parseURL(str(path.domain)+cookie["path"])
+            if not cookie_path:
+                cookie_path = Path.insert(str(path.domain)+cookie["path"])
+            if cookie_path:
+                Cookie.insert(cookie)
 
-        return Cookie.insert(cookie)
+        return None
 
     # Return last inserted cookie whose with name
     # If URL is specified, url must macth domain and path of the cookie
@@ -961,17 +967,26 @@ class Cookie:
         for result in results:
             cookie = Cookie(result[0], result[1], result[2], result[3], result[4], result[5], result[6], result[7], result[8], result[9])
             
-            if url:
-                # If domain/range of subdomains and range of paths from cookie match with url
-                cookie_path = Path.parseURL(str(path) + cookie.path[1:]) if cookie.path != '/' else path
-                if Domain.compare(cookie.domain, path.domain.name) and path.checkParent(cookie_path):
-                    if last_cookie is None or last_cookie.id < cookie.id:
-                        last_cookie = cookie
+            if url and cookie.check(path) and (last_cookie is None or last_cookie.id < cookie.id):
+                last_cookie = cookie
             else:
                 if last_cookie is None or last_cookie.id < cookie.id:
                     last_cookie = cookie
 
         return last_cookie
+
+    # Check if cookie domain and cookie path matches path
+    def check(self, path):
+        if Domain.compare(self.domain, str(path.domain)) and (path.protocol == 'http' or (path.protocol == 'https' and self.secure)):
+            url = path.protocol + '://' + str(path.domain) + self.path
+            if self.path != '/':
+                url += self.path[1:]
+            cookie_path = Path.parseURL(url)
+            if not cookie_path:
+                cookie_path = Path.insert(url)
+            if cookie_path and cookie_path.checkParent(path):
+                return True
+        return False
 
     # Links the cookie to the specified target. If target is not a request nor a response, returns False
     def link(self, target):

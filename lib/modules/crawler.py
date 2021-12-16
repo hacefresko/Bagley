@@ -172,7 +172,7 @@ class Crawler (threading.Thread):
                 url = urljoin(parent_url, action)
                 domain = urlparse(url).netloc
 
-                if Domain.checkScope(domain):
+                if Domain.checkScope(domain) and Request.checkExtension(url):
                     # Parse input, select and textarea (textarea may be outside forms, linked by form attribute)
                     data = ''
                     external_textareas = parser('textarea', form=form_id) if form_id is not None else []
@@ -217,7 +217,7 @@ class Crawler (threading.Thread):
                         
                         req_headers += [h]
 
-                    if Request.checkExtension(url) and not Request.check(url, method, content_type, data, self.cookies):
+                    if not Request.check(url, method, content_type, data, self.cookies):
                         self.__crawl(url, method, data, req_headers)
 
             elif element.name == 'script':
@@ -301,6 +301,33 @@ class Crawler (threading.Thread):
                 except:
                     continue
 
+    def __updateCookies(self, last_visited_path):
+        self.driver.delete_all_cookies()
+        c = self.driver.get_cookies()
+        try:
+            for cookie in self.cookies:
+                cookie_url = cookie.domain if cookie.domain[0] != '.' else cookie.domain[1:]
+                cookie_url += cookie.path
+                if cookie.secure:
+                    cookie_url = 'https://' + cookie_url
+                else:
+                    cookie_url = 'http://' + cookie_url
+
+                p = Path.parseURL(cookie_url)
+                if not p:
+                    p = Path.insert(cookie_url)
+                if not p:
+                    continue
+                
+                # If cookie domain or path doesn't match with last visited URL, visit a matching value since Selenium won't let us insert cookie elsewhere
+                if not Domain.compare(str(p.domain), str(last_visited_path.domain)) or not last_visited_path.checkParent(p):
+                    self.driver.get(cookie_url)
+                    last_visited_path = p
+
+                self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain" : cookie.domain, "path": cookie.path, "secure": cookie.secure})
+        except:
+            print("[ERROR] Couldn't insert cookie %s" % str(cookie))
+
     # Main method of crawler
     def __crawl(self, parent_url, method, data=None, headers = []):
         # If execution is stopped
@@ -312,6 +339,8 @@ class Crawler (threading.Thread):
         if not path:
             return
         domain = path.domain
+
+        self.__updateCookies(path)
 
         print(('['+method+']').ljust(8) + parent_url)
 
@@ -344,20 +373,19 @@ class Crawler (threading.Thread):
 
         # Copy browser cookies to local copy
         self.cookies = []
-        for cookie in self.driver.get_cookies():
-            c = Cookie.get(cookie['name'])
-            if not c:
-                c = Cookie.insert(cookie)
-            if c:
-                self.cookies.append(c)
+        waited = 0
+        while waited < 15:
+            first = len(self.driver.get_cookies())
+            for cookie in self.driver.get_cookies():
+                c = Cookie.get(cookie['name'])
+                if not c:
+                    c = Cookie.insert(cookie)
+                if c:
+                    self.cookies.append(c)
+            if first == len(self.driver.get_cookies()):
+                break
             else:
-                pass
-
-        if len(self.driver.get_cookies()) != len(self.cookies):
-            print("Dirver cookies: %d" % len(self.driver.get_cookies()))
-            print(self.driver.get_cookies())
-            print()
-            print("Local cookies: %d" % len(self.cookies))
+                waited += 1
 
         # List of responses to analyze
         resp_to_analyze = []
