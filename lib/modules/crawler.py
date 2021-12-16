@@ -307,7 +307,7 @@ class Crawler (threading.Thread):
         if self.stop.is_set():
             return
 
-        # Always inserts path into database since __crawl is only called if the path hasn't been crawled yet
+        # Always inserts path into database since __crawl should only be called if the path hasn't been crawled yet
         path = Path.insert(parent_url)
         if not path:
             return
@@ -438,9 +438,9 @@ class Crawler (threading.Thread):
                                 resp_to_analyze.append({'url': request.url, 'response':resp})
                         continue
 
-        # Analyze all responses
-        for resp_to_analyze in resp_to_analyze:
-            self.__parseHTML(resp_to_analyze['url'], resp_to_analyze['response'], headers)
+        # Process all responses
+        for r in resp_to_analyze:
+            self.__parseHTML(r['url'], r['response'], headers)
 
     def run(self):
         # Generator for domains
