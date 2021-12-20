@@ -300,44 +300,7 @@ class Crawler (threading.Thread):
 
                 except:
                     continue
-
-    def __updateCookies(self, last_visited_path):
-        already_inserted = []
-
-        # Remove all cookies from driver that are not in self.cookies and mark those already inserted as inserted
-        for driver_cookie in self.driver.get_cookies():
-            valid = False
-            for local_cookie in self.cookies:
-                if driver_cookie['name'] == local_cookie.name and driver_cookie['value'] == local_cookie.value:
-                    valid = True
-                    already_inserted.append(driver_cookie['name'])
-                    break
-            if not valid:
-                self.driver.delete_cookie(driver_cookie['name'])
-
-        # Insert all cookies not already inserted
-        for cookie in self.cookies:
-            if cookie.name not in already_inserted:
-                cookie_url = cookie.domain if cookie.domain[0] != '.' else cookie.domain[1:]
-                cookie_url += cookie.path
-                if cookie.secure:
-                    cookie_url = 'https://' + cookie_url
-                else:
-                    cookie_url = 'http://' + cookie_url
-
-                p = Path.parseURL(cookie_url)
-                if not p:
-                    p = Path.insert(cookie_url)
-                if not p:
-                    continue
-                
-                # If cookie domain or path doesn't match with last visited URL, visit a matching value since Selenium won't let us insert cookie elsewhere
-                if not Domain.compare(str(p.domain), str(last_visited_path.domain)) or not last_visited_path.checkParent(p):
-                    self.driver.get(cookie_url)
-                    last_visited_path = p
-
-                self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain" : cookie.domain, "path": cookie.path, "secure": cookie.secure})
-            
+   
     # Main method of crawler
     def __crawl(self, parent_url, method, data=None, headers = []):
         # If execution is stopped
