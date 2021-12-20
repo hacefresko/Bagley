@@ -941,6 +941,9 @@ class Cookie:
         if cookie.get('expires') and cookie.get('expires') != 'session':
             cookie['expires'] = 'date'
 
+        if not cookie.get('secure'):
+            cookie['secure'] = False
+
         if Domain.compare(cookie["domain"], str(path.domain)) and (path.protocol == 'http' or (path.protocol == 'https' and cookie["secure"])):
             cookie_path = Path.parseURL(str(path.domain)+cookie["path"])
             if not cookie_path:

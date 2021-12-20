@@ -350,7 +350,7 @@ class Crawler (threading.Thread):
             return
         domain = path.domain
 
-        self.__updateCookies(path)
+        #self.__updateCookies(path)
 
         print(('['+method+']').ljust(8) + parent_url)
 
@@ -381,22 +381,13 @@ class Crawler (threading.Thread):
             print('[ERROR] Exception %s ocurred when requesting %s' % (e.__class__.__name__, parent_url))
             return
 
-        # Copy browser cookies to local copy (since driver is still rendering pages in the background, there may be some new cookies while loading them, so sleeps prevent us from missing those cookies)
-        self.cookies = []
-        waited = 0
-        while waited < 15:
-            time.sleep(1)
-            first = len(self.driver.get_cookies())
-            for cookie in self.driver.get_cookies():
-                c = Cookie.get(cookie['name'])
-                if not c:
-                    c = Cookie.insert(cookie)
-                if c:
-                    self.cookies.append(c)
-            if first == len(self.driver.get_cookies()):
-                break
-            else:
-                waited += 1
+        # Copy browser cookies to local copy
+        for cookie in self.driver.get_cookies():
+            c = Cookie.get(cookie['name'])
+            if not c or c.value != cookie.get('value'):
+                c = Cookie.insert(cookie)
+            if c and c not in self.cookies:
+                self.cookies.append(c)
 
         # List of responses to analyze
         resp_to_analyze = []
@@ -467,9 +458,6 @@ class Crawler (threading.Thread):
                         print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url)
                         
                         req = self.__processRequest(request)
-                        if req:
-                            self.cookies = utils.mergeCookies(self.cookies, req.cookies)
-
                         resp = self.__processResponse(request, req)
                         if resp: 
                             # If dynamic request responded with HTML, send it to analize
