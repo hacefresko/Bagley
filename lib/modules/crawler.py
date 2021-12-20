@@ -104,7 +104,7 @@ class Crawler (threading.Thread):
     def __processResponse(self, request, processed_request, main=False):
         response = request.response
         if not response:
-            time.sleep(5)
+            time.sleep(3)
             response = request.response
             if not response:
                 return False
@@ -282,7 +282,7 @@ class Crawler (threading.Thread):
                         del self.driver.requests
                         self.driver.execute_script("document.getElementsByClassName(arguments[0])[0].click();", button_class)
                     
-                    time.sleep(2)
+                    time.sleep(1)
 
                     #Check if requests have been made
                     if self.driver.requests[0]:
@@ -302,10 +302,22 @@ class Crawler (threading.Thread):
                     continue
 
     def __updateCookies(self, last_visited_path):
-        self.driver.delete_all_cookies()
-        c = self.driver.get_cookies()
-        try:
-            for cookie in self.cookies:
+        already_inserted = []
+
+        # Remove all cookies from driver that are not in self.cookies and mark those already inserted as inserted
+        for driver_cookie in self.driver.get_cookies():
+            valid = False
+            for local_cookie in self.cookies:
+                if driver_cookie['name'] == local_cookie.name and driver_cookie['value'] == local_cookie.value:
+                    valid = True
+                    already_inserted.append(driver_cookie['name'])
+                    break
+            if not valid:
+                self.driver.delete_cookie(driver_cookie['name'])
+
+        # Insert all cookies not already inserted
+        for cookie in self.cookies:
+            if cookie.name not in already_inserted:
                 cookie_url = cookie.domain if cookie.domain[0] != '.' else cookie.domain[1:]
                 cookie_url += cookie.path
                 if cookie.secure:
@@ -325,9 +337,7 @@ class Crawler (threading.Thread):
                     last_visited_path = p
 
                 self.driver.add_cookie({"name" : cookie.name, "value" : cookie.value, "domain" : cookie.domain, "path": cookie.path, "secure": cookie.secure})
-        except:
-            print("[ERROR] Couldn't insert cookie %s" % str(cookie))
-
+            
     # Main method of crawler
     def __crawl(self, parent_url, method, data=None, headers = []):
         # If execution is stopped
@@ -371,10 +381,11 @@ class Crawler (threading.Thread):
             print('[ERROR] Exception %s ocurred when requesting %s' % (e.__class__.__name__, parent_url))
             return
 
-        # Copy browser cookies to local copy
+        # Copy browser cookies to local copy (since driver is still rendering pages in the background, there may be some new cookies while loading them, so sleeps prevent us from missing those cookies)
         self.cookies = []
         waited = 0
         while waited < 15:
+            time.sleep(1)
             first = len(self.driver.get_cookies())
             for cookie in self.driver.get_cookies():
                 c = Cookie.get(cookie['name'])
