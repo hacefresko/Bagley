@@ -390,12 +390,13 @@ class Crawler (threading.Thread):
                                 method = 'GET'
                                 data = None
 
-                            if Request.checkExtension(redirect_to) and not Request.check(redirect_to, method, data=data, cookies=self.cookies):
-                                if Domain.checkScope(urlparse(redirect_to).netloc):
-                                    print("[%d]   %s " % (code, redirect_to))
+                            if Domain.checkScope(urlparse(redirect_to).netloc):
+                                print("[%d]   %s " % (code, redirect_to))
+                                if Request.checkExtension(redirect_to) and not Request.check(redirect_to, method, data=data, cookies=self.cookies):
                                     self.__crawl(redirect_to, method, data, headers)
-                                else:
-                                    print("[%d]   %s [OUT OF SCOPE]" % (code, redirect_to))
+                            else:
+                                print("[%d]   %s [OUT OF SCOPE]" % (code, redirect_to))
+
                     return
 
                 resp_to_analyze.append({'url': parent_url, 'response':main_response})
