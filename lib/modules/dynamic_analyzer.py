@@ -96,9 +96,9 @@ class Dynamic_Analyzer (threading.Thread):
                 elif request.method == 'POST':
                     r = requests.get(str(request.url), request.params, request.data, headers, cookies)
                 
-                if r.status_code != 403:
+                if r.status_code != 403 and r.status_code != 500:
                     Vulnerability.insert('Broken Access Control', k+": "+v, str(request.path))
-                    print("[Access Control] Got code %d for %s using header %s: %s", r.status_code, request.url, k,v)
+                    print("[Access Control] Got code %d for %s using header %s: %s", r.status_code, request.path, k,v)
             
             time.sleep(str(1/config.REQ_PER_SEC))
 

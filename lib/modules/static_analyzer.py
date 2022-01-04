@@ -6,8 +6,12 @@ class Static_Analyzer (threading.Thread):
     def __init__(self, stop):
         threading.Thread.__init__(self)
         self.stop = stop
+
+    @staticmethod
+    def __searchKeys(text):
+        result = []
         # https://github.com/m4ll0k/SecretFinder pattern list + https://github.com/hahwul/dalfox greeping list
-        self.patterns = {
+        patterns = {
             'rsa-key':                          r'-----BEGIN RSA PRIVATE KEY-----|-----END RSA PRIVATE KEY-----',
             'priv-key':                         r'-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----',
             'ssh_dsa_private_key' :             r'-----BEGIN DSA PRIVATE KEY-----',
@@ -41,26 +45,30 @@ class Static_Analyzer (threading.Thread):
             'paypal_braintree_access_token' :   r'access_token\$production\$[0-9a-z]{16}\$[0-9a-f]{32}'
         }
 
+        for name, pattern in patterns.items():
+            for f in re.findall(pattern, text):
+                result.append({'name': name, 'value': f})
+
+        return result
+
     def run(self):
         scripts = Script.yieldAll()
         responses = Response.yieldAll()
         while not self.stop.is_set():
             script = next(scripts)
             if script and script.path and script.content:
-                for name, pattern in self.patterns.items():
-                    for f in re.findall(pattern, script.content):
-                        print("[KEYS] Found %s at script %s\n\n%s\n\n" % (name, str(script.path), f))
-                        Vulnerability.insert('Key Leak', name + ":" + f, str(script.path))
+                for r in self.__searchKeys(script.content):
+                    print("[KEYS] Found %s at script %s\n\n%s\n\n" % (r.get('name'), str(script.path), r.get('value')))
+                    Vulnerability.insert('Key Leak', name + ":" + f, str(script.path))
             else:
                 response = next(responses)
-                if not response or not response.body:
-                    time.sleep(5)
-                    continue
-                for name, pattern in self.patterns.items():
-                    for f in re.findall(pattern, response.body):
-                        paths = ''
+                if response and response.body:
+                    for r in self.__searchKeys(response.body):
                         for r in response.getRequests():
                             paths += str(r.path) + ', '
                             Vulnerability.insert('Key Leak', name + ":" + f, str(r.path))
                         paths = paths[:-2]
                         print("[KEYS] Found %s at %s\n\n%s\n\n" % (name, paths, f))
+                else:
+                    time.sleep(5)
+                    continue
