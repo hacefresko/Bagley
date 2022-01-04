@@ -71,9 +71,41 @@ class Dynamic_Analyzer (threading.Thread):
             Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
             print('[TAKEOVER] Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout))
 
+    @staticmethod
+    def __bypass403(request):
+        bypass_headers = {
+            "X-Client-IP": "127.0.0.1",
+            "Host": "127.0.0.1",
+            "Referer": "127.0.0.1"
+        }
+
+        if request.response.code == 403:
+            headers = {}
+            for h in request.headers:
+                headers[h.key] = h.value
+
+            cookies = {}
+            for c in request.cookies:
+                cookies[c.name] = c.value
+
+            for k,v in bypass_headers.items():
+                req_headers = headers
+                req_headers[k] = v
+                if request.method == 'GET':
+                    r = requests.get(str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies)
+                elif request.method == 'POST':
+                    r = requests.get(str(request.url), request.params, request.data, headers, cookies)
+                
+                if r.status_code != 403:
+                    Vulnerability.insert('Broken Access Control', k+": "+v, str(request.path))
+                    print("[Access Control] Got code %d for %s using header %s: %s", r.status_code, request.url, k,v)
+            
+            time.sleep(str(1/config.REQ_PER_SEC))
+
     def run(self):
         paths = Path.yieldAll()
         domains = Domain.yieldAll()
+        requests = Request.yieldAll()
         while not self.stop.is_set():
             path = next(paths)
             if path:
@@ -83,5 +115,8 @@ class Dynamic_Analyzer (threading.Thread):
                 if domain:
                     self.__subdomainTakeover(domain)
                 else:
-                    time.sleep(5)
-                    continue
+                    request = next(requests)
+                    if request and request.response.code == 403:
+                        self.__bypass403(request)
+                    else:
+                        time.sleep(5)
