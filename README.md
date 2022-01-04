@@ -39,13 +39,30 @@ Each modules is ran on a different thread
 
 *   Crawler: Crawls all resources rendering JavaScript (including dynamic requests made to APIs, other domains inside the scope, etc.).
 
-*   Finder: Searches for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and fuzzes subdomains and resources with [Gobuster](https://github.com/OJ/gobuster). When a subdomain is found, it checks if it's vulnerable to Subdomain Takeover with [Subjack](https://github.com/haccer/subjack). Every discover asset is sent to the crawler.
+*   Finder: Searches for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and fuzzes subdomains and resources with [Gobuster](https://github.com/OJ/gobuster). Every discover asset is sent to the crawler.
 
-*   Injector: Tests SQLi with [Sqlmap](https://github.com/sqlmapproject/sqlmap), XSS with [DalFox](https://github.com/hahwul/dalfox), CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz) and SSTI with [Tplmap](https://github.com/epinna/tplmap) on GET and POST parameters.
+*   Injector: Tests different injection vectors:
 
-*   Vulnerability Searcher: Gets the technologies used by the application with [Wappalyzer](https://github.com/AliasIO/wappalyzer) and looks for known vulnerabilities in the [NVD](https://nvd.nist.gov/) via its [API](https://nvd.nist.gov/developers/products)
+    *   SQLi with [Sqlmap](https://github.com/sqlmapproject/sqlmap)
 
-*   Analyzer: Analyzes responses and scripts looking for API keys, based on a pattern list made with [SecretFinder](https://github.com/m4ll0k/SecretFinder) pattern list and [Dalfox](https://github.com/hahwul/dalfox) greeping list
+    *   XSS with [DalFox](https://github.com/hahwul/dalfox)
+
+    *   CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz)
+
+    *   SSTI with [Tplmap](https://github.com/epinna/tplmap) on GET and POST parameters.
+
+*   Static_Analyzer: Performs local analysis among obtained data, without generating network traffic:
+
+    *   Searches for API keys with a pattern list mainly obtained from [SecretFinder](https://github.com/m4ll0k/SecretFinder)
+
+*   Dynamic_Analyzer: Performs lightweighted analysis among discovered assets, generating network traffic:
+
+    *   Gets technologies used by the application with [Wappalyzer](https://github.com/AliasIO/wappalyzer)
+
+    *   Check know vulnerabilities of technologies used in the [NVD](https://nvd.nist.gov/) via its [API](https://nvd.nist.gov/developers/products)
+
+    *   Subdomain Takeover with [Subjack](https://github.com/haccer/subjack).
+
 
 ## External requirements
 

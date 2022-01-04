@@ -2,7 +2,7 @@ import threading, time, re
 
 from lib.entities import *
 
-class Analyzer (threading.Thread):
+class Static_Analyzer (threading.Thread):
     def __init__(self, stop):
         threading.Thread.__init__(self)
         self.stop = stop

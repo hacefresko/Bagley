@@ -134,29 +134,20 @@ class Finder(threading.Thread):
                 pass
             finally:
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
-
-    def __subdomainTakeover(self, domain):
-        if str(domain) not in self.analyzed:
-            command = [shutil.which('subjack'), '-a', '-m', '-d', str(domain)]
-            result = subprocess.run(command, capture_output=True, encoding='utf-8')
-
-            if result.stdout != '':
-                Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
-                print('[TAKEOVER] Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout))
-            self.analyzed.append(str(domain))
         
     def run(self):
         directories = Path.yieldDirectories()
         domains = Domain.yieldAll()
         while not self.stop.is_set():
             domain = next(domains)
-            self.__subdomainTakeover(domain)
             if domain and domain.name[0] == '.':
                 self.__findSubDomains(domain)
                 self.__fuzzSubDomain(domain)
             else:
                 directory = next(directories)
-                if not directory:
+                if directory:
+                    self.__fuzzPath(directory, directory.domain.headers, directory.domain.cookies)
+                else:
                     time.sleep(5)
                     continue
-                self.__fuzzPath(directory, directory.domain.headers, directory.domain.cookies)
+                

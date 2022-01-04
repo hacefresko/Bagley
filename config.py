@@ -9,10 +9,10 @@ DB_PASSWORD = ''
 TIMEOUT = 120
 
 # Requests per second
-REQ_PER_SEC = 10
+REQ_PER_SEC = 1
 
 # Formats that won't be stored
-EXTENSIONS_BLACKLIST = ['.css', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp', '.bmp', '.ico', '.tiff', '.woff2', '.woff', '.mp4', '.rar', '.zip', '.pdf', '.apk']
+EXTENSIONS_BLACKLIST = ['.css', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp', '.bmp', '.ico', '.tiff', '.woff2', '.woff', '.mp4', '.rar', '.zip', '.pdf', '.apk', '.mp3']
 
 # Params and POST data containing these words, won't be stored
 PARAMS_BLACKLIST = ['csrf']

@@ -1,5 +1,5 @@
 from .crawler import Crawler
 from .finder import Finder
 from .injector import Injector
-from .vuln_searcher import Vuln_Searcher
-from .analyzer import Analyzer
+from .dynamic_analyzer import Dynamic_Analyzer
+from .static_analyzer import Static_Analyzer

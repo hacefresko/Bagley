@@ -164,14 +164,14 @@ class Injector (threading.Thread):
             if not request.response or request.id in tested or request.response.code != 200: 
                 continue
                 
-            Injector.__crlf(request)
+            self.__crlf(request)
 
             if request.params or request.data:
                 content_type = request.getHeader('content-type')
                 if content_type and 'text/html' in str(content_type):
-                    Injector.__xss(request)
-                Injector.__ssti(request)
-                Injector.__sqli(request)
+                    self.__xss(request)
+                self.__ssti(request)
+                self.__sqli(request)
 
             # Add request with same keys in POST/GET data to tested list
             tested = [*[request.id for request in request.getSameKeys()], *tested]

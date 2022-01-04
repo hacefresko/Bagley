@@ -130,11 +130,11 @@ injector = lib.modules.Injector(stopThread)
 injector.start()
 threads.append(injector)
 
-vuln_searcher = lib.modules.Vuln_Searcher(stopThread)
+vuln_searcher = lib.modules.Dynamic_Analyzer(stopThread)
 vuln_searcher.start()
 threads.append(vuln_searcher)
 
-analyzer = lib.modules.Analyzer(stopThread)
+analyzer = lib.modules.Static_Analyzer(stopThread)
 analyzer.start()
 threads.append(analyzer)
 
@@ -159,23 +159,26 @@ while True:
         if not Domain.check(domain):
             print("[+] Target found: %s" % domain)
 
+            # Specified modules to use
+            modules = []
+            if entry.get('modules') and type(modules) == list:
+                modules = entry.get('modules')
+
             # Insert domain
             d = Domain.insert(domain)
             if not domain:
                 continue
             
             # Get and insert headers
-            json_headers = entry.get('headers')
-            if json_headers:
-                for k,v in json_headers.items():
+            if entry.get('headers'):
+                for k,v in entry.get('headers').items():
                     header = Header.insert(k,v, False)
                     if header:
                         d.add(header)
 
             # Get and insert cookies
-            json_cookies = entry.get('cookies')
-            if json_cookies:
-                for c in json_cookies:
+            if entry.get('cookies'):
+                for c in entry.get('cookies'):
                     cookie = Cookie.insert(c)
                     if cookie:
                         d.add(cookie)
@@ -192,3 +195,4 @@ while True:
                 for q in entry.get("queue"):
                     crawler.addToQueue(q)
                     print("[+] %s added to queue" % q)
+

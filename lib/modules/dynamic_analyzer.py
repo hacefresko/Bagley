@@ -3,7 +3,7 @@ import threading, subprocess, shutil, requests, time, json
 import config
 from lib.entities import *
 
-class Vuln_Searcher (threading.Thread):
+class Dynamic_Analyzer (threading.Thread):
     def __init__(self, stop):
         threading.Thread.__init__(self)
         self.stop = stop
@@ -55,19 +55,33 @@ class Vuln_Searcher (threading.Thread):
                     if not tech:
                         tech = Technology.insert(t.get('cpe'), t.get('name'), t.get('version'))
                         if tech:
-                            Vuln_Searcher.__lookupCVEs(tech)
+                            Dynamic_Analyzer.__lookupCVEs(tech)
 
                     if tech:
                         tech.link(path)
         except:
             return
 
+    @staticmethod
+    def __subdomainTakeover(domain):
+        command = [shutil.which('subjack'), '-a', '-m', '-d', str(domain)]
+        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+
+        if result.stdout != '':
+            Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
+            print('[TAKEOVER] Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout))
+
     def run(self):
         paths = Path.yieldAll()
+        domains = Domain.yieldAll()
         while not self.stop.is_set():
             path = next(paths)
-            if not path:
-                time.sleep(5)
-                continue
-
-            Vuln_Searcher.__wappalyzer(path)
+            if path:
+                self.__wappalyzer(path)
+            else:
+                domain = next(domains)
+                if domain:
+                    self.__subdomainTakeover(domain)
+                else:
+                    time.sleep(5)
+                    continue
