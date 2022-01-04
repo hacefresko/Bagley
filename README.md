@@ -63,6 +63,8 @@ Each modules is ran on a different thread
 
     *   Subdomain Takeover with [Subjack](https://github.com/haccer/subjack).
 
+    *   Tries to bypass 403 responses by using `127.0.0.1` in some headers
+
 
 ## External requirements
 
