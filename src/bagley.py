@@ -1,5 +1,4 @@
-import datetime, signal, os
-import shutil
+import datetime, signal, os, shutil, sys
 import lib.controller, lib.bot, config
 
 # Called when Ctrl+C
@@ -26,6 +25,10 @@ def checkDependences():
 
 # Register signal handlers
 signal.signal(signal.SIGINT, sigint_handler)
+
+# Redirect all output to a log file, with buffering = 1 so it gets written almost at the moment (turning it off is only allowed for binary mode)
+sys.stdout = open(config.LOG_FILE, "w", 1)
+sys.stderr = open(config.LOG_FILE, "w", 1)
 
 print(lib.controller.title)
 print("[+] Starting time: %s" % datetime.datetime.now())

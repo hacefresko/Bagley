@@ -1,9 +1,13 @@
+# Log file
+LOG_FILE = '/tmp/bagley.log'
+
 # Database variables
 DB_USER = 'bagley'
 DB_HOST = '127.0.0.1'
 DB_NAME = 'bagley'
 DB_PASSWORD = ''
 
+# Discord variables
 DISCORD_TOKEN_ENV_VAR = 'DISCORD_TOKEN'
 DISCORD_TERMINAL_CHANNEL = 877376214774472806
 
