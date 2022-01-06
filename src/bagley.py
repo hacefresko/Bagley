@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import os, signal, datetime, getopt, sys, time, json, re, shutil, threading, io
 
 from lib.entities import *

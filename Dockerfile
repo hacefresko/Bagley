@@ -69,4 +69,4 @@ WORKDIR /root/bagley
 RUN pip3 install -r  requirements.txt
 
 # Run bagley when running docker
-ENTRYPOINT [ "bagley.py" ]
+ENTRYPOINT [ "python3", "bagley.py" ]
