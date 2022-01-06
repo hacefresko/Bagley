@@ -1,5 +1,4 @@
 # Database variables
-DB_SCRIPT = 'sql/bagley.sql'
 DB_USER = 'bagley'
 DB_HOST = '127.0.0.1'
 DB_NAME = 'bagley'
@@ -21,7 +20,7 @@ PARAMS_BLACKLIST = ['csrf']
 HEADERS_BLACKLIST = ['date', 'cookie', 'set-cookie', 'content-length']
 
 # Directory fuzzing wordlist
-DIR_FUZZING = '/usr/lib/SecLists/Discovery/Web-Content/big.txt'
+DIR_FUZZING = '/usr/lib/SecLists/Discovery/Web-Content/directory-list-2.3-big.txt'
 
 # Domain fuzzing wordlist
-DOMAIN_FUZZING = '/usr/lib/SecLists/Discovery/DNS/subdomains-top1million-20000.txt'
+DOMAIN_FUZZING = '/usr/lib/SecLists/Discovery/DNS/subdomains-top1million-110000.txt'

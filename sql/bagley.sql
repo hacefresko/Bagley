@@ -1,3 +1,8 @@
+CREATE DATABASE bagley;
+CREATE USER 'bagley'@'localhost';
+GRANT ALL PRIVILEGES ON *.* TO 'bagley'@'localhost';
+use bagley;
+
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS domains;

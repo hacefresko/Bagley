@@ -39,7 +39,10 @@ Each modules is ran on a different thread
 
 *   Crawler: Crawls all resources rendering JavaScript (including dynamic requests made to APIs, other domains inside the scope, etc.).
 
-*   Finder: Searches for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and fuzzes subdomains and resources with [Gobuster](https://github.com/OJ/gobuster). Every discover asset is sent to the crawler.
+*   Finder: Looks for resources and subdomains in the server and sends discovered assets to the crawler:
+
+    *   Searches for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder)
+    *   Fuzzes subdomains and resources with [Gobuster](https://github.com/OJ/gobuster) and wordlists from [SecLists](https://github.com/danielmiessler/SecLists)
 
 *   Injector: Tests different injection vectors:
 
@@ -49,7 +52,7 @@ Each modules is ran on a different thread
 
     *   CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz)
 
-    *   SSTI with [Tplmap](https://github.com/epinna/tplmap) on GET and POST parameters.
+    *   SSTI with [Tplmap](https://github.com/epinna/tplmap) on GET and POST parameters
 
 *   Static_Analyzer: Performs local analysis among obtained data, without generating network traffic:
 
@@ -61,26 +64,25 @@ Each modules is ran on a different thread
 
     *   Check know vulnerabilities of technologies used in the [NVD](https://nvd.nist.gov/) via its [API](https://nvd.nist.gov/developers/products)
 
-    *   Subdomain Takeover with [Subjack](https://github.com/haccer/subjack).
+    *   Subdomain Takeover with [Subjack](https://github.com/haccer/subjack)
 
     *   Tries to bypass 403 responses by using `127.0.0.1` in some headers
 
 
 ## External requirements
 
-#### All of these requirements must be available in one of the PATH directories so Bagley can call them wherever it's executed
-
 *   [Mariadb](https://mariadb.com/)
 *   [Chrome](https://www.google.com/chrome/)
 *   [ChromeDriver](https://chromedriver.chromium.org/downloads)
 *   [Gobuster](https://github.com/OJ/gobuster)
 *   [Subfinder](https://github.com/projectdiscovery/subfinder)
-*   [Subjack](https://github.com/haccer/subjack)
+*   [SecLists](https://github.com/danielmiessler/SecLists)
 *   [Sqlmap](https://github.com/sqlmapproject/sqlmap)
 *   [DalFox](https://github.com/hahwul/dalfox)
 *   [CRLFuzz](https://github.com/dwisiswant0/crlfuzz)
 *   [Tplmap](https://github.com/epinna/tplmap)
 *   [Wappalyzer](https://github.com/AliasIO/wappalyzer)
+*   [Subjack](https://github.com/haccer/subjack)
 
 ## Useful documentation
 

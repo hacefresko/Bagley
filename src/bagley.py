@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os, signal, datetime, getopt, sys, time, json, re, shutil, threading, io
 
 from lib.entities import *
@@ -13,28 +15,13 @@ def checkDependences():
             print("[x] %s not found in PATH" % d)
             return False
 
-    files = [config.DIR_FUZZING,config.DOMAIN_FUZZING, config.DB_SCRIPT]
+    files = [config.DIR_FUZZING, config.DOMAIN_FUZZING]
     for f in files:
         if not os.path.exists(f):
+            print("[x] %s from config file not found" % f)
             return False
 
     return True
-
-def initDB():
-    db = DB()
-    statement = ''
-    for line in open(config.DB_SCRIPT):
-        if re.match(r'--', line):
-            continue
-        if not re.search(r';$', line):  # keep appending lines that don't end in ';'
-            statement = statement + line
-        else:  # when you get a line ending in ';' then exec statement and reset for next statement
-            statement = statement + line
-            try:
-                db.exec(statement)
-            except Exception as e:
-                print('[x] MySQLError when executing %s' % config.DB_SCRIPT)
-            statement = ''
 
 # Called when Ctrl+C
 def sigint_handler(sig, frame):
