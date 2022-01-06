@@ -90,10 +90,6 @@ print("[+] Checking dependences")
 if not checkDependences():
     exit()
 
-# Start db
-print("[+] Initializing database")
-initDB()
-
 # Check if file can be opened (and open it)
 try:
     scope_file = open(scope_file_name, 'r')
