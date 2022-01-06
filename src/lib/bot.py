@@ -8,7 +8,7 @@ bot = discord.Client()
 async def on_ready():
     terminal_channel = bot.get_channel(config.DISCORD_TERMINAL_CHANNEL)
     print("[+] Connected to Discord server")
-    await terminal_channel.send("`" + controller.title + "`")
+    await terminal_channel.send("`" + controller.title.replace('`', '\`') + "`")
 
 @bot.event
 async def on_message(message):
