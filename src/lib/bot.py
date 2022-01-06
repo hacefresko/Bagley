@@ -41,7 +41,3 @@ async def on_message(message):
 
     elif message.content.startswith('getpaths'):
         pass
-    
-    else:
-        print("[DISCORD] Received unknown command: %s" % message.content)
-        await terminal_channel.send('```I don\'t know what "%s" is, but you can try with:\n%s```' % (message.content, help_msg))
