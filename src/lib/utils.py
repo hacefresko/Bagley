@@ -29,18 +29,6 @@ def replaceJSON(data, match, newValue):
 
     return data
 
-# Merges both lists of cookies. If the same cookie is on both lists, the chosen cookie is the one from cookies2
-def mergeCookies(cookies1, cookies2):
-    ret = []
-    names = []
-
-    for c in cookies1 + cookies2:
-        if c.name not in names:
-            names.append(c.name)
-            ret.append(c)
-
-    return ret      
-
 # Substitutes all values whose keys match with match parameter for newValue. If match is None, it will substitute all values.
 # It uses content_type header to know what type of POST data is, so it can be more precise
 # For multipart/form-data, it also substitutes the boundary since its value is usually random/partially random

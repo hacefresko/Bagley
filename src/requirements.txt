@@ -5,3 +5,4 @@ selenium-wire
 mariadb
 pathlib
 iptools
+discord

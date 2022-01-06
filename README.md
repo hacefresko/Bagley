@@ -89,3 +89,4 @@ Each modules is ran on a different thread
 *   [MDN HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP)
 *   [Selenium](https://selenium-python.readthedocs.io/)
 *   [Selenium Wire](https://github.com/wkeeling/selenium-wire)
+*   [Discord API](https://discordpy.readthedocs.io/en/latest/api.html)

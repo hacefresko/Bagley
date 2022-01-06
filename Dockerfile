@@ -1,7 +1,5 @@
 FROM mariadb:latest
 
-ENV MYSQL_ROOT_PASSWORD=test
-
 # Prevent packages from prompting interactive input
 ENV DEBIAN_FRONTEND=noninteractive
 
