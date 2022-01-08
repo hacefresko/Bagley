@@ -313,8 +313,6 @@ class Crawler (threading.Thread):
             return
         domain = path.domain
 
-        #self.__updateCookies(path)
-
         print(('['+method+']').ljust(8) + parent_url)
 
         # Request resource

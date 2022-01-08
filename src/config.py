@@ -1,5 +1,5 @@
 # Log file
-LOG_FILE = '/tmp/bagley.log'
+LOG_FILE = '/var/log/bagley.log'
 
 # Database variables
 DB_USER = 'bagley'

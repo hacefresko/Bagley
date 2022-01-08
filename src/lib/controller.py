@@ -60,3 +60,6 @@ def stop():
     stopThread.set()
     for thread in threads:
         thread.join()
+
+def addToQueue(domain):
+    crawler.addToQueue(domain)
