@@ -2,7 +2,7 @@
 
 <img src="/git%20resources/logo.png" width="350">
 
-Bagley is a tool made for bug bounty enviroments to analize whole domains looking for vulnerabilities. It may be deployed as a bot in a server, where targets can be specified via the scope file
+Bagley is a tool made for bug bounty environments to automate the finding of vulnerabilities in web applications
 
 ## Usage
 
@@ -35,7 +35,7 @@ Scope options:
 
 ## Available modules
 
-Each modules is ran on a different thread
+Each modules runs different thread
 
 *   Crawler: Crawls all resources rendering JavaScript (including dynamic requests made to APIs, other domains inside the scope, etc.).
 
@@ -69,7 +69,7 @@ Each modules is ran on a different thread
     *   Tries to bypass 403 responses by using `127.0.0.1` in some headers
 
 
-## External requirements
+## External dependencies
 
 *   [Mariadb](https://mariadb.com/)
 *   [Chrome](https://www.google.com/chrome/)
