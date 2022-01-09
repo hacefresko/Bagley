@@ -1,4 +1,4 @@
-FROM mariadb:latest
+FROM ubuntu:20.04
 
 # Prevent packages from prompting interactive input
 ENV DEBIAN_FRONTEND=noninteractive
@@ -56,15 +56,11 @@ RUN mkdir /usr/lib/SecLists && mkdir /usr/lib/SecLists/Discovery && mkdir /usr/l
 RUN wget -c https://github.com/danielmiessler/SecLists/blob/master/Discovery/DNS/subdomains-top1million-110000.txt -O /usr/lib/SecLists/Discovery/DNS/subdomains-top1million-110000.txt
 RUN wget -c https://github.com/danielmiessler/SecLists/blob/master/Discovery/Web-Content/directory-list-2.3-big.txt -O /usr/lib/SecLists/Discovery/Web-Content/directory-list-2.3-big.txt
 
-# Copy init script in docker-entrypoint-initdb.d so it gets executed on startup (https://hub.docker.com/_/mariadb/)
-COPY sql/ /docker-entrypoint-initdb.d
-
 # Copy src files
 COPY src/ /root/bagley
-WORKDIR /root/bagley
 
 # Install requirements
-RUN pip3 install -r  requirements.txt
-
-# Run bagley when running docker
-ENTRYPOINT [ "python3", "bagley.py" ]
+RUN pip3 install -r  /root/bagley/requirements.txt
+    
+# Run supervisord
+ENTRYPOINT ["python3", "/root/bagley/bagley.py"]

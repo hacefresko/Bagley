@@ -9,7 +9,7 @@ def sigint_handler(sig, frame):
     quit()
 
 def checkDependences():
-    dependences = ['chromedriver', 'mariadb', 'chromedriver', 'gobuster', 'subfinder', 'subjack', 'sqlmap', 'dalfox', 'crlfuzz', 'tplmap', 'wappalyzer']
+    dependences = ['chromedriver', 'chromedriver', 'gobuster', 'subfinder', 'subjack', 'sqlmap', 'dalfox', 'crlfuzz', 'tplmap', 'wappalyzer']
     for d in dependences:
         if not shutil.which(d):
             print("[x] %s not found in PATH" % d)
@@ -28,8 +28,8 @@ signal.signal(signal.SIGINT, sigint_handler)
 
 # Redirect all output to a log file, with buffering = 1 so it gets written almost at the moment (turning it off is only allowed for binary mode)
 log_fd = open(config.LOG_FILE, "w", 1)
-sys.stdout = log_fd
-sys.stderr = log_fd
+#sys.stdout = log_fd
+#sys.stderr = log_fd
 
 print(lib.controller.title)
 print("[+] Starting time: %s" % datetime.datetime.now())
@@ -39,12 +39,6 @@ print("[+] Checking dependences")
 if not checkDependences():
     exit()
 
-# Get discord token
-token = os.getenv(config.DISCORD_TOKEN_ENV_VAR)
-if not token:
-    print("[x] %s environment variable not found" % config.DISCORD_TOKEN_ENV_VAR)
-    exit()
-
 # Start bot
 print("[+] Starting discord bot")
-lib.bot.bot.run(token)
+lib.bot.bot.run(config.DISCORD_TOKEN)

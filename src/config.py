@@ -1,14 +1,19 @@
+import os
+
 # Log file
 LOG_FILE = '/var/log/bagley.log'
 
 # Database variables
-DB_USER = 'bagley'
-DB_HOST = '127.0.0.1'
-DB_NAME = 'bagley'
-DB_PASSWORD = ''
+DB_USER = os.getenv("DB_USER") if os.getenv("DB_USER") else 'bagley'
+DB_HOST = os.getenv("DB_HOST") if os.getenv("DB_HOST") else '127.0.0.1'
+DB_NAME = os.getenv("DB_NAME") if os.getenv("DB_NAME") else 'bagley'
+DB_PASSWORD = os.getenv("DB_PASSWORD") if os.getenv("DB_PASSWORD") else ''
 
 # Discord variables
-DISCORD_TOKEN_ENV_VAR = 'DISCORD_TOKEN'
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+if not DISCORD_TOKEN:
+    print("[x] DISCORD_TOKEN environment variable not found")
+    exit()
 DISCORD_TERMINAL_CHANNEL = 877376214774472806
 
 # Timeout for selenium

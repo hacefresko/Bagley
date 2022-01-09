@@ -1,0 +1,23 @@
+version: '3.9'
+services:
+  mariadb:
+    image: mariadb
+    volumes:
+      - ./sql/bagley.sql:/docker-entrypoint-initdb.d/bagley.sql
+    environment:
+      - MARIADB_ROOT_PASSWORD=xwpogivnoqipwm,elvwp4ebqw`rv,
+      - MARIADB_DATABASE=bagley
+      - MARIADB_USER=bagley
+      - MARIADB_PASSWORD=bagley
+
+  bagley:
+    build: .
+    environment:
+      - DB_HOST=mariadb
+      - DB_NAME=bagley
+      - DB_USER=bagley
+      - DB_PASSWORD=bagley
+      - DISCORD_TOKEN=OTA3NzY1MTg1NTA5NDYyMDk2.YYr8NQ.gTmNzNO_RwEEFPgTrUkKcW5HuNk
+    depends_on:
+      - mariadb
+    network_mode: "host"
