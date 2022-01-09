@@ -27,9 +27,9 @@ def checkDependences():
 signal.signal(signal.SIGINT, sigint_handler)
 
 # Duplicate stdout and stderr to log them into a file
-#log_fd = open(config.LOG_FILE, "w", 1)
-#os.dup2(1, log_fd)
-#os.dup2(2, log_fd)
+log_fd = open(config.LOG_FILE, "w", 1)
+os.dup2(1, log_fd.fileno())
+os.dup2(2, log_fd.fileno())
 
 print(lib.controller.title)
 print("[+] Starting time: %s" % datetime.datetime.now())

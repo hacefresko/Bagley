@@ -2,7 +2,6 @@ version: '3.9'
 services:
   mariadb:
     image: mariadb
-    restart: always
     environment:
       - MARIADB_ROOT_PASSWORD=xwpogivnoqipwm,elvwp4ebqw`rv,
       - MARIADB_DATABASE=bagley
@@ -16,7 +15,6 @@ services:
 
   bagley:
     build: .
-    restart: always
     environment:
       - DB_HOST=127.0.0.1
       - DB_NAME=bagley
