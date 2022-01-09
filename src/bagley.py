@@ -28,8 +28,8 @@ signal.signal(signal.SIGINT, sigint_handler)
 
 # Redirect all output to a log file, with buffering = 1 so it gets written almost at the moment (turning it off is only allowed for binary mode)
 log_fd = open(config.LOG_FILE, "w", 1)
-#sys.stdout = log_fd
-#sys.stderr = log_fd
+sys.stdout = log_fd
+sys.stderr = log_fd
 
 print(lib.controller.title)
 print("[+] Starting time: %s" % datetime.datetime.now())

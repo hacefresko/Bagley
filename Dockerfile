@@ -4,7 +4,7 @@ FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install apt packages
-RUN apt update && apt install -y nano wget unzip git python3 python3-pip python2 libmariadb3 libmariadb-dev && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt install -y nano wget unzip git python3 python3-pip python2 libmariadb3 libmariadb-dev iputils-ping iproute2 && rm -rf /var/lib/apt/lists/*
 
 # Install pip2
 RUN wget https://bootstrap.pypa.io/pip/2.7/get-pip.py && python2 get-pip.py && rm get-pip.py

@@ -2,18 +2,23 @@ version: '3.9'
 services:
   mariadb:
     image: mariadb
-    volumes:
-      - ./sql/bagley.sql:/docker-entrypoint-initdb.d/bagley.sql
+    restart: always
     environment:
       - MARIADB_ROOT_PASSWORD=xwpogivnoqipwm,elvwp4ebqw`rv,
       - MARIADB_DATABASE=bagley
       - MARIADB_USER=bagley
       - MARIADB_PASSWORD=bagley
+    volumes:
+      - ./sql/bagley.sql:/docker-entrypoint-initdb.d/bagley.sql
+    network_mode: "host"
+    expose: 
+      - 3306
 
   bagley:
     build: .
+    restart: always
     environment:
-      - DB_HOST=mariadb
+      - DB_HOST=127.0.0.1
       - DB_NAME=bagley
       - DB_USER=bagley
       - DB_PASSWORD=bagley
