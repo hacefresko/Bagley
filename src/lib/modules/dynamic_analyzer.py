@@ -72,14 +72,50 @@ class Dynamic_Analyzer (threading.Thread):
             print('[TAKEOVER] Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout))
 
     @staticmethod
-    def __bypass403(request):
+    def __bypass4xx(request):
         bypass_headers = {
-            "X-Client-IP": "127.0.0.1",
             "Host": "127.0.0.1",
-            "Referer": "127.0.0.1"
+            "Referer": "127.0.0.1",
+            "Client-IP": "127.0.0.1",
+            "Forwarded-For-Ip": "127.0.0.1",
+            "Forwarded-For": "127.0.0.1",
+            "Forwarded-For": "localhost",
+            "Forwarded": "127.0.0.1",
+            "Forwarded": "localhost",
+            "True-Client-IP": "127.0.0.1",
+            "X-Client-IP": "127.0.0.1",
+            "X-Custom-IP-Authorization": "127.0.0.1",
+            "X-Forward-For": "127.0.0.1",
+            "X-Forward": "127.0.0.1",
+            "X-Forward": "localhost",
+            "X-Forwarded-By": "127.0.0.1",
+            "X-Forwarded-By": "localhost",
+            "X-Forwarded-For-Original": "127.0.0.1",
+            "X-Forwarded-For-Original": "localhost",
+            "X-Forwarded-For": "127.0.0.1",
+            "X-Forwarded-For": "localhost",
+            "X-Forwarded-Server": "127.0.0.1",
+            "X-Forwarded-Server": "localhost",
+            "X-Forwarded": "127.0.0.1",
+            "X-Forwarded": "localhost",
+            "X-Forwarded-Host": "127.0.0.1",
+            "X-Forwarded-Host": "localhost",
+            "X-Host": "127.0.0.1",
+            "X-Host": "localhost",
+            "X-HTTP-Host-Override": "127.0.0.1",
+            "X-Originating-IP": "127.0.0.1",
+            "X-Real-IP": "127.0.0.1",
+            "X-Remote-Addr": "127.0.0.1",
+            "X-Remote-Addr": "localhost",
+            "X-Remote-IP": "127.0.0.1",
+            "X-Original-URL": "/admin",
+            "X-Override-URL": "/admin",
+            "X-Rewrite-URL": "/admin",
+            "Referer": "/admin",
+            "X-HTTP-Method-Override": "PUT"
         }
 
-        if request.response.code == 403:
+        if request.response.code//100 == 4:
             headers = {}
             for h in request.headers:
                 headers[h.key] = h.value
@@ -96,7 +132,7 @@ class Dynamic_Analyzer (threading.Thread):
                 elif request.method == 'POST':
                     r = requests.get(str(request.url), request.params, request.data, headers, cookies)
                 
-                if r.status_code != 403 and r.status_code != 500:
+                if r.status_code != request.response.code and r.status_code != 500:
                     Vulnerability.insert('Broken Access Control', k+": "+v, str(request.path))
                     print("[Access Control] Got code %d for %s using header %s: %s", r.status_code, request.path, k,v)
             
@@ -116,7 +152,7 @@ class Dynamic_Analyzer (threading.Thread):
                     self.__subdomainTakeover(domain)
                 else:
                     request = next(requests)
-                    if request and request.response.code == 403:
-                        self.__bypass403(request)
+                    if request and request.response.code//100 == 4:
+                        self.__bypass4xx(request)
                     else:
                         time.sleep(5)
