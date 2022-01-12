@@ -6,17 +6,9 @@ Bagley is a tool made for bug bounty environments to automate the finding of vul
 
 ## Usage
 
-File config.py defines some global variables that you may have to change, such as path for the directory fuzzing wordlist, the DNS fuzzing wordlist, the database parameters, etc. A database with the parameters specified in config.py must exist
+File config.py defines some global variables that you may have to change, such as path for the directory fuzzing wordlist, the DNS fuzzing wordlist, the database parameters, etc. 
 
-File specifying the scope must be provided with parameter -S. It must contain one target per line, in JSON format. The application will iterate over the targets inside the scope file and will scan all of them one by one. Once it's done, it will wait for the user to write more targets into the file.
-
-This way, the application can be launched as a daemon waiting for targets to be scanned.
-
-Example of usage:
-
-    python3 bagley.py -S scope.txt
-
-Scope options:
+Options:
 
 *   domain \[required\]: Adds a domain or group of subdomains (i.e .example.com) to the scope. Only domains inside the scope will be scanned. If a group of subdomains is specified, the scan will start with the parent domain specified and all referenced subdomains inside the specified group will be scanned (i.e if .example.com is specified, scan will start with example.com and any path with a domain such as api.example.com will be scanned).
 
@@ -28,14 +20,14 @@ Scope options:
 
 *   queue: Specifies list of URLs to start crawling from. Domain must be already added.
 
-### Example of scope file
+### Example for adding domains
 
-    {"domain":".example.com", "excluded": ["test.example.com"], "queue": ["https://www.example.com/example?e=1337"]}
-    {"domain":"api.example.com", "headers": {"Referer": "google.com", "Accept-Encoding": "gzip, deflate, br"}, "cookies": [{"name":"user_session", "value": "1234567890", "domain": "example.com"}, {"name": "logged_in", "value": "yes", "domain": ".example.com"}]}
+    add .example.com -o {"excluded": ["test.example.com"], "queue": ["https://www.example.com/example?e=1337"]}
+    add api.example.com -o {"headers": {"Referer": "google.com", "Accept-Encoding": "gzip, deflate, br"}, "cookies": [{"name":"user_session", "value": "1234567890", "domain": "example.com"}, {"name": "logged_in", "value": "yes", "domain": ".example.com"}]}
 
 ## Available modules
 
-Each modules runs different thread
+Each modules runs in a different thread
 
 *   Crawler: Crawls all resources rendering JavaScript (including dynamic requests made to APIs, other domains inside the scope, etc.).
 
@@ -66,7 +58,7 @@ Each modules runs different thread
 
     *   Subdomain Takeover with [Subjack](https://github.com/haccer/subjack)
 
-    *   Tries to bypass 403 responses by using `127.0.0.1` in some headers
+    *   Tries to bypass 403 responses by tampering headers
 
 
 ## External dependencies
@@ -83,6 +75,7 @@ Each modules runs different thread
 *   [Tplmap](https://github.com/epinna/tplmap)
 *   [Wappalyzer](https://github.com/AliasIO/wappalyzer)
 *   [Subjack](https://github.com/haccer/subjack)
+*   [Gau](https://github.com/lc/gau)
 
 ## Useful documentation
 
