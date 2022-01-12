@@ -92,4 +92,5 @@ async def on_message(message):
             pass
 
         else:
+            print("[DISCORD] Invalid command '%s'" % message.content)
             await terminal_channel.send('Cannot understand "%s"' % message.content)

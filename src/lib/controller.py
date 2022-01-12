@@ -47,9 +47,9 @@ static_analyzer = lib.modules.Static_Analyzer(stopThread)
 threads = [
     crawler,
     finder,
-    injector,
-    dynamic_analyzer,
-    static_analyzer
+    #injector,
+    #dynamic_analyzer,
+    #static_analyzer
 ]
 
 def start():

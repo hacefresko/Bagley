@@ -1,5 +1,5 @@
 import threading, subprocess, json, shutil, time, socket
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import config
 from lib.entities import *
@@ -11,7 +11,7 @@ class Finder(threading.Thread):
         self.stop = stop
         self.analyzed = []
 
-    def __fuzzPath(self, path, headers, cookies, errcodes=[]):
+    def __fuzzPaths(self, path, headers, cookies, errcodes=[]):
         url = str(path)
         # Crawl all urls on the database that has not been crawled
         if not Request.check(url, 'GET'):
@@ -66,9 +66,19 @@ class Finder(threading.Thread):
                 try:
                     errcode = error.split('=>')[1].split('(')[0].strip()
                     errcodes.append(errcode)
-                    self.__fuzzPath(url, headers, cookies, errcodes)
+                    self.__fuzzPaths(url, headers, cookies, errcodes)
                 except:
                     return
+
+    def __findPaths(self, domain):
+        command = [shutil.which('gau')]
+        
+        for line in subprocess.run(command, capture_output=True, encoding='utf-8', input=str(domain)).stdout.splitlines():
+            domain = urlparse(line).netloc
+            if Domain.checkScope(domain):
+                if not Domain.get(domain):
+                    Domain.insert(domain)
+                Path.insert(line)
 
     def __fuzzSubDomain(self, domain, errcodes=[]):
         delay = str(int(1/config.REQ_PER_SEC * 1000)) + 'ms'
@@ -104,7 +114,7 @@ class Finder(threading.Thread):
                     # Repeat the execution with errorcodes
                     errcode = error.split('=>')[1].split('(')[0].strip()
                     errcodes.append(errcode)
-                    self.__fuzzPath(str(domain), errcodes)
+                    self.__fuzzPaths(str(domain), errcodes)
                 except:
                     return
 
@@ -140,13 +150,16 @@ class Finder(threading.Thread):
         domains = Domain.yieldAll()
         while not self.stop.is_set():
             domain = next(domains)
-            if domain and domain.name[0] == '.':
-                self.__findSubDomains(domain)
-                self.__fuzzSubDomain(domain)
+            if domain:
+                if domain.name[0] == '.':
+                    self.__findSubDomains(domain)
+                    self.__fuzzSubDomain(domain)
+                else:
+                    self.__findPaths(domain)
             else:
                 directory = next(directories)
                 if directory:
-                    self.__fuzzPath(directory, directory.domain.headers, directory.domain.cookies)
+                    self.__fuzzPaths(directory, directory.domain.headers, directory.domain.cookies)
                 else:
                     time.sleep(5)
                     continue

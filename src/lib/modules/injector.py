@@ -147,7 +147,7 @@ class Injector (threading.Thread):
         
         print("[+] Testing SSTI in %s [%s]" % (url, request.method))
 
-        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+        result = subprocess.run(command, capture_output=True, encoding='utf-8').stdout
 
         if "Tplmap identified the following injection point" in result.stdout:
             Vulnerability.insert('SSTI', result.stdout, str(request.path), command)
