@@ -41,7 +41,7 @@ Each modules runs different thread
 
 *   Finder: Looks for resources and subdomains in the server and sends discovered assets to the crawler:
 
-    *   Searches for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder)
+    *   Searches for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and paths with [Gau](https://github.com/lc/gau)
     *   Fuzzes subdomains and resources with [Gobuster](https://github.com/OJ/gobuster) and wordlists from [SecLists](https://github.com/danielmiessler/SecLists)
 
 *   Injector: Tests different injection vectors:
