@@ -1,4 +1,4 @@
-import threading, time, re
+import threading, time, re, logging
 
 from lib.entities import *
 
@@ -58,17 +58,17 @@ class Static_Analyzer (threading.Thread):
             script = next(scripts)
             if script and script.path and script.content:
                 for r in self.__searchKeys(script.content):
-                    print("[KEYS] Found %s at script %s\n\n%s\n\n" % (r.get('name'), str(script.path), r.get('value')))
-                    Vulnerability.insert('Key Leak', name + ":" + f, str(script.path))
+                    logging.critical("KEYS FOUND: %s at script %s\n\n%s\n\n", r.get('name'), str(script.path), r.get('value'))
+                    Vulnerability.insert('Key Leak', r["name"] + ":" + r["f"], str(script.path))
             else:
                 response = next(responses)
                 if response and response.body:
                     for r in self.__searchKeys(response.body):
                         for r in response.getRequests():
                             paths += str(r.path) + ', '
-                            Vulnerability.insert('Key Leak', name + ":" + f, str(r.path))
+                            Vulnerability.insert('Key Leak', r["name"] + ":" + r["f"], str(r.path))
                         paths = paths[:-2]
-                        print("[KEYS] Found %s at %s\n\n%s\n\n" % (name, paths, f))
+                        logging.critical("KEYS FOUND: %s at %s\n\n%s\n\n", r["name"], paths, r["f"])
                 else:
                     time.sleep(5)
                     continue

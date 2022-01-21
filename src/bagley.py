@@ -1,9 +1,9 @@
-import datetime, signal, os, shutil, sys
+import datetime, signal, os, shutil, logging
 import lib.controller, lib.bot, config
 
 # Called when Ctrl+C
 def sigint_handler(sig, frame):
-    print('\n[SIGINT] Ending execution...')
+    logging.info('Ending execution...')
 
     lib.controller.stop()
     quit()
@@ -12,13 +12,13 @@ def checkDependences():
     dependences = ['chromedriver', 'chromedriver', 'gobuster', 'subfinder', 'subjack', 'sqlmap', 'dalfox', 'crlfuzz', 'tplmap', 'wappalyzer']
     for d in dependences:
         if not shutil.which(d):
-            print("[x] %s not found in PATH" % d)
+            logging.error('%s not found in PATH', d)
             return False
 
     files = [config.DIR_FUZZING, config.DOMAIN_FUZZING]
     for f in files:
         if not os.path.exists(f):
-            print("[x] %s from config file not found" % f)
+            logging.error('%s from config file not found', f)
             return False
 
     return True
@@ -26,19 +26,15 @@ def checkDependences():
 # Register signal handlers
 signal.signal(signal.SIGINT, sigint_handler)
 
-# Duplicate stdout and stderr to log them into a file
-log_fd = open(config.LOG_FILE, "w", 1)
-os.dup2(1, log_fd.fileno())
-os.dup2(2, log_fd.fileno())
+logging.basicConfig(filename=config.LOG_FILE, format='[%(asctime)s][%(levelname)s] %(message)s')
 
-print(lib.controller.title)
-print("[+] Starting time: %s" % datetime.datetime.now())
+logging.info("Starting \n%s", lib.controller.title)
 
 # Check dependences
-print("[+] Checking dependences")
+logging.info("Checking dependences")
 if not checkDependences():
     exit()
 
 # Start bot
-print("[+] Starting discord bot")
+logging.info("Starting discord bot")
 lib.bot.bot.run(config.DISCORD_TOKEN)

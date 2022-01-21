@@ -1,4 +1,4 @@
-import os
+import os, logging
 
 # Log file
 LOG_FILE = '/var/log/bagley.log'
@@ -12,7 +12,7 @@ DB_PASSWORD = os.getenv("DB_PASSWORD") if os.getenv("DB_PASSWORD") else ''
 # Discord variables
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 if not DISCORD_TOKEN:
-    print("[x] DISCORD_TOKEN environment variable not found")
+    logging.error('DISCORD_TOKEN environment variable not found')
     exit()
 DISCORD_TERMINAL_CHANNEL = 877376214774472806
 

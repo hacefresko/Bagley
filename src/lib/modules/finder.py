@@ -1,3 +1,4 @@
+import logging
 import threading, subprocess, json, shutil, time, socket
 from urllib.parse import urljoin, urlparse
 
@@ -40,7 +41,7 @@ class Finder(threading.Thread):
 
         # If function hasn't been called by itself
         if len(errcodes) == 0:
-            print("[+] Fuzzing path %s" % url)
+            logging.info("Fuzzing path %s", url)
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -51,7 +52,7 @@ class Finder(threading.Thread):
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
                 if code != 404 and not Request.check(discovered, 'GET'):
                     if Path.insert(discovered):
-                        print("[FOUND] Path found! Queued %s to crawler" % discovered)
+                        logging.critical("PATH FOUND: Queued %s to crawler", discovered)
                         self.crawler.addToQueue(discovered)
             except:
                 pass
@@ -88,7 +89,7 @@ class Finder(threading.Thread):
             command.append('-s')
             command.append(','.join(errcodes))
 
-        print("[+] Fuzzing domain %s" % str(domain)[1:])
+        logging.info("Fuzzing domain %s", str(domain)[1:])
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -97,7 +98,7 @@ class Finder(threading.Thread):
             try:
                 discovered = line.split('Found: ')[1].rstrip()
                 if Domain.checkScope(discovered) and not Domain.get(discovered):
-                    print('[FOUND] Domain found! Inserted %s to database' % discovered)
+                    logging.critical('DOMAIN FOUND: Inserted %s to database', discovered)
                     Domain.insert(discovered)
                     self.__subdomainTakeover(discovered)
             except:
@@ -121,7 +122,7 @@ class Finder(threading.Thread):
     def __findSubDomains(self,domain):
         command = [shutil.which('subfinder'), '-oJ', '-nC', '-silent', '-all', '-d', str(domain)[1:]]
 
-        print("[+] Finding subdomains for %s" % str(domain)[1:])
+        logging.info("Finding subdomains for %s", str(domain)[1:])
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
@@ -135,7 +136,7 @@ class Finder(threading.Thread):
                         # Check if domain really exist, since subfinder does not check it
                         socket.gethostbyname(d)
                         if Domain.checkScope(d) and not Domain.get(discovered):
-                            print('[FOUND] Domain found! Inserted %s to database' % d)
+                            logging.critical('DOMAIN FOUND: Inserted %s to database', d)
                             Domain.insert(d)
                             self.__subdomainTakeover(d)
                     except:

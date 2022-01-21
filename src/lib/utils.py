@@ -1,4 +1,5 @@
 import json
+import logging
 
 def replaceURLencoded(data, match, newValue):
     if not data:
@@ -79,5 +80,5 @@ def substitutePOSTData(content_type, data, match, newValue):
                 return  replaceURLencoded(data, match, newValue)
             
     except Exception as e:
-        print('[x] Exception %s ocurred when parsing POST data' % (e.__class__.__name__))
+        logging.error('Exception ocurred when parsing POST data', exc_info=True)
         return data

@@ -1,4 +1,4 @@
-import threading, subprocess, time, shutil
+import threading, subprocess, time, shutil, logging
 
 import config
 from lib.entities import *
@@ -35,16 +35,16 @@ class Injector (threading.Thread):
             cookies_string = cookies_string[:-2]
             command.append(cookies_string)
         
-        print("[+] Testing SQL injection in %s [%s]" % (url, request.method))
+        logging.info("Testing SQL injection in %s [%s]", url, request.method)
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "---" in result.stdout:
             Vulnerability.insert('SQLi', result.stdout, str(request.path))
-            print("[SQLi] SQL injection found in %s!\n\n%s\n" % (url, result.stdout), command)
+            logging.critical("SQL INJECTION: Found in %s!\n\n%s\n%s", url, result.stdout, command)
         elif "[WARNING] false positive or unexploitable injection point detected" in result.stdout:
             Vulnerability.insert('pSQLi', result.stdout, str(request.path), command)
-            print("[SQLi] Possible SQL injection found in %s! But sqlmap couldn't exploit it\n\n%s\n" % (url, result.stdout))
+            logging.critical("SQL INJECTION: Possible SQL injection in %s! But sqlmap couldn't exploit it\n\n%s\n", url, result.stdout)
 
     @staticmethod
     def __xss(request):
@@ -75,13 +75,13 @@ class Injector (threading.Thread):
             cookies_string = cookies_string[:-2]
             command.append(cookies_string)
         
-        print("[+] Testing XSS in %s [%s]" % (url, request.method))
+        logging.info("Testing XSS in %s [%s]", url, request.method)
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "[POC]" in result.stdout:
             Vulnerability.insert('XSS', result.stdout, str(request.path), command)
-            print("[XSS] Cross Site Scripting found in %s!\n\n%s\n" % (url, result.stdout))
+            logging.critical("XSS: %s\n\n%s\n", url, result.stdout)
 
     @staticmethod
     def __crlf(request):
@@ -111,13 +111,13 @@ class Injector (threading.Thread):
             cookies_string = cookies_string[:-2]
             command.append(cookies_string)
         
-        print("[+] Testing CRLF injection in %s [%s]" % (url, request.method))
+        logging.info("Testing CRLF injection in %s [%s]", url, request.method)
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "[VLN]" in result.stdout:
             Vulnerability.insert('CRLFi', result.stdout, str(request.path), command)
-            print("[CRLFi] Carriage Return Line Feed injection found in %s!\n\n%s\n" % (url, result.stdout))
+            logging.critical("CRLF INJECTION: %s\n\n%s\n", url, result.stdout)
 
     @staticmethod
     def __ssti(request):
@@ -145,13 +145,13 @@ class Injector (threading.Thread):
                 command.append('-c')
                 command.append(str(cookie))
         
-        print("[+] Testing SSTI in %s [%s]" % (url, request.method))
+        logging.info("Testing SSTI in %s [%s]", url, request.method)
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8').stdout
 
         if "Tplmap identified the following injection point" in result.stdout:
             Vulnerability.insert('SSTI', result.stdout, str(request.path), command)
-            print("[SSTI] Server Side Template Injection found in %s!\n\n%s\n" % (url, result.stdout))
+            logging.critical("SSTI: %s\n\n%s\n", url, result.stdout)
 
     def run(self):
         tested = []

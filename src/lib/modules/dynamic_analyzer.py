@@ -1,4 +1,4 @@
-import threading, subprocess, shutil, requests, time, json
+import threading, subprocess, shutil, requests, time, json, logging
 
 import config
 from lib.entities import *
@@ -20,7 +20,7 @@ class Dynamic_Analyzer (threading.Thread):
             url = api % (fetched, cpe)
             r = requests.get(url)
             if not r.ok:
-                print('[ERROR] There was a problem requesting %s' % url)
+                logging.error('There was a problem requesting %s', url)
                 break
             j = json.loads(r.text)
 
@@ -38,8 +38,8 @@ class Dynamic_Analyzer (threading.Thread):
                 str += "\t" + v + "\n"
         
         if str != '':
-            print('[CVE] Vulnerabilities found at %s %s\n' % (tech.name, tech.version))
-            print(str)
+            logging.critical('CVE: Vulnerabilities found at %s %s', tech.name, tech.version)
+            logging.scritical(str)
 
     @staticmethod
     def __wappalyzer(path):
@@ -69,7 +69,7 @@ class Dynamic_Analyzer (threading.Thread):
 
         if result.stdout != '':
             Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
-            print('[TAKEOVER] Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout))
+            logging.critical('TAKEOVER: Subdomain Takeover found at %s!\n\n%s\n', str(domain), result.stdout)
 
     @staticmethod
     def __bypass4xx(request):
@@ -134,7 +134,7 @@ class Dynamic_Analyzer (threading.Thread):
                 
                 if r.status_code != request.response.code and r.status_code != 500:
                     Vulnerability.insert('Broken Access Control', k+": "+v, str(request.path))
-                    print("[Access Control] Got code %d for %s using header %s: %s", r.status_code, request.path, k,v)
+                    logging.critical("ACCESS CONTROL: Got code %d for %s using header %s: %s", r.status_code, request.path, k,v)
             
             time.sleep(str(1/config.REQ_PER_SEC))
 

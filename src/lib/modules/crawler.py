@@ -1,4 +1,4 @@
-import threading, time, requests
+import threading, time, requests, logging
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from seleniumwire import webdriver
@@ -6,7 +6,7 @@ from seleniumwire.utils import decode
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 
-import config, lib.utils as utils
+import config
 from lib.entities import *
 
 class Crawler (threading.Thread):
@@ -245,7 +245,7 @@ class Crawler (threading.Thread):
                         if s:
                             s.link(response)
                     except:
-                        print("[x] Error fething script %s" % src)
+                        logging.error('Error fething script %s', src)
                         continue
 
             elif element.name == 'iframe':
@@ -313,7 +313,7 @@ class Crawler (threading.Thread):
             return
         domain = path.domain
 
-        print(('['+method+']').ljust(8) + parent_url)
+        logging.info('GET: %s', parent_url)
 
         # Request resource
         try:
@@ -339,7 +339,7 @@ class Crawler (threading.Thread):
             elif method == 'POST':
                 self.__post(parent_url, data, headers)
         except Exception as e:
-            print('[ERROR] Exception %s ocurred when requesting %s' % (e.__class__.__name__, parent_url))
+            logging.error('Exception ocurred when requesting', exc_info=True)
             return
 
         # Copy browser cookies to local copy
@@ -376,11 +376,11 @@ class Crawler (threading.Thread):
                 code = main_response.code
                 if code//100 == 3:
                     if code == 304:
-                        print("[304] Chached response")
+                        logging.info("304 received: Chached response")
                     else:
                         redirect_to = main_response.getHeader('location').value
                         if not redirect_to:
-                            print("[ERROR] Received %d but location header is not present" % code)
+                            logging.error("Received %d but location header is not present", code)
                         else:
                             redirect_to = urljoin(parent_url, redirect_to)
 
@@ -389,11 +389,11 @@ class Crawler (threading.Thread):
                                 data = None
 
                             if Domain.checkScope(urlparse(redirect_to).netloc):
-                                print("[%d]   %s " % (code, redirect_to))
+                                logging.info("%d received: Redirect to %s ", code, redirect_to)
                                 if Request.checkExtension(redirect_to) and not Request.check(redirect_to, method, data=data, cookies=self.cookies):
                                     self.__crawl(redirect_to, method, data, headers)
                             else:
-                                print("[%d]   %s [OUT OF SCOPE]" % (code, redirect_to))
+                                logging.info("%d received: Redirect to %s [OUT OF SCOPE]", code, redirect_to)
 
                     return
 
@@ -417,7 +417,7 @@ class Crawler (threading.Thread):
                         continue
 
                     elif Request.checkExtension(request.url) and not Request.check(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), self.cookies):
-                        print(('['+request.method+']').ljust(8) + "DYNAMIC REQUEST " + request.url)
+                        logging.info('%s: DYNAMIC REQUEST to %s', request.method, request.url)
                         
                         req = self.__processRequest(request)
                         resp = self.__processResponse(request, req)
@@ -447,10 +447,10 @@ class Crawler (threading.Thread):
                 try:
                     requests.get(url, allow_redirects=False)
                 except requests.exceptions.SSLError:
-                    print("[x] SSL certificate validation failed for %s" % (url))
+                    logging.error('SSL certificate validation failed for %s', url)
                     continue
                 except Exception as e:
-                    print("[x] Cannot request %s" % (url))
+                    logging.error('Cannot request %s', url)
                     continue
             else:
                 domain = next(domains)
@@ -484,11 +484,11 @@ class Crawler (threading.Thread):
                 elif https_request is not None:
                     url = https_request.url
                 else:
-                    print("[x] Cannot request %s" % domain_name)
+                    logging.error('Cannot request %s', domain_name)
                     continue
 
                 if http_request:
-                    print("[*] HTTP protocol is used by %s" % http_request.url)
+                    logging.info("HTTP protocol used by %s" % http_request.url)
 
             # If url already in database, skip
             if Request.check(url, 'GET'):
@@ -511,7 +511,7 @@ class Crawler (threading.Thread):
                             valid.append(cookie)
                             del self.driver.requests
                         except:
-                            print("[ERROR] Couldn't import cookie %s" % str(cookie))
+                            logging.error("Couldn't import cookie %s", str(cookie), exc_info=True)
                     
                     print("[+] Cookies used:\n")
                     for cookie in valid:
@@ -520,7 +520,7 @@ class Crawler (threading.Thread):
                 
                 self.__crawl(url, 'GET', headers=domain.headers)
             except Exception as e:
-                print('[ERROR] Exception %s ocurred when crawling %s' % (e.__class__.__name__, url))
+                logging.error('Exception ocurred when crawling %s', url, exc_info=True)
             finally:
-                print("[+] Finished crawling %s" % url)
+                logging.error('Finished crawling %s', url)
                 continue
