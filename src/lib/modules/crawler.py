@@ -488,7 +488,7 @@ class Crawler (threading.Thread):
                     continue
 
                 if http_request:
-                    logging.info("HTTP protocol used by %s" % http_request.url)
+                    logging.info("HTTP protocol used by %s", http_request.url)
 
             # If url already in database, skip
             if Request.check(url, 'GET'):
@@ -496,12 +496,12 @@ class Crawler (threading.Thread):
 
             try:
                 # Add headers/cookies inputed by the user
-                print("[+] Started crawling %s" % url)
+                logging.info("Started crawling %s", url)
                 if domain.headers:
-                    print("[+] Headers used:\n")
+                    logging.info("Headers used:\n")
                     for header in domain.headers:
-                        print(header)
-                    print()
+                        logging.info(header)
+                    logging.info()
                 if domain.cookies:
                     valid = []
                     for cookie in domain.cookies:
@@ -513,14 +513,14 @@ class Crawler (threading.Thread):
                         except:
                             logging.error("Couldn't import cookie %s", str(cookie), exc_info=True)
                     
-                    print("[+] Cookies used:\n")
+                    logging.info("Cookies used:\n")
                     for cookie in valid:
-                        print(cookie)
-                    print()
+                        logging.info(cookie)
+                    logging.info()
                 
                 self.__crawl(url, 'GET', headers=domain.headers)
             except Exception as e:
                 logging.error('Exception ocurred when crawling %s', url, exc_info=True)
             finally:
-                logging.error('Finished crawling %s', url)
+                logging.info('Finished crawling %s', url)
                 continue

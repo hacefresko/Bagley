@@ -37,7 +37,7 @@ RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
 RUN go get github.com/haccer/subjack
 
 # Install gau
-RUN go get -u github.com/tomnomnom/unfurl
+RUN go install github.com/lc/gau/v2/cmd/gau@latest
 
 # Install sqlmap
 RUN git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git /usr/lib/sqlmap && sed -i "s/#!\/usr\/bin\/env python/#!\/usr\/bin\/env python3/" /usr/lib/sqlmap/sqlmap.py && ln -s /usr/lib/sqlmap/sqlmap.py /usr/local/sbin/sqlmap

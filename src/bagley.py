@@ -26,7 +26,7 @@ def checkDependences():
 # Register signal handlers
 signal.signal(signal.SIGINT, sigint_handler)
 
-logging.basicConfig(filename=config.LOG_FILE, format='[%(asctime)s][%(levelname)s] %(message)s')
+logging.basicConfig(filename=config.LOG_FILE, format='[%(asctime)s][%(levelname)s] %(message)s', level=logging.INFO)
 
 logging.info("Starting \n%s", lib.controller.title)
 
