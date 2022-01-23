@@ -1,4 +1,4 @@
-import threading, time, requests, logging
+import threading, time, requests, logging, inspect
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from seleniumwire import webdriver
@@ -6,7 +6,7 @@ from seleniumwire.utils import decode
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 
-import config
+import config, lib.bot
 from lib.entities import *
 
 class Crawler (threading.Thread):
@@ -495,7 +495,6 @@ class Crawler (threading.Thread):
                 continue
 
             try:
-                # Add headers/cookies inputed by the user
                 logging.info("Started crawling %s", url)
                 if domain.headers:
                     logging.info("Headers used:\n")

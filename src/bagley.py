@@ -1,4 +1,4 @@
-import datetime, signal, os, shutil, logging
+import signal, os, shutil, logging
 import lib.controller, lib.bot, config
 
 # Called when Ctrl+C
@@ -9,7 +9,7 @@ def sigint_handler(sig, frame):
     quit()
 
 def checkDependences():
-    dependences = ['chromedriver', 'chromedriver', 'gobuster', 'subfinder', 'subjack', 'sqlmap', 'dalfox', 'crlfuzz', 'tplmap', 'wappalyzer']
+    dependences = ['chromedriver', 'chromedriver', 'gobuster', 'subfinder', 'subjack', 'sqlmap', 'dalfox', 'crlfuzz', 'tplmap', 'wappalyzer', 'gau']
     for d in dependences:
         if not shutil.which(d):
             logging.error('%s not found in PATH', d)
@@ -26,6 +26,7 @@ def checkDependences():
 # Register signal handlers
 signal.signal(signal.SIGINT, sigint_handler)
 
+# Start logging
 logging.basicConfig(filename=config.LOG_FILE, format='[%(asctime)s][%(levelname)s] %(message)s', level=logging.INFO)
 
 logging.info("Starting \n%s", lib.controller.title)
