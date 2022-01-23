@@ -12,13 +12,13 @@ bot = discord.Client()
 
 @bot.event
 async def on_ready():
-    terminal_channel = bot.get_channel(config.DISCORD_TERMINAL_CHANNEL)
+    terminal_channel = bot.get_channel(config.DISCORD_TERMINAL)
     logging.info("Connected to Discord bot")
     await terminal_channel.send("Hello")
 
 @bot.event
 async def on_message(message):
-    terminal_channel = bot.get_channel(config.DISCORD_TERMINAL_CHANNEL)
+    terminal_channel = bot.get_channel(config.DISCORD_TERMINAL)
     if message.author.id != bot.user.id:
         logging.info("Received %s from Discord", message.content)
         if message.content.lower() == 'help':
@@ -96,3 +96,21 @@ async def on_message(message):
 
         else:
             await terminal_channel.send('Cannot understand "%s"' % message.content)
+
+@bot.event
+async def on_bagley_msg(msg, channel):
+    channels = {
+        "crawler": config.DISCORD_CRAWLER,
+        "dynamic analyzer": config.DISCORD_DYNAMIC_ANALYZER,
+        "finder": config.DISCORD_FINDER,
+        "injector": config.DISCORD_INJECTOR,
+        "static analyzer": config.DISCORD_STATIC_ANALYZER,
+        "vulnerabilities": config.DISCORD_VULNERABILITIES
+    }
+
+    c = channels.get(channel)
+    if not c:
+        logging.error("Tried sending message inexistent channel %s", channel)
+        return
+
+    await c.send(msg)    
