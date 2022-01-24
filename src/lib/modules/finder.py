@@ -52,7 +52,7 @@ class Finder(threading.Thread):
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
                 if code != 404 and not Request.check(discovered, 'GET'):
                     if Path.insert(discovered):
-                        lib.bot.send_vuln_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
+                        lib.bot.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
                         self.crawler.addToQueue(discovered)
             except:
                 pass
@@ -74,11 +74,12 @@ class Finder(threading.Thread):
     def __findPaths(self, domain):
         command = [shutil.which('gau')]
 
-        lib.bot.send_msg("Finding paths for domain %s" % str(domain)[1:], "finder")
+        lib.bot.send_msg("Finding paths for domain %s" % str(domain), "finder")
         
         for line in subprocess.run(command, capture_output=True, encoding='utf-8', input=str(domain)).stdout.splitlines():
             domain = urlparse(line).netloc
             if Domain.checkScope(domain):
+                lib.bot.send_msg("PATH FOUND: Queued %s to crawler" % line, "finder")
                 if not Domain.get(domain):
                     Domain.insert(domain)
                 Path.insert(line)
@@ -100,9 +101,8 @@ class Finder(threading.Thread):
             try:
                 discovered = line.split('Found: ')[1].rstrip()
                 if Domain.checkScope(discovered) and not Domain.get(discovered):
-                    lib.bot.send_vuln_msg("DOMAIN FOUND: Inserted %s to database" % discovered, "finder")
+                    lib.bot.send_msg("DOMAIN FOUND: Inserted %s to database" % discovered, "finder")
                     Domain.insert(discovered)
-                    self.__subdomainTakeover(discovered)
             except:
                 pass
             finally:
@@ -138,9 +138,8 @@ class Finder(threading.Thread):
                         # Check if domain really exist, since subfinder does not check it
                         socket.gethostbyname(d)
                         if Domain.checkScope(d) and not Domain.get(discovered):
-                            lib.bot.send_vuln_msg("DOMAIN FOUND: Inserted %s to database" % d, "finder")
+                            lib.bot.send_msg("DOMAIN FOUND: Inserted %s to database" % d, "finder")
                             Domain.insert(d)
-                            self.__subdomainTakeover(d)
                     except:
                         continue
             except:
