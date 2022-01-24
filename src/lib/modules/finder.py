@@ -2,7 +2,7 @@ import logging
 import threading, subprocess, json, shutil, time, socket
 from urllib.parse import urljoin, urlparse
 
-import config
+import config, lib.bot
 from lib.entities import *
 
 class Finder(threading.Thread):
@@ -41,7 +41,7 @@ class Finder(threading.Thread):
 
         # If function hasn't been called by itself
         if len(errcodes) == 0:
-            logging.info("Fuzzing path %s", url)
+            lib.bot.send_msg("Fuzzing path %s" % url, "finder")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -52,7 +52,7 @@ class Finder(threading.Thread):
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
                 if code != 404 and not Request.check(discovered, 'GET'):
                     if Path.insert(discovered):
-                        logging.critical("PATH FOUND: Queued %s to crawler", discovered)
+                        lib.bot.send_vuln_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
                         self.crawler.addToQueue(discovered)
             except:
                 pass
@@ -73,6 +73,8 @@ class Finder(threading.Thread):
 
     def __findPaths(self, domain):
         command = [shutil.which('gau')]
+
+        lib.bot.send_msg("Finding paths for domain %s" % str(domain)[1:], "finder")
         
         for line in subprocess.run(command, capture_output=True, encoding='utf-8', input=str(domain)).stdout.splitlines():
             domain = urlparse(line).netloc
@@ -89,7 +91,7 @@ class Finder(threading.Thread):
             command.append('-s')
             command.append(','.join(errcodes))
 
-        logging.info("Fuzzing domain %s", str(domain)[1:])
+        lib.bot.send_msg("Fuzzing domain %s" % str(domain)[1:], "finder")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -98,7 +100,7 @@ class Finder(threading.Thread):
             try:
                 discovered = line.split('Found: ')[1].rstrip()
                 if Domain.checkScope(discovered) and not Domain.get(discovered):
-                    logging.critical('DOMAIN FOUND: Inserted %s to database', discovered)
+                    lib.bot.send_vuln_msg("DOMAIN FOUND: Inserted %s to database" % discovered, "finder")
                     Domain.insert(discovered)
                     self.__subdomainTakeover(discovered)
             except:
@@ -115,14 +117,14 @@ class Finder(threading.Thread):
                     # Repeat the execution with errorcodes
                     errcode = error.split('=>')[1].split('(')[0].strip()
                     errcodes.append(errcode)
-                    self.__fuzzPaths(str(domain), errcodes)
+                    self.__fuzzSubDomain(str(domain), errcodes)
                 except:
                     return
 
     def __findSubDomains(self,domain):
         command = [shutil.which('subfinder'), '-oJ', '-nC', '-silent', '-all', '-d', str(domain)[1:]]
 
-        logging.info("Finding subdomains for %s", str(domain)[1:])
+        lib.bot.send_msg("Finding subdomains for %s" % str(domain)[1:], "finder")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
@@ -136,7 +138,7 @@ class Finder(threading.Thread):
                         # Check if domain really exist, since subfinder does not check it
                         socket.gethostbyname(d)
                         if Domain.checkScope(d) and not Domain.get(discovered):
-                            logging.critical('DOMAIN FOUND: Inserted %s to database', d)
+                            lib.bot.send_vuln_msg("DOMAIN FOUND: Inserted %s to database" % d, "finder")
                             Domain.insert(d)
                             self.__subdomainTakeover(d)
                     except:
@@ -147,21 +149,24 @@ class Finder(threading.Thread):
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
         
     def run(self):
-        directories = Path.yieldDirectories()
-        domains = Domain.yieldAll()
-        while not self.stop.is_set():
-            domain = next(domains)
-            if domain:
-                if domain.name[0] == '.':
-                    self.__findSubDomains(domain)
-                    self.__fuzzSubDomain(domain)
+        try:
+            directories = Path.yieldDirectories()
+            domains = Domain.yieldAll()
+            while not self.stop.is_set():
+                domain = next(domains)
+                if domain:
+                    if domain.name[0] == '.':
+                        self.__findSubDomains(domain)
+                        self.__fuzzSubDomain(domain)
+                    else:
+                        self.__findPaths(domain)
                 else:
-                    self.__findPaths(domain)
-            else:
-                directory = next(directories)
-                if directory:
-                    self.__fuzzPaths(directory, directory.domain.headers, directory.domain.cookies)
-                else:
-                    time.sleep(5)
-                    continue
+                    directory = next(directories)
+                    if directory:
+                        self.__fuzzPaths(directory, directory.domain.headers, directory.domain.cookies)
+                    else:
+                        time.sleep(5)
+                        continue
+        except:
+            lib.bot.send_error_msg("Exception occured", "finder", exception=True)
                 

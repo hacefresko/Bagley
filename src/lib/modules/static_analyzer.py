@@ -1,6 +1,7 @@
 import threading, time, re, logging
 
 from lib.entities import *
+import lib.bot
 
 class Static_Analyzer (threading.Thread):
     def __init__(self, stop):
@@ -52,23 +53,26 @@ class Static_Analyzer (threading.Thread):
         return result
 
     def run(self):
-        scripts = Script.yieldAll()
-        responses = Response.yieldAll()
-        while not self.stop.is_set():
-            script = next(scripts)
-            if script and script.path and script.content:
-                for r in self.__searchKeys(script.content):
-                    logging.critical("KEYS FOUND: %s at script %s\n\n%s\n\n", r.get('name'), str(script.path), r.get('value'))
-                    Vulnerability.insert('Key Leak', r["name"] + ":" + r["f"], str(script.path))
-            else:
-                response = next(responses)
-                if response and response.body:
-                    for r in self.__searchKeys(response.body):
-                        for r in response.getRequests():
-                            paths += str(r.path) + ', '
-                            Vulnerability.insert('Key Leak', r["name"] + ":" + r["f"], str(r.path))
-                        paths = paths[:-2]
-                        logging.critical("KEYS FOUND: %s at %s\n\n%s\n\n", r["name"], paths, r["f"])
+        try:
+            scripts = Script.yieldAll()
+            responses = Response.yieldAll()
+            while not self.stop.is_set():
+                script = next(scripts)
+                if script and script.path and script.content:
+                    for r in self.__searchKeys(script.content):
+                        lib.bot.send_vuln_msg("KEYS FOUND: %s at script %s\n\n%s\n\n" % (r.get('name'), str(script.path), r.get('value')), "static analyzer")
+                        Vulnerability.insert('Key Leak', r["name"] + ":" + r["f"], str(script.path))
                 else:
-                    time.sleep(5)
-                    continue
+                    response = next(responses)
+                    if response and response.body:
+                        for r in self.__searchKeys(response.body):
+                            for r in response.getRequests():
+                                paths += str(r.path) + ', '
+                                Vulnerability.insert('Key Leak', r["name"] + ":" + r["f"], str(r.path))
+                            paths = paths[:-2]
+                            lib.bot.send_vuln_msg("KEYS FOUND: %s at %s\n\n%s\n\n" % (r["name"], paths, r["f"]), "static analyzer")
+                    else:
+                        time.sleep(5)
+                        continue
+        except:
+            lib.bot.send_error_msg("Exception occured", "static analyzer", exception=True)

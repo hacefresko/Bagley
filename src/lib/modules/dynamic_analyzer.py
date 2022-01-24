@@ -1,6 +1,6 @@
 import threading, subprocess, shutil, requests, time, json, logging
 
-import config
+import config, lib.bot
 from lib.entities import *
 
 class Dynamic_Analyzer (threading.Thread):
@@ -16,11 +16,13 @@ class Dynamic_Analyzer (threading.Thread):
         fetched = 0
         total_results = 1
 
+        lib.bot.send_msg("Searching for known vulnerabilites for %s %s" % (tech.name, tech.version), "dynamic analyzer")
+
         while fetched < total_results:
             url = api % (fetched, cpe)
             r = requests.get(url)
             if not r.ok:
-                logging.error('There was a problem requesting %s', url)
+                lib.bot.send_error_msg('There was a problem requesting %s for CVE looking' % url, "dynamic analyzer")
                 break
             j = json.loads(r.text)
 
@@ -38,13 +40,14 @@ class Dynamic_Analyzer (threading.Thread):
                 str += "\t" + v + "\n"
         
         if str != '':
-            logging.critical('CVE: Vulnerabilities found at %s %s', tech.name, tech.version)
-            logging.scritical(str)
+            lib.bot.send_vuln_msg('CVE: Vulnerabilities found at %s %s\n%s' % (tech.name, tech.version, str), "dynamic analyzer")
 
     @staticmethod
     def __wappalyzer(path):
         delay = str(int((1/config.REQ_PER_SEC) * 1000))
         command = [shutil.which('wappalyzer'), '--probe', '--delay='+delay, str(path)]
+
+        lib.bot.send_msg("Getting technologies used by %s" % str(path), "dynamic analyzer")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
@@ -65,11 +68,14 @@ class Dynamic_Analyzer (threading.Thread):
     @staticmethod
     def __subdomainTakeover(domain):
         command = [shutil.which('subjack'), '-a', '-m', '-d', str(domain)]
+
+        lib.bot.send_msg("Testing subdomain takeover for domain %s" % str(domain), "dynamic analyzer")
+
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if result.stdout != '':
             Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
-            logging.critical('TAKEOVER: Subdomain Takeover found at %s!\n\n%s\n', str(domain), result.stdout)
+            lib.bot.send_vuln_msg('TAKEOVER: Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout), "dynamic analyzer")
 
     @staticmethod
     def __bypass4xx(request):
@@ -134,25 +140,28 @@ class Dynamic_Analyzer (threading.Thread):
                 
                 if r.status_code != request.response.code and r.status_code != 500:
                     Vulnerability.insert('Broken Access Control', k+": "+v, str(request.path))
-                    logging.critical("ACCESS CONTROL: Got code %d for %s using header %s: %s", r.status_code, request.path, k,v)
+                    lib.bot.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using header "%s: %s"' % (r.status_code, request.path, k,v), "dynamic analyzer")
             
             time.sleep(str(1/config.REQ_PER_SEC))
 
     def run(self):
-        paths = Path.yieldAll()
-        domains = Domain.yieldAll()
-        requests = Request.yieldAll()
-        while not self.stop.is_set():
-            path = next(paths)
-            if path:
-                self.__wappalyzer(path)
-            else:
-                domain = next(domains)
-                if domain:
-                    self.__subdomainTakeover(domain)
+        try:
+            paths = Path.yieldAll()
+            domains = Domain.yieldAll()
+            requests = Request.yieldAll()
+            while not self.stop.is_set():
+                path = next(paths)
+                if path:
+                    self.__wappalyzer(path)
                 else:
-                    request = next(requests)
-                    if request and request.response.code//100 == 4:
-                        self.__bypass4xx(request)
+                    domain = next(domains)
+                    if domain:
+                        self.__subdomainTakeover(domain)
                     else:
-                        time.sleep(5)
+                        request = next(requests)
+                        if request and request.response and request.response.code//100 == 4:
+                            self.__bypass4xx(request)
+                        else:
+                            time.sleep(5)
+        except:
+            lib.bot.send_error_msg("Exception occured", "dynamic analyzer", exception=True)

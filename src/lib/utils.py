@@ -1,5 +1,5 @@
 import json
-import logging
+import lib.bot
 
 def replaceURLencoded(data, match, newValue):
     if not data:
@@ -14,7 +14,6 @@ def replaceURLencoded(data, match, newValue):
         else:
             new_data += p + '&'
     return new_data[:-1]
-
 
 def replaceJSON(data, match, newValue):
     if isinstance(data, dict):
@@ -80,5 +79,4 @@ def substitutePOSTData(content_type, data, match, newValue):
                 return  replaceURLencoded(data, match, newValue)
             
     except Exception as e:
-        logging.error('Exception ocurred when parsing POST data', exc_info=True)
         return data

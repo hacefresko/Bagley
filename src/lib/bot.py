@@ -10,6 +10,20 @@ help_msg = """
 # Init discord bot
 bot = discord.Client()
 
+def send_msg(msg, channel):
+    logging.info("[%s] %s", channel, msg)
+    bot.dispatch("bagley_msg", msg, channel)
+
+def send_error_msg(msg, channel, exception=False):
+    logging.error(msg, exc_info=exception)
+    bot.dispatch("bagley_msg", msg, channel)
+    bot.dispatch("bagley_msg", msg, "errors")
+
+def send_vuln_msg(msg, channel):
+    logging.critical(msg)
+    bot.dispatch("bagley_msg", msg, channel)
+    bot.dispatch("bagley_msg", msg, "vulnerabilities")
+
 @bot.event
 async def on_ready():
     terminal_channel = bot.get_channel(config.DISCORD_TERMINAL)
@@ -100,6 +114,7 @@ async def on_message(message):
 @bot.event
 async def on_bagley_msg(msg, channel):
     channels = {
+        "errors": config.DISCORD_ERRORS,
         "crawler": config.DISCORD_CRAWLER,
         "dynamic analyzer": config.DISCORD_DYNAMIC_ANALYZER,
         "finder": config.DISCORD_FINDER,
@@ -109,7 +124,7 @@ async def on_bagley_msg(msg, channel):
     }
 
     if not channels.get(channel):
-        logging.error("Tried sending message inexistent channel %s", channel)
+        logging.error("Tried sending message to inexistent channel %s", channel)
         return
 
     await bot.get_channel(channels.get(channel)).send(msg)
