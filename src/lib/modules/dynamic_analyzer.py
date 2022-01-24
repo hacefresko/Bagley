@@ -150,18 +150,24 @@ class Dynamic_Analyzer (threading.Thread):
             domains = Domain.yieldAll()
             requests = Request.yieldAll()
             while not self.stop.is_set():
+                executed = False
                 path = next(paths)
                 if path:
                     self.__wappalyzer(path)
-                else:
-                    domain = next(domains)
-                    if domain:
-                        self.__subdomainTakeover(domain)
-                    else:
-                        request = next(requests)
-                        if request and request.response and request.response.code//100 == 4:
-                            self.__bypass4xx(request)
-                        else:
-                            time.sleep(5)
+                    executed = True
+
+                domain = next(domains)
+                if domain:
+                    self.__subdomainTakeover(domain)
+                    executed = True
+
+                request = next(requests)
+                if request and request.response and request.response.code//100 == 4:
+                    self.__bypass4xx(request)
+                    executed = True
+
+                if not executed:
+                    time.sleep(5)
+
         except Exception as e:
             lib.bot.send_error_msg("Exception occured", "dynamic analyzer", e.message)

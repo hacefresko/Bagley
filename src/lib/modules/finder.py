@@ -152,20 +152,22 @@ class Finder(threading.Thread):
             directories = Path.yieldDirectories()
             domains = Domain.yieldAll()
             while not self.stop.is_set():
+                executed = False
                 domain = next(domains)
+                
                 if domain:
                     if domain.name[0] == '.':
                         self.__findSubDomains(domain)
                         self.__fuzzSubDomain(domain)
                     else:
                         self.__findPaths(domain)
-                else:
-                    directory = next(directories)
-                    if directory:
-                        self.__fuzzPaths(directory, directory.domain.headers, directory.domain.cookies)
-                    else:
-                        time.sleep(5)
-                        continue
+
+                directory = next(directories)
+                if directory:
+                    self.__fuzzPaths(directory, directory.domain.headers, directory.domain.cookies)
+
+                if not executed:
+                    time.sleep(5)
         except Exception as e:
             lib.bot.send_error_msg("Exception occured", "finder", e.message)
                 
