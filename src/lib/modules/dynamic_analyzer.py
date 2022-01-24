@@ -50,7 +50,6 @@ class Dynamic_Analyzer (threading.Thread):
         lib.bot.send_msg("Getting technologies used by %s" % str(path), "dynamic analyzer")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
-
         try:
             for t in json.loads(result.stdout).get('technologies'):
                 if t.get('cpe') and t.get('version'):
