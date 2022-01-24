@@ -176,5 +176,5 @@ class Injector (threading.Thread):
 
                 # Add request with same keys in POST/GET data to tested list
                 tested = [*[request.id for request in request.getSameKeys()], *tested]
-        except:
-            lib.bot.send_error_msg("Exception occured", "injector", exception=True)
+        except Exception as e:
+            lib.bot.send_error_msg("Exception occured", "injector", e.message)

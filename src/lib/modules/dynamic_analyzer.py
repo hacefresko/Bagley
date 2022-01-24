@@ -163,5 +163,5 @@ class Dynamic_Analyzer (threading.Thread):
                             self.__bypass4xx(request)
                         else:
                             time.sleep(5)
-        except:
-            lib.bot.send_error_msg("Exception occured", "dynamic analyzer", exception=True)
+        except Exception as e:
+            lib.bot.send_error_msg("Exception occured", "dynamic analyzer", e.message)

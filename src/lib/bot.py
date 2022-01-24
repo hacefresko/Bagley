@@ -14,8 +14,13 @@ def send_msg(msg, channel):
     logging.info("[%s] %s", channel, msg)
     bot.dispatch("bagley_msg", msg, channel)
 
-def send_error_msg(msg, channel, exception=False):
-    logging.error(msg, exc_info=exception)
+def send_error_msg(msg, channel, exception=None):
+    if exception:
+        msg +="\n" + exception
+        logging.exception(msg)
+    else:
+        logging.error(msg)
+
     bot.dispatch("bagley_msg", msg, channel)
     bot.dispatch("bagley_msg", msg, "errors")
 

@@ -244,8 +244,8 @@ class Crawler (threading.Thread):
                             s = Script.insert(src, content)
                         if s:
                             s.link(response)
-                    except Exception:
-                        lib.bot.send_error_msg('Error fething script %s' % src, "crawler", exception=True)
+                    except Exception as e:
+                        lib.bot.send_error_msg('Error fething script %s' % src, "crawler", e.message)
                         continue
 
             elif element.name == 'iframe':
@@ -338,8 +338,8 @@ class Crawler (threading.Thread):
                 self.driver.get(parent_url)
             elif method == 'POST':
                 self.__post(parent_url, data, headers)
-        except Exception:
-            lib.bot.send_error_msg('Exception ocurred when requesting', "crawler", exception=True)
+        except Exception as e:
+            lib.bot.send_error_msg('Exception ocurred when requesting', "crawler", e.message)
             return
 
         # Copy browser cookies to local copy
@@ -446,11 +446,11 @@ class Crawler (threading.Thread):
 
                 try:
                     requests.get(url, allow_redirects=False)
-                except requests.exceptions.SSLError:
-                    lib.bot.send_error_msg('SSL certificate validation failed for %s' % url, "crawler", exception=True)
+                except requests.exceptions.SSLError as e:
+                    lib.bot.send_error_msg('SSL certificate validation failed for %s' % url, "crawler", e.message)
                     continue
-                except Exception:
-                    lib.bot.send_error_msg('Cannot request %s' % url, "crawler", exception=True)
+                except Exception as e:
+                    lib.bot.send_error_msg('Cannot request %s' % url, "crawler", e.message)
                     continue
             else:
                 domain = next(domains)
@@ -512,8 +512,8 @@ class Crawler (threading.Thread):
                             self.driver.add_cookie(cookie.getDict())
                             valid.append(cookie)
                             del self.driver.requests
-                        except:
-                            lib.bot.send_error_msg("Couldn't import cookie %s" % str(cookie), "crawler", exception=True)
+                        except Exception as e:
+                            lib.bot.send_error_msg("Couldn't import cookie %s" % str(cookie), "crawler", e.message)
                     
                     cookies_string = "Cookies used:\n"
                     for cookie in valid:
@@ -522,8 +522,8 @@ class Crawler (threading.Thread):
                     lib.bot.send_msg(cookies_string, "crawler")
                 
                 self.__crawl(url, 'GET', headers=domain.headers)
-            except Exception:
-                lib.bot.send_error_msg('Exception ocurred when crawling %s' % url, "crawler", exception=True)
+            except Exception as e:
+                lib.bot.send_error_msg('Exception ocurred when crawling %s' % url, "crawler", e.message)
             finally:
                 lib.bot.send_msg('Finished crawling %s' % url, "crawler")
                 continue

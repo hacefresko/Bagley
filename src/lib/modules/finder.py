@@ -166,6 +166,6 @@ class Finder(threading.Thread):
                     else:
                         time.sleep(5)
                         continue
-        except:
-            lib.bot.send_error_msg("Exception occured", "finder", exception=True)
+        except Exception as e:
+            lib.bot.send_error_msg("Exception occured", "finder", e.message)
                 
