@@ -147,9 +147,9 @@ class Injector (threading.Thread):
         
         lib.bot.send_msg("Testing SSTI in %s [%s]" % (url, request.method), "injector")
 
-        result = subprocess.run(command, capture_output=True, encoding='utf-8').stdout
+        result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
-        if "Tplmap identified the following injection point" in result:
+        if "Tplmap identified the following injection point" in result.stdout:
             Vulnerability.insert('SSTI', result.stdout, str(request.path), command)
             lib.bot.send_vuln_msg("SSTI: %s\n\n%s\n" % (url, result.stdout), "injector")
 
@@ -165,6 +165,7 @@ class Injector (threading.Thread):
                 if not request.response or request.id in tested or request.response.code != 200: 
                     continue
                     
+                
                 self.__crlf(request)
 
                 if request.params or request.data:

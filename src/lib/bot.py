@@ -52,6 +52,9 @@ async def on_message(message):
             controller.stop()
             await terminal_channel.send('`Stopped`')
 
+        elif message.content.lower() == 'restart':
+            pass
+
         elif message.content.lower().startswith('add'):
             domain = message.content.split(" ")[1]
             if Domain.check(domain):
@@ -111,6 +114,9 @@ async def on_message(message):
             pass
 
         elif message.content.lower().startswith('getpaths'):
+            pass
+
+        elif message.content.lower().startswith('set'):
             pass
 
         else:
