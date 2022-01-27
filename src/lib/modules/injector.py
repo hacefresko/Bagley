@@ -150,7 +150,7 @@ class Injector (threading.Thread):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "Tplmap identified the following injection point" in result.stdout:
-            Vulnerability.insert('SSTI', result.stdout, str(request.path), command)
+            Vulnerability.insert('SSTI', result.stdout, str(request.path), " ".join(command))
             lib.bot.send_vuln_msg("SSTI: %s\n\n%s\n" % (url, result.stdout), "injector")
 
     def run(self):
@@ -178,4 +178,4 @@ class Injector (threading.Thread):
                 # Add request with same keys in POST/GET data to tested list
                 tested = [*[request.id for request in request.getSameKeys()], *tested]
         except Exception as e:
-            lib.bot.send_error_msg("Exception occured", "injector", e.message)
+            lib.bot.send_error_msg("Exception occured", "injector", e.message if hasattr(e, 'message') else e)
