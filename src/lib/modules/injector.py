@@ -12,7 +12,7 @@ class Injector (threading.Thread):
     def __sqli(request):
         url = str(request.path) + ('?' + request.params if request.params else '')
         delay = str(1/config.REQ_PER_SEC)
-        command = [shutil.which('sqlmap'), '--level', '3', '--delay=' + delay, '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method]
+        command = [shutil.which('sqlmap'), '--random-agent', '--delay=' + delay, '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method]
 
         # Add POST data
         if request.method == 'POST' and request.data:
@@ -179,3 +179,4 @@ class Injector (threading.Thread):
                 tested = [*[request.id for request in request.getSameKeys()], *tested]
         except Exception as e:
             lib.bot.send_error_msg("Exception occured", "injector", e.message if hasattr(e, 'message') else e)
+
