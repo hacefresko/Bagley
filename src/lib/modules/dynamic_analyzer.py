@@ -141,7 +141,7 @@ class Dynamic_Analyzer (threading.Thread):
                     Vulnerability.insert('Broken Access Control', k+": "+v, str(request.path))
                     lib.bot.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using header "%s: %s"' % (r.status_code, request.path, k,v), "dynamic analyzer")
             
-            time.sleep(str(1/config.REQ_PER_SEC))
+            time.sleep(1/config.REQ_PER_SEC)
 
     def run(self):
         try:

@@ -27,7 +27,7 @@ def send_msg(msg, channel):
 
 def send_error_msg(msg, channel, exception=None):
     if exception:
-        msg +="\n" + exception
+        msg +="\n" + str(exception)
         logging.exception(msg)
     else:
         logging.error(msg)
