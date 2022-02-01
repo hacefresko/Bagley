@@ -40,7 +40,7 @@ PARAMS_BLACKLIST = ['csrf']
 HEADERS_BLACKLIST = ['date', 'cookie', 'set-cookie', 'content-length']
 
 # Directory fuzzing wordlist
-DIR_FUZZING = '/usr/lib/SecLists/Discovery/Web-Content/directory-list-2.3-big.txt'
+DIR_FUZZING = '/usr/lib/SecLists/Discovery/Web-Content/big.txt'
 
 # Domain fuzzing wordlist
 DOMAIN_FUZZING = '/usr/lib/SecLists/Discovery/DNS/subdomains-top1million-110000.txt'

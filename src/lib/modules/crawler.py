@@ -238,7 +238,7 @@ class Crawler (threading.Thread):
                     if not Domain.checkScope(domain):
                         continue
                     try:
-                        content = requests.get(src).text
+                        content = requests.get(src, verify=False).text
                         s = Script.get(src, content)
                         if not s:
                             s = Script.insert(src, content)
@@ -445,10 +445,7 @@ class Crawler (threading.Thread):
                 domain = path.domain
 
                 try:
-                    requests.get(url, allow_redirects=False)
-                except requests.exceptions.SSLError as e:
-                    lib.bot.send_error_msg('SSL certificate validation failed for %s' % url, "crawler", e.message if hasattr(e, 'message') else e)
-                    continue
+                    requests.get(url, allow_redirects=False, verify=False)
                 except Exception as e:
                     lib.bot.send_error_msg('Cannot request %s' % url, "crawler", e.message if hasattr(e, 'message') else e)
                     continue
@@ -464,14 +461,14 @@ class Crawler (threading.Thread):
 
                 # Check for http and https
                 try:
-                    http_request = requests.get('http://'+domain_name+'/',  allow_redirects=False, timeout=5)
+                    http_request = requests.get('http://'+domain_name+'/',  allow_redirects=False, timeout=5, verify=False)
                     if http_request and http_request.is_permanent_redirect and urlparse(http_request.headers.get('Location')).scheme == 'https':
                         http_request = None
                 except:
                     pass
 
                 try:
-                    https_request = requests.get('https://'+domain_name+'/',  allow_redirects=False, timeout=5)
+                    https_request = requests.get('https://'+domain_name+'/',  allow_redirects=False, timeout=5, verify=False)
                 except:
                     pass
 
