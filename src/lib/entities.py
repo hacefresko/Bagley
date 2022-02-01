@@ -99,6 +99,14 @@ class Domain:
             return None
         return Domain(domain[0], domain[1])
 
+    @staticmethod
+    def getAll():
+        result = []
+        db = DB()
+        for d in db.query_all('SELECT * FROM domains'):
+            result.append(Domain(d[0], d[1]))
+        return result
+
     # Yields domains or None if there are no requests. It continues infinetly until program stops
     @staticmethod
     def yieldAll():

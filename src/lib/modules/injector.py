@@ -39,6 +39,8 @@ class Injector (threading.Thread):
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
+        lib.bot.send_msg(result.stdout + result.stderr, "injector")
+
         if "---" in result.stdout:
             Vulnerability.insert('SQLi', result.stdout, str(request.path))
             lib.bot.send_vuln_msg("SQL INJECTION: Found in %s!\n\n%s\n%s" % (url, result.stdout, command), "injector")
@@ -172,7 +174,7 @@ class Injector (threading.Thread):
                     content_type = request.getHeader('content-type')
                     if content_type and 'text/html' in str(content_type):
                         self.__xss(request)
-                    self.__ssti(request)
+                    #self.__ssti(request)
                     self.__sqli(request)
 
                 # Add request with same keys in POST/GET data to tested list

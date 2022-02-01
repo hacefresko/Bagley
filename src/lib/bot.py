@@ -42,51 +42,42 @@ def send_vuln_msg(msg, channel):
 
 @bot.event
 async def on_ready():
-    #for c in CHANNELS.values():
-    #    mgs = []
-    #    async for x in bot.logs_from(bot.get_channel(c)):
-    #        mgs.append(x)
-    #    await bot.delete_messages(mgs)
-
     logging.info("Connected to Discord bot")
     await  bot.get_channel(CHANNELS.get("terminal")).send("`Hello`")
 
 @bot.event
 async def on_message(message):
-    terminal_channel = bot.get_channel(CHANNELS.get("terminal"))
-    if message.author.id != bot.user.id:
-        logging.info("Received %s from Discord", message.content)
-        if message.content.lower() == 'help':
-            await terminal_channel.send(help_msg)
+    try:
+        terminal_channel = bot.get_channel(CHANNELS.get("terminal"))
+        if message.author.id != bot.user.id:
+            logging.info("Received %s from Discord", message.content)
+            if message.content.lower() == 'help':
+                await terminal_channel.send(help_msg)
 
-        elif message.content.lower() == 'start':
-            controller.start()
-            await terminal_channel.send('`Started`')
+            elif message.content.lower() == 'start':
+                controller.start()
+                await terminal_channel.send('`Started`')
 
-        elif message.content.lower() == 'stop':
-            await terminal_channel.send('`Stopping`')
-            controller.stop()
-            await terminal_channel.send('`Stopped`')
+            elif message.content.lower() == 'stop':
+                await terminal_channel.send('`Stopping`')
+                controller.stop()
+                await terminal_channel.send('`Stopped`')
 
-        elif message.content.lower() == 'restart':
-            pass
+            elif message.content.lower() == 'restart':
+                controller.stop()
+                controller.start()
 
-        elif message.content.lower().startswith('add'):
-            domain = message.content.split(" ")[1]
-            if Domain.check(domain):
-                logging.error("Domain %s already in database", domain)
-                await terminal_channel.send("`Domain %s already in database`" % domain)
-            else:
-                d = Domain.insert(domain)
-                if not d:
-                    logging.error("Could't add domain %s", domain)
-                    await terminal_channel.send("`Couldn't add domain %s`" % domain)
+            elif message.content.lower().startswith('add'):
+                domain = message.content.split(" ")[1]
+                if Domain.check(domain):
+                    logging.error("Domain %s already in database", domain)
+                    await terminal_channel.send("`Domain %s already in database`" % domain)
                 else:
-                    logging.info("Added domain %s", str(d))
-                    await terminal_channel.send("`Added domain %s`" % str(d))
-
-                    # Try parsing options if any
-                    try:
+                    d = Domain.insert(domain)
+                    if not d:
+                        logging.error("Could't add domain %s", domain)
+                        await terminal_channel.send("`Couldn't add domain %s`" % domain)
+                    else:
                         if len(message.content.split(" ")) > 2:
                             opts = json.loads(message.content.split(" ")[2:])
 
@@ -123,20 +114,29 @@ async def on_message(message):
                                     controller.addToQueue(q)
                                     logging.info("Added %s to queue", str(q))
                                     await terminal_channel.send("`Added %s to queue`" % str(q))
-                    except:
-                        await terminal_channel.send("`Couldn't parse options`")
+                        
+                        logging.info("Added domain %s", str(d))
+                        await terminal_channel.send("`Added domain %s`" % str(d))
 
-        elif message.content.lower() == 'getdomains':
-            pass
+            elif message.content.lower() == 'getdomains':
+                s = '`'
+                for d in controller.getDomains():
+                    s += str(d) + "\n"
+                s += '`'
+                await terminal_channel.send(s)
 
-        elif message.content.lower().startswith('getpaths'):
-            pass
+            elif message.content.lower().startswith('getpaths'):
+                domain = message.content.split(" ")[1]
+                await terminal_channel.send('`' + controller.getPaths(domain) + '`')
 
-        elif message.content.lower().startswith('set'):
-            pass
+            elif message.content.lower().startswith('set'):
+                pass
 
-        else:
-            await terminal_channel.send('`Cannot understand "%s"`' % message.content)
+            else:
+                await terminal_channel.send('`Cannot understand "%s"`' % message.content)
+
+    except:
+        await terminal_channel.send("`Couldn't parse command`")
 
 @bot.event
 async def on_bagley_msg(msg, channel):

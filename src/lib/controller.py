@@ -1,6 +1,8 @@
 import threading
 import lib.modules
 
+from lib.entities import *
+
 stopThread = threading.Event()
 title = '''
 
@@ -63,3 +65,13 @@ def stop():
 
 def addToQueue(domain):
     crawler.addToQueue(domain)
+
+def getDomains():
+    return Domain.getAll()
+
+def getPaths(domain):
+    d = Domain.get(domain)
+    if not d:
+        return None
+    
+    return d.getStructure()
