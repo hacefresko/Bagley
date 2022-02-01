@@ -19,7 +19,7 @@ class Finder(threading.Thread):
             self.crawler.addToQueue(url)
 
         delay = str(int((1/config.REQ_PER_SEC) * 1000)) + 'ms'
-        command = [shutil.which('gobuster'), 'dir', '-q', '-w', config.DIR_FUZZING, '-u', url, '--delay', delay]
+        command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-w', config.DIR_FUZZING, '-u', url, '--delay', delay]
 
         # Add headers
         for header in headers:
