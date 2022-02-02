@@ -18,8 +18,7 @@ class Finder(threading.Thread):
         if not Request.check(url, 'GET'):
             self.crawler.addToQueue(url)
 
-        delay = str(int((1/config.REQ_PER_SEC) * 1000)) + 'ms'
-        command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-w', config.DIR_FUZZING, '-u', url, '--delay', delay]
+        command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-w', config.DIR_FUZZING, '-u', url]
 
         # Add headers
         for header in headers:
@@ -85,8 +84,7 @@ class Finder(threading.Thread):
                 Path.insert(line)
 
     def __fuzzSubDomain(self, domain, errcodes=[]):
-        delay = str(int(1/config.REQ_PER_SEC * 1000)) + 'ms'
-        command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', delay]
+        command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:]]
         # Add errorcodes if specified
         if len(errcodes) != 0:
             command.append('-s')

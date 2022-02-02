@@ -44,8 +44,7 @@ class Dynamic_Analyzer (threading.Thread):
 
     @staticmethod
     def __wappalyzer(path):
-        delay = str(int((1/config.REQ_PER_SEC) * 1000))
-        command = [shutil.which('wappalyzer'), '--probe', '--delay='+delay, str(path)]
+        command = [shutil.which('wappalyzer'), '--probe', str(path)]
 
         lib.bot.send_msg("Getting technologies used by %s" % str(path), "dynamic analyzer")
 

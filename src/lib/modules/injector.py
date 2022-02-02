@@ -11,8 +11,7 @@ class Injector (threading.Thread):
     @staticmethod
     def __sqli(request):
         url = str(request.path) + ('?' + request.params if request.params else '')
-        delay = str(1/config.REQ_PER_SEC)
-        command = [shutil.which('sqlmap'), '--random-agent', '--delay=' + delay, '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method]
+        command = [shutil.which('sqlmap'), '--random-agent', '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method]
 
         # Add POST data
         if request.method == 'POST' and request.data:
@@ -49,8 +48,7 @@ class Injector (threading.Thread):
     @staticmethod
     def __xss(request):
         url = str(request.path) + ('?' + request.params if request.params else '')
-        delay = str(int(1/config.REQ_PER_SEC * 1000))
-        command = [shutil.which('dalfox'), 'url', url, '-S', '--skip-bav', '--skip-grepping', '--no-color', '--delay', delay]
+        command = [shutil.which('dalfox'), 'url', url, '-S', '--skip-bav', '--skip-grepping', '--no-color']
         
         # Add POST data
         if request.method == 'POST' and request.data:
@@ -86,7 +84,6 @@ class Injector (threading.Thread):
     @staticmethod
     def __crlf(request):
         url = str(request.path) + ('?' + request.params if request.params else '')
-        # Added delay 1 by default since it only accepts integer and it's a large enough delay
         command = [shutil.which('crlfuzz'), '-u', url, '-s', '-c', '10']
         
         # Add POST data
@@ -122,7 +119,6 @@ class Injector (threading.Thread):
     @staticmethod
     def __ssti(request):
         url = str(request.path) + ('?' + request.params if request.params else '')
-        # Added delay 1 by default since it only accepts integer and it's a large enough delay
         command = [shutil.which('tplmap'), '-u', url]
         
         # Add POST data
