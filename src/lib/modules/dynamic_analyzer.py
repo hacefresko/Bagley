@@ -192,4 +192,4 @@ class Dynamic_Analyzer (threading.Thread):
                     time.sleep(5)
 
         except Exception as e:
-            lib.bot.send_error_msg("Exception occured", "dynamic analyzer", e.message if hasattr(e, 'message') else e)
+            lib.bot.send_error_msg(utils.getExceptionString())

@@ -12,7 +12,7 @@ DB_PASSWORD = os.getenv("DB_PASSWORD") if os.getenv("DB_PASSWORD") else ''
 # Discord variables
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 if not DISCORD_TOKEN:
-    logging.error('DISCORD_TOKEN environment variable not found')
+    print('DISCORD_TOKEN environment variable not found')
     exit()
 
 DISCORD_TERMINAL = 877376214774472806

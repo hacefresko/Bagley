@@ -53,7 +53,7 @@ class Domain:
 
             results = db.query_all('SELECT * FROM paths WHERE parent = %d and element is not Null', (path.id,))
             for i, result in enumerate(results):
-                child = Path(result[0], result[1], result[2], result[3])
+                child = Path(result[0], result[1], result[2], result[3], result[4])
                 if i != len(results)-1:
                     nextLast = False
                 else:
@@ -73,7 +73,7 @@ class Domain:
 
         results = db.query_all('SELECT * FROM paths WHERE parent is Null and element is not Null AND domain = %d', (self.id,))
         for i, result in enumerate(results):
-            child = Path(result[0], result[1], result[2], result[3])
+            child = Path(result[0], result[1], result[2], result[3], result[4])
             if i != len(results)-1:
                 string += recursion(child, False, '')
             else:
@@ -103,7 +103,7 @@ class Domain:
     def getAll():
         result = []
         db = DB()
-        for d in db.query_all('SELECT * FROM domains'):
+        for d in db.query_all('SELECT * FROM domains', ()):
             result.append(Domain(d[0], d[1]))
         return result
 

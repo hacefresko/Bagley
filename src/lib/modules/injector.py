@@ -39,8 +39,6 @@ class Injector (threading.Thread):
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
-        lib.bot.send_msg(result.stdout + result.stderr, "injector")
-
         if "---" in result.stdout:
             Vulnerability.insert('SQLi', result.stdout, str(request.path))
             lib.bot.send_vuln_msg("SQL INJECTION: Found in %s!\n\n%s\n%s" % (url, result.stdout, command), "injector")
@@ -166,7 +164,6 @@ class Injector (threading.Thread):
                     continue
                 if not request.response or request.id in tested or request.response.code != 200: 
                     continue
-                    
                 
                 self.__crlf(request)
 
@@ -179,6 +176,6 @@ class Injector (threading.Thread):
 
                 # Add request with same keys in POST/GET data to tested list
                 tested = [*[request.id for request in request.getSameKeys()], *tested]
-        except Exception as e:
-            lib.bot.send_error_msg("Exception occured", "injector", e.message if hasattr(e, 'message') else e)
+        except:
+            lib.bot.send_error_msg(utils.getExceptionString())
 

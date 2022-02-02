@@ -57,7 +57,7 @@ RUN git clone https://github.com/AliasIO/wappalyzer.git /usr/lib/wappalyzer && c
 # Download SecLists used
 RUN mkdir /usr/lib/SecLists && mkdir /usr/lib/SecLists/Discovery && mkdir /usr/lib/SecLists/Discovery/DNS/ && mkdir /usr/lib/SecLists/Discovery/Web-Content
 RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1million-110000.txt -O /usr/lib/SecLists/Discovery/DNS/subdomains-top1million-110000.txt
-RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/directory-list-2.3-big.txt -O /usr/lib/SecLists/Discovery/Web-Content/directory-list-2.3-big.txt
+RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/big.txt -O /usr/lib/SecLists/Discovery/Web-Content/big.txt
 
 # Copy src files
 COPY src/ /root/bagley

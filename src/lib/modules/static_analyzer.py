@@ -74,5 +74,5 @@ class Static_Analyzer (threading.Thread):
                     else:
                         time.sleep(5)
                         continue
-        except Exception as e:
-            lib.bot.send_error_msg("Exception occured", "static analyzer", e.message if hasattr(e, 'message') else e)
+        except:
+            lib.bot.send_error_msg(utils.getExceptionString())

@@ -245,7 +245,7 @@ class Crawler (threading.Thread):
                         if s:
                             s.link(response)
                     except Exception as e:
-                        lib.bot.send_error_msg('Error fething script %s' % src, "crawler", e.message if hasattr(e, 'message') else e)
+                        lib.bot.send_error_msg(utils.getExceptionString())
                         continue
 
             elif element.name == 'iframe':
@@ -339,7 +339,7 @@ class Crawler (threading.Thread):
             elif method == 'POST':
                 self.__post(parent_url, data, headers)
         except Exception as e:
-            lib.bot.send_error_msg('Exception ocurred when requesting', "crawler", e.message if hasattr(e, 'message') else e)
+            lib.bot.send_error_msg(utils.getExceptionString())
             return
 
         # Copy browser cookies to local copy
@@ -447,7 +447,7 @@ class Crawler (threading.Thread):
                 try:
                     requests.get(url, allow_redirects=False, verify=False)
                 except Exception as e:
-                    lib.bot.send_error_msg('Cannot request %s' % url, "crawler", e.message if hasattr(e, 'message') else e)
+                    lib.bot.send_error_msg(utils.getExceptionString())
                     continue
             else:
                 domain = next(domains)
@@ -510,7 +510,7 @@ class Crawler (threading.Thread):
                             valid.append(cookie)
                             del self.driver.requests
                         except Exception as e:
-                            lib.bot.send_error_msg("Couldn't import cookie %s" % str(cookie), "crawler", e.message if hasattr(e, 'message') else e)
+                            lib.bot.send_error_msg(utils.getExceptionString())
                     
                     cookies_string = "Cookies used:\n"
                     for cookie in valid:
@@ -520,7 +520,7 @@ class Crawler (threading.Thread):
                 
                 self.__crawl(url, 'GET', headers=domain.headers)
             except Exception as e:
-                lib.bot.send_error_msg('Exception ocurred when crawling %s' % url, "crawler", e.message if hasattr(e, 'message') else e)
+                lib.bot.send_error_msg(utils.getExceptionString())
             finally:
                 lib.bot.send_msg('Finished crawling %s' % url, "crawler")
                 continue

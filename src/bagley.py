@@ -1,4 +1,4 @@
-import signal, os, shutil, logging
+import signal, os, shutil, logging, urllib3
 import lib.controller, lib.bot, config
 
 # Called when Ctrl+C
@@ -12,19 +12,22 @@ def checkDependences():
     dependences = ['chromedriver', 'chromedriver', 'gobuster', 'subfinder', 'subjack', 'sqlmap', 'dalfox', 'crlfuzz', 'tplmap', 'wappalyzer', 'gau']
     for d in dependences:
         if not shutil.which(d):
-            logging.error('%s not found in PATH', d)
+            print('%s not found in PATH', d)
             return False
 
     files = [config.DIR_FUZZING, config.DOMAIN_FUZZING]
     for f in files:
         if not os.path.exists(f):
-            logging.error('%s from config file not found', f)
+            print('%s from config file not found' % f)
             return False
 
     return True
 
 # Register signal handlers
 signal.signal(signal.SIGINT, sigint_handler)
+
+# Disable SSL requests warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Start logging
 logging.basicConfig(filename=config.LOG_FILE, format='[%(asctime)s][%(levelname)s] %(message)s', level=logging.INFO)
