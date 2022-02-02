@@ -9,7 +9,7 @@ class Static_Analyzer (threading.Thread):
         self.stop = stop
 
     @staticmethod
-    def __searchKeys(text):
+    def __searchKeys(element):
         result = []
         # https://github.com/m4ll0k/SecretFinder pattern list + https://github.com/hahwul/dalfox greeping list
         patterns = {
@@ -46,11 +46,30 @@ class Static_Analyzer (threading.Thread):
             'paypal_braintree_access_token' :   r'access_token\$production\$[0-9a-z]{16}\$[0-9a-f]{32}'
         }
 
+        if isinstance(element, Script):
+            text = element.content
+        elif isinstance(element, Response):
+            text = element.body
+        else:
+            return
+
         for name, pattern in patterns.items():
-            for f in re.findall(pattern, text):
+            for value in re.findall(pattern, text):
                 result.append({'name': name, 'value': f})
 
-        return result
+                if isinstance(element, Script):
+                    lib.bot.send_vuln_msg("KEYS FOUND: %s at script %s\n\n%s\n\n" % (name, str(element.path), value), "static analyzer")
+                    Vulnerability.insert('Key Leak', name + ":" + value, str(element.path))
+
+                elif isinstance(element, Response):
+                    for r in element.getRequests():
+                        paths += str(r.path) + ', '
+                        Vulnerability.insert('Key Leak', name + ":" + value, str(r.path))
+                    paths = paths[:-2]
+                    lib.bot.send_vuln_msg("KEYS FOUND: %s at %s\n\n%s\n\n" % (name, paths, value), "static analyzer")
+
+    def __jwtCookies(cookie):
+        pass
 
     def run(self):
         try:
@@ -59,18 +78,11 @@ class Static_Analyzer (threading.Thread):
             while not self.stop.is_set():
                 script = next(scripts)
                 if script and script.path and script.content:
-                    for r in self.__searchKeys(script.content):
-                        lib.bot.send_vuln_msg("KEYS FOUND: %s at script %s\n\n%s\n\n" % (r.get('name'), str(script.path), r.get('value')), "static analyzer")
-                        Vulnerability.insert('Key Leak', r["name"] + ":" + r["f"], str(script.path))
+                   self.__searchKeys(script)
                 else:
                     response = next(responses)
                     if response and response.body:
-                        for r in self.__searchKeys(response.body):
-                            for r in response.getRequests():
-                                paths += str(r.path) + ', '
-                                Vulnerability.insert('Key Leak', r["name"] + ":" + r["f"], str(r.path))
-                            paths = paths[:-2]
-                            lib.bot.send_vuln_msg("KEYS FOUND: %s at %s\n\n%s\n\n" % (r["name"], paths, r["f"]), "static analyzer")
+                        self.__searchKeys(response)
                     else:
                         time.sleep(5)
                         continue
