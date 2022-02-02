@@ -133,6 +133,13 @@ class Dynamic_Analyzer (threading.Thread):
             "PATCH"
         }
 
+        negative_codes = {
+            400,
+            403,
+            405,
+            500
+        }
+
         if request.response.code//100 == 4:
             headers = {}
             for h in request.headers:
@@ -145,9 +152,9 @@ class Dynamic_Analyzer (threading.Thread):
             for method in methods:
                 r = requests.request(method, str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
 
-                if r.status_code != request.response.code and r.status_code != 500 and r.status_code != 400:
+                if r.status_code != request.response.code and r.status_code not in negative_codes:
                     Vulnerability.insert('Broken Access Control', "Method: " + method, str(request.path))
-                    lib.bot.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using method "%s"' % (r.status_code, request.path, method), "dynamic analyzer")
+                    lib.bot.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using method "%s" (original was %d)' % (r.status_code, request.path, method, request.response.code), "dynamic analyzer")
 
 
             for k,v in bypass_headers.items():
@@ -158,9 +165,9 @@ class Dynamic_Analyzer (threading.Thread):
                 elif request.method == 'POST':
                     r = requests.get(str(request.url), request.params, request.data, headers, cookies, verify=False)
                 
-                if r.status_code != request.response.code and r.status_code != 500 and r.status_code != 400:
+                if r.status_code != request.response.code and r.status_code not in negative_codes:
                     Vulnerability.insert('Broken Access Control', k+": "+v, str(request.path))
-                    lib.bot.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using header "%s: %s"' % (r.status_code, request.path, k,v), "dynamic analyzer")
+                    lib.bot.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using header "%s: %s" (original was %d)' % (r.status_code, request.path, k,v, request.response.code), "dynamic analyzer")
             
 
 

@@ -1,4 +1,4 @@
-import threading, time, re, logging
+import threading, time, re, jwt
 
 from lib.entities import *
 import lib.bot
@@ -10,7 +10,6 @@ class Static_Analyzer (threading.Thread):
 
     @staticmethod
     def __searchKeys(element):
-        result = []
         # https://github.com/m4ll0k/SecretFinder pattern list + https://github.com/hahwul/dalfox greeping list
         patterns = {
             'rsa-key':                          r'-----BEGIN RSA PRIVATE KEY-----|-----END RSA PRIVATE KEY-----',
@@ -47,18 +46,16 @@ class Static_Analyzer (threading.Thread):
         }
 
         if isinstance(element, Script):
-            lib.bot.send_msg("Looking for API keys in script %s" % str(element.link), "static analyzer")
+            lib.bot.send_msg("Looking for API keys in script %s" % str(element.path), "static analyzer")
             text = element.content
         elif isinstance(element, Response):
-            lib.bot.send_msg("Looking for API keys in response %s" % str(element.path), "static analyzer")
+            lib.bot.send_msg("Looking for API keys in response from %s" % ", ".join([str(r.path) for r in element.getRequests()]), "static analyzer")
             text = element.body
         else:
             return
 
         for name, pattern in patterns.items():
             for value in re.findall(pattern, text):
-                result.append({'name': name, 'value': f})
-
                 if isinstance(element, Script):
                     lib.bot.send_vuln_msg("KEYS FOUND: %s at script %s\n\n%s\n\n" % (name, str(element.path), value), "static analyzer")
                     Vulnerability.insert('Key Leak', name + ":" + value, str(element.path))
@@ -69,9 +66,6 @@ class Static_Analyzer (threading.Thread):
                         Vulnerability.insert('Key Leak', name + ":" + value, str(r.path))
                     paths = paths[:-2]
                     lib.bot.send_vuln_msg("KEYS FOUND: %s at %s\n\n%s\n\n" % (name, paths, value), "static analyzer")
-
-    def __jwtCookies(cookie):
-        pass
 
     def run(self):
         try:
