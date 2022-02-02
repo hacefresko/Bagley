@@ -47,8 +47,10 @@ class Static_Analyzer (threading.Thread):
         }
 
         if isinstance(element, Script):
+            lib.bot.send_msg("Looking for API keys in script %s" % str(element.link), "static analyzer")
             text = element.content
         elif isinstance(element, Response):
+            lib.bot.send_msg("Looking for API keys in response %s" % str(element.path), "static analyzer")
             text = element.body
         else:
             return
