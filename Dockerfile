@@ -65,9 +65,11 @@ COPY src/ /root/bagley
 # Install requirements
 RUN pip3 install -r  /root/bagley/requirements.txt
 
-# Limit requests per second of all processes (default to 5 req/s)
-RUN iptables -A OUTPUT -p tcp --dport 80,443 -m limit --limit 5/s -j ACCEPT
-RUN iptables -A OUTPUT -p tcp --dport 80,443 -j DROP
+# Configure iptables to only allow 5 requests per second to http and https connections
+RUN iptables -N BEFORE_DOCKER
+RUN iptables -I BEFORE_DOCKER -p tcp --dport 80,443 -j DROP
+RUN iptables -I BEFORE_DOCKER -p tcp --dport 80,443 -m limit --limit 5/s -j ACCEPT
+RUN iptables -I FORWARD -i docker0 -j BEFORE_DOCKER
 
 # Run supervisord
 ENTRYPOINT ["python3", "/root/bagley/bagley.py"]
