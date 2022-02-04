@@ -21,6 +21,8 @@ services:
       - DB_USER=bagley
       - DB_PASSWORD=bagley
       - DISCORD_TOKEN=OTA3NzY1MTg1NTA5NDYyMDk2.YYr8NQ.gTmNzNO_RwEEFPgTrUkKcW5HuNk
+    cap_add:
+      - NET_ADMIN
     depends_on:
       - mariadb
     network_mode: "host"
