@@ -1,5 +1,5 @@
 import signal, os, shutil, logging, urllib3
-import lib.controller, lib.bot, config
+import lib.controller, lib.bot, lib.traffic_controller, config
 
 # Called when Ctrl+C
 def sigint_handler(sig, frame):
@@ -38,6 +38,8 @@ logging.info("Starting \n%s", lib.controller.title)
 logging.info("Checking dependences")
 if not checkDependences():
     exit()
+
+#lib.traffic_controller.init(5)
 
 # Start bot
 logging.info("Starting discord bot")
