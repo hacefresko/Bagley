@@ -44,6 +44,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logging.basicConfig(filename=config.LOG_FILE, format='[%(asctime)s][%(levelname)s] %(message)s', level=logging.INFO)
 logging.info(title)
 
-# Start bot
-logging.info("Starting discord bot")
-lib.bot.bot.run(config.DISCORD_TOKEN)
+# Init controller
+controller = lib.controller.Controller()
+
+# Init bot
+lib.bot.initBot(controller)

@@ -3,7 +3,7 @@ import threading, subprocess, shutil, requests, time, json, logging
 import config
 from lib.entities import *
 from lib.modules.module import Module
-from lib.controller import Controller
+import lib.controller
 
 class Dynamic_Analyzer (Module):
     def __init__(self, stop):
@@ -17,13 +17,13 @@ class Dynamic_Analyzer (Module):
         fetched = 0
         total_results = 1
 
-        Controller.send_msg("Searching for known vulnerabilites for %s %s" % (tech.name, tech.version), "dynamic analyzer")
+        lib.controller.Controller.send_msg("Searching for known vulnerabilites for %s %s" % (tech.name, tech.version), "dynamic analyzer")
 
         while fetched < total_results:
             url = api % (fetched, cpe)
             r = requests.get(url)
             if not r.ok:
-                Controller.send_error_msg('There was a problem requesting %s for CVE looking' % url, "dynamic analyzer")
+                lib.controller.Controller.send_error_msg('There was a problem requesting %s for CVE looking' % url, "dynamic analyzer")
                 break
             j = json.loads(r.text)
 
@@ -41,13 +41,13 @@ class Dynamic_Analyzer (Module):
                 str += "\t" + v + "\n"
         
         if str != '':
-            Controller.send_vuln_msg('CVE: Vulnerabilities found at %s %s\n%s' % (tech.name, tech.version, str), "dynamic analyzer")
+            lib.controller.Controller.send_vuln_msg('CVE: Vulnerabilities found at %s %s\n%s' % (tech.name, tech.version, str), "dynamic analyzer")
 
     @staticmethod
     def __wappalyzer(path):
         command = [shutil.which('wappalyzer'), '--probe', str(path)]
 
-        Controller.send_msg("Getting technologies used by %s" % str(path), "dynamic analyzer")
+        lib.controller.Controller.send_msg("Getting technologies used by %s" % str(path), "dynamic analyzer")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
         try:
@@ -68,13 +68,13 @@ class Dynamic_Analyzer (Module):
     def __subdomainTakeover(domain):
         command = [shutil.which('subjack'), '-a', '-m', '-d', str(domain)]
 
-        Controller.send_msg("Testing subdomain takeover for domain %s" % str(domain), "dynamic analyzer")
+        lib.controller.Controller.send_msg("Testing subdomain takeover for domain %s" % str(domain), "dynamic analyzer")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if result.stdout != '':
             Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
-            Controller.send_vuln_msg('TAKEOVER: Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout), "dynamic analyzer")
+            lib.controller.Controller.send_vuln_msg('TAKEOVER: Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout), "dynamic analyzer")
 
     @staticmethod
     def __bypass4xx(request):
@@ -147,7 +147,7 @@ class Dynamic_Analyzer (Module):
 
                 if r.status_code//100 == 2:
                     Vulnerability.insert('Broken Access Control', "Method: " + method, str(request.path))
-                    Controller.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using method "%s" (original was %d)' % (r.status_code, request.path, method, request.response.code), "dynamic analyzer")
+                    lib.controller.Controller.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using method "%s" (original was %d)' % (r.status_code, request.path, method, request.response.code), "dynamic analyzer")
 
             for k,v in bypass_headers.items():
                 req_headers = headers
@@ -159,7 +159,7 @@ class Dynamic_Analyzer (Module):
                 
                 if r.status_code//100 == 2:
                     Vulnerability.insert('Broken Access Control', k+": "+v, str(request.path))
-                    Controller.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using header "%s: %s" (original was %d)' % (r.status_code, request.path, k,v, request.response.code), "dynamic analyzer")
+                    lib.controller.Controller.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using header "%s: %s" (original was %d)' % (r.status_code, request.path, k,v, request.response.code), "dynamic analyzer")
 
             time.sleep(1/config.REQ_PER_SEC)
 
@@ -189,4 +189,4 @@ class Dynamic_Analyzer (Module):
                     time.sleep(5)
 
         except Exception as e:
-            Controller.send_error_msg(utils.getExceptionString())
+            lib.controller.Controller.send_error_msg(utils.getExceptionString())

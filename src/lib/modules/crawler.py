@@ -9,7 +9,7 @@ from selenium.webdriver.chrome.options import Options
 import config
 from lib.entities import *
 from lib.modules.module import Module
-from lib.controller import Controller
+import lib.controller
 
 class Crawler (Module):
     def __init__(self, stop):
@@ -245,7 +245,7 @@ class Crawler (Module):
                         if s:
                             s.link(response)
                     except:
-                        Controller.send_error_msg(utils.getExceptionString())
+                        lib.controller.Controller.send_error_msg(utils.getExceptionString())
                         continue
 
             elif element.name == 'iframe':
@@ -313,7 +313,7 @@ class Crawler (Module):
             return
         domain = path.domain
 
-        Controller.send_msg('GET: %s' % parent_url, "crawler")
+        lib.controller.Controller.send_msg('GET: %s' % parent_url, "crawler")
 
         # Request resource
         try:
@@ -339,7 +339,7 @@ class Crawler (Module):
             elif method == 'POST':
                 self.__post(parent_url, data, headers)
         except Exception as e:
-            Controller.send_error_msg(utils.getExceptionString())
+            lib.controller.Controller.send_error_msg(utils.getExceptionString())
             return
 
         # Copy browser cookies to local copy
@@ -376,11 +376,11 @@ class Crawler (Module):
                 code = main_response.code
                 if code//100 == 3:
                     if code == 304:
-                        Controller.send_msg("304 received: Chached response", "crawler")
+                        lib.controller.Controller.send_msg("304 received: Chached response", "crawler")
                     else:
                         redirect_to = main_response.getHeader('location').value
                         if not redirect_to:
-                            Controller.send_error_msg("Received %d but location header is not present" % code, "crawler")
+                            lib.controller.Controller.send_error_msg("Received %d but location header is not present" % code, "crawler")
                         else:
                             redirect_to = urljoin(parent_url, redirect_to)
 
@@ -389,11 +389,11 @@ class Crawler (Module):
                                 data = None
 
                             if Domain.checkScope(urlparse(redirect_to).netloc):
-                                Controller.send_msg("%d received: Redirect to %s" % (code, redirect_to), "crawler")
+                                lib.controller.Controller.send_msg("%d received: Redirect to %s" % (code, redirect_to), "crawler")
                                 if Request.checkExtension(redirect_to) and not Request.check(redirect_to, method, data=data, cookies=self.cookies):
                                     self.__crawl(redirect_to, method, data, headers)
                             else:
-                                Controller.send_msg("%d received: Redirect to %s [OUT OF SCOPE]" % (code, redirect_to), "crawler")
+                                lib.controller.Controller.send_msg("%d received: Redirect to %s [OUT OF SCOPE]" % (code, redirect_to), "crawler")
 
                     return
 
@@ -417,7 +417,7 @@ class Crawler (Module):
                         continue
 
                     elif Request.checkExtension(request.url) and not Request.check(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), self.cookies):
-                        Controller.send_msg('%s: DYNAMIC REQUEST to %s' % (request.method, request.url), "crawler")
+                        lib.controller.Controller.send_msg('%s: DYNAMIC REQUEST to %s' % (request.method, request.url), "crawler")
                         
                         req = self.__processRequest(request)
                         resp = self.__processResponse(request, req)
@@ -447,7 +447,7 @@ class Crawler (Module):
                 try:
                     requests.get(url, allow_redirects=False, verify=False)
                 except Exception as e:
-                    Controller.send_error_msg(utils.getExceptionString())
+                    lib.controller.Controller.send_error_msg(utils.getExceptionString())
                     continue
             else:
                 domain = next(domains)
@@ -481,25 +481,25 @@ class Crawler (Module):
                 elif https_request is not None:
                     url = https_request.url
                 else:
-                    Controller.send_error_msg('Cannot request %s' % domain_name, "crawler")
+                    lib.controller.Controller.send_error_msg('Cannot request %s' % domain_name, "crawler")
                     continue
 
                 if http_request:
-                    Controller.send_msg("HTTP protocol used by %s" % http_request.url, "crawler")
+                    lib.controller.Controller.send_msg("HTTP protocol used by %s" % http_request.url, "crawler")
 
             # If url already in database, skip
             if Request.check(url, 'GET'):
                 continue
 
             try:
-                Controller.send_msg("Started crawling %s" % url, "crawler")
+                lib.controller.Controller.send_msg("Started crawling %s" % url, "crawler")
                 
                 if domain.headers:
                     headers_string = "Headers used:\n"
                     for header in domain.headers:
                         headers_string += str(header) + "\n"
                     headers_string += "\n"
-                    Controller.send_msg(headers_string, "crawler")
+                    lib.controller.Controller.send_msg(headers_string, "crawler")
 
                 if domain.cookies:
                     valid = []
@@ -510,17 +510,17 @@ class Crawler (Module):
                             valid.append(cookie)
                             del self.driver.requests
                         except Exception as e:
-                            Controller.send_error_msg(utils.getExceptionString())
+                            lib.controller.Controller.send_error_msg(utils.getExceptionString())
                     
                     cookies_string = "Cookies used:\n"
                     for cookie in valid:
                         cookies_string += str(cookie) + "\n"
                     cookies_string += "\n"
-                    Controller.send_msg(cookies_string, "crawler")
+                    lib.controller.Controller.send_msg(cookies_string, "crawler")
                 
                 self.__crawl(url, 'GET', headers=domain.headers)
             except Exception as e:
-                Controller.send_error_msg(utils.getExceptionString())
+                lib.controller.Controller.send_error_msg(utils.getExceptionString())
             finally:
-                Controller.send_msg('Finished crawling %s' % url, "crawler")
+                lib.controller.Controller.send_msg('Finished crawling %s' % url, "crawler")
                 continue

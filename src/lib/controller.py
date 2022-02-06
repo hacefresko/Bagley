@@ -4,7 +4,6 @@ import lib.modules, lib.bot, config
 from lib.entities import *
 from lib.traffic_controller import TrafficController
 
-
 class Controller:
     def __init__(self): 
         self.traffic_controller = TrafficController(config.REQ_PER_SEC)

@@ -2,9 +2,9 @@ import subprocess, json, shutil, time, socket, os
 from urllib.parse import urljoin, urlparse
 
 import config
-from lib.modules import Module
+from lib.modules.module import Module
 from lib.entities import *
-from lib.controller import Controller
+import lib.controller
 
 class Finder(Module):
     def __init__(self, stop, crawler):
@@ -47,7 +47,7 @@ class Finder(Module):
 
         # If function hasn't been called by itself
         if len(errcodes) == 0:
-            Controller.send_msg("Fuzzing path %s" % url, "finder")
+            lib.controller.Controller.send_msg("Fuzzing path %s" % url, "finder")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -58,7 +58,7 @@ class Finder(Module):
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
                 if code != 404 and not Request.check(discovered, 'GET'):
                     if Path.insert(discovered):
-                        Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
+                        lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
                         self.crawler.addToQueue(discovered)
             except:
                 pass
@@ -80,12 +80,12 @@ class Finder(Module):
     def __findPaths(self, domain):
         command = [shutil.which('gau')]
 
-        Controller.send_msg("Finding paths for domain %s" % str(domain), "finder")
+        lib.controller.Controller.send_msg("Finding paths for domain %s" % str(domain), "finder")
         
         for line in subprocess.run(command, capture_output=True, encoding='utf-8', input=str(domain)).stdout.splitlines():
             domain = urlparse(line).netloc
             if Domain.checkScope(domain):
-                Controller.send_msg("PATH FOUND: Queued %s to crawler" % line, "finder")
+                lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % line, "finder")
                 if not Domain.get(domain):
                     Domain.insert(domain)
                 Path.insert(line)
@@ -97,7 +97,7 @@ class Finder(Module):
             command.append('-s')
             command.append(','.join(errcodes))
 
-        Controller.send_msg("Fuzzing domain %s" % str(domain)[1:], "finder")
+        lib.controller.Controller.send_msg("Fuzzing domain %s" % str(domain)[1:], "finder")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -106,7 +106,7 @@ class Finder(Module):
             try:
                 discovered = line.split('Found: ')[1].rstrip()
                 if Domain.checkScope(discovered) and not Domain.get(discovered):
-                    Controller.send_msg("DOMAIN FOUND: Inserted %s to database" % discovered, "finder")
+                    lib.controller.Controller.send_msg("DOMAIN FOUND: Inserted %s to database" % discovered, "finder")
                     Domain.insert(discovered)
             except:
                 pass
@@ -129,7 +129,7 @@ class Finder(Module):
     def __findSubDomains(self,domain):
         command = [shutil.which('subfinder'), '-oJ', '-nC', '-silent', '-all', '-d', str(domain)[1:]]
 
-        Controller.send_msg("Finding subdomains for %s" % str(domain)[1:], "finder")
+        lib.controller.Controller.send_msg("Finding subdomains for %s" % str(domain)[1:], "finder")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
@@ -143,7 +143,7 @@ class Finder(Module):
                         # Check if domain really exist, since subfinder does not check it
                         socket.gethostbyname(d)
                         if Domain.checkScope(d) and not Domain.get(discovered):
-                            Controller.send_msg("DOMAIN FOUND: Inserted %s to database" % d, "finder")
+                            lib.controller.Controller.send_msg("DOMAIN FOUND: Inserted %s to database" % d, "finder")
                             Domain.insert(d)
                     except:
                         continue
@@ -174,5 +174,5 @@ class Finder(Module):
                 if not executed:
                     time.sleep(5)
         except:
-            Controller.send_error_msg(utils.getExceptionString())
+            lib.controller.Controller.send_error_msg(utils.getExceptionString())
                 

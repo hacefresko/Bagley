@@ -1,4 +1,4 @@
-import os, logging
+import os
 
 # Log file
 LOG_FILE = '/var/log/bagley.log'

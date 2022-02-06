@@ -1,8 +1,8 @@
 import time, re
 
 from lib.entities import *
-from lib.controller import Controller
-from lib.modules import Module
+import lib.controller
+from lib.modules.module import Module
 
 class Static_Analyzer (Module):
     def __init__(self, stop):
@@ -46,10 +46,10 @@ class Static_Analyzer (Module):
         }
 
         if isinstance(element, Script):
-            Controller.send_msg("Looking for API keys in script %s" % str(element.path), "static analyzer")
+            lib.controller.Controller.send_msg("Looking for API keys in script %s" % str(element.path), "static analyzer")
             text = element.content
         elif isinstance(element, Response):
-            Controller.send_msg("Looking for API keys in response from %s" % ", ".join([str(r.path) for r in element.getRequests()]), "static analyzer")
+            lib.controller.Controller.send_msg("Looking for API keys in response from %s" % ", ".join([str(r.path) for r in element.getRequests()]), "static analyzer")
             text = element.body
         else:
             return
@@ -57,7 +57,7 @@ class Static_Analyzer (Module):
         for name, pattern in patterns.items():
             for value in re.findall(pattern, text):
                 if isinstance(element, Script):
-                    Controller.send_vuln_msg("KEYS FOUND: %s at script %s\n\n%s\n\n" % (name, str(element.path), value), "static analyzer")
+                    lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at script %s\n\n%s\n\n" % (name, str(element.path), value), "static analyzer")
                     Vulnerability.insert('Key Leak', name + ":" + value, str(element.path))
 
                 elif isinstance(element, Response):
@@ -65,7 +65,7 @@ class Static_Analyzer (Module):
                         paths += str(r.path) + ', '
                         Vulnerability.insert('Key Leak', name + ":" + value, str(r.path))
                     paths = paths[:-2]
-                    Controller.send_vuln_msg("KEYS FOUND: %s at %s\n\n%s\n\n" % (name, paths, value), "static analyzer")
+                    lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at %s\n\n%s\n\n" % (name, paths, value), "static analyzer")
 
     def run(self):
         try:
@@ -83,4 +83,4 @@ class Static_Analyzer (Module):
                         time.sleep(5)
                         continue
         except:
-            Controller.send_error_msg(utils.getExceptionString())
+            lib.controller.Controller.send_error_msg(utils.getExceptionString())

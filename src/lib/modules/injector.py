@@ -1,8 +1,8 @@
 import subprocess, time, shutil
 
-from lib.modules import Module
+from lib.modules.module import Module
 from lib.entities import *
-from lib.controller import Controller
+import lib.controller
 
 class Injector (Module):
     def __init__(self, stop):
@@ -34,16 +34,16 @@ class Injector (Module):
             cookies_string = cookies_string[:-2]
             command.append(cookies_string)
         
-        Controller.send_msg("Testing SQL injection in %s [%s]" % (url, request.method), "injector")
+        lib.controller.Controller.send_msg("Testing SQL injection in %s [%s]" % (url, request.method), "injector")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "---" in result.stdout:
             Vulnerability.insert('SQLi', result.stdout, str(request.path))
-            Controller.send_vuln_msg("SQL INJECTION: Found in %s!\n\n%s\n%s" % (url, result.stdout, command), "injector")
+            lib.controller.Controller.send_vuln_msg("SQL INJECTION: Found in %s!\n\n%s\n%s" % (url, result.stdout, command), "injector")
         elif "[WARNING] false positive or unexploitable injection point detected" in result.stdout:
             Vulnerability.insert('pSQLi', result.stdout, str(request.path), command)
-            Controller.send_vuln_msg("SQL INJECTION: Possible SQL injection in %s! But sqlmap couldn't exploit it\n\n%s\n" % (url, result.stdout), "injector")
+            lib.controller.Controller.send_vuln_msg("SQL INJECTION: Possible SQL injection in %s! But sqlmap couldn't exploit it\n\n%s\n" % (url, result.stdout), "injector")
 
     @staticmethod
     def __xss(request):
@@ -73,13 +73,13 @@ class Injector (Module):
             cookies_string = cookies_string[:-2]
             command.append(cookies_string)
         
-        Controller.send_msg("Testing XSS in %s [%s]" % (url, request.method), "injector")
+        lib.controller.Controller.send_msg("Testing XSS in %s [%s]" % (url, request.method), "injector")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "[POC]" in result.stdout:
             Vulnerability.insert('XSS', result.stdout, str(request.path), command)
-            Controller.send_vuln_msg("XSS: %s\n\n%s\n" % (url, result.stdout), "injector")
+            lib.controller.Controller.send_vuln_msg("XSS: %s\n\n%s\n" % (url, result.stdout), "injector")
 
     @staticmethod
     def __crlf(request):
@@ -108,13 +108,13 @@ class Injector (Module):
             cookies_string = cookies_string[:-2]
             command.append(cookies_string)
         
-        Controller.send_msg("Testing CRLF injection in %s [%s]" % (url, request.method), "injector")
+        lib.controller.Controller.send_msg("Testing CRLF injection in %s [%s]" % (url, request.method), "injector")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "[VLN]" in result.stdout:
             Vulnerability.insert('CRLFi', result.stdout, str(request.path), command)
-            Controller.send_vuln_msg("CRLF INJECTION: %s\n\n%s\n" % (url, result.stdout), "injector")
+            lib.controller.Controller.send_vuln_msg("CRLF INJECTION: %s\n\n%s\n" % (url, result.stdout), "injector")
 
     @staticmethod
     def __ssti(request):
@@ -141,13 +141,13 @@ class Injector (Module):
                 command.append('-c')
                 command.append(str(cookie))
         
-        Controller.send_msg("Testing SSTI in %s [%s]" % (url, request.method), "injector")
+        lib.controller.Controller.send_msg("Testing SSTI in %s [%s]" % (url, request.method), "injector")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "Tplmap identified the following injection point" in result.stdout:
             Vulnerability.insert('SSTI', result.stdout, str(request.path), " ".join(command))
-            Controller.send_vuln_msg("SSTI: %s\n\n%s\n" % (url, result.stdout), "injector")
+            lib.controller.Controller.send_vuln_msg("SSTI: %s\n\n%s\n" % (url, result.stdout), "injector")
 
     def run(self):
         try:
@@ -173,5 +173,5 @@ class Injector (Module):
                 # Add request with same keys in POST/GET data to tested list
                 tested = [*[request.id for request in request.getSameKeys()], *tested]
         except:
-            Controller.send_error_msg(utils.getExceptionString())
+            lib.controller.Controller.send_error_msg(utils.getExceptionString())
 
