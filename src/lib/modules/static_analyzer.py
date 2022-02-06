@@ -1,12 +1,12 @@
-import threading, time, re, jwt
+import time, re
 
 from lib.entities import *
-import lib.bot
+from lib.controller import Controller
+from lib.modules import Module
 
-class Static_Analyzer (threading.Thread):
+class Static_Analyzer (Module):
     def __init__(self, stop):
-        threading.Thread.__init__(self)
-        self.stop = stop
+        super().__init__(stop)
 
     @staticmethod
     def __searchKeys(element):
@@ -46,10 +46,10 @@ class Static_Analyzer (threading.Thread):
         }
 
         if isinstance(element, Script):
-            lib.bot.send_msg("Looking for API keys in script %s" % str(element.path), "static analyzer")
+            Controller.send_msg("Looking for API keys in script %s" % str(element.path), "static analyzer")
             text = element.content
         elif isinstance(element, Response):
-            lib.bot.send_msg("Looking for API keys in response from %s" % ", ".join([str(r.path) for r in element.getRequests()]), "static analyzer")
+            Controller.send_msg("Looking for API keys in response from %s" % ", ".join([str(r.path) for r in element.getRequests()]), "static analyzer")
             text = element.body
         else:
             return
@@ -57,7 +57,7 @@ class Static_Analyzer (threading.Thread):
         for name, pattern in patterns.items():
             for value in re.findall(pattern, text):
                 if isinstance(element, Script):
-                    lib.bot.send_vuln_msg("KEYS FOUND: %s at script %s\n\n%s\n\n" % (name, str(element.path), value), "static analyzer")
+                    Controller.send_vuln_msg("KEYS FOUND: %s at script %s\n\n%s\n\n" % (name, str(element.path), value), "static analyzer")
                     Vulnerability.insert('Key Leak', name + ":" + value, str(element.path))
 
                 elif isinstance(element, Response):
@@ -65,7 +65,7 @@ class Static_Analyzer (threading.Thread):
                         paths += str(r.path) + ', '
                         Vulnerability.insert('Key Leak', name + ":" + value, str(r.path))
                     paths = paths[:-2]
-                    lib.bot.send_vuln_msg("KEYS FOUND: %s at %s\n\n%s\n\n" % (name, paths, value), "static analyzer")
+                    Controller.send_vuln_msg("KEYS FOUND: %s at %s\n\n%s\n\n" % (name, paths, value), "static analyzer")
 
     def run(self):
         try:
@@ -83,4 +83,4 @@ class Static_Analyzer (threading.Thread):
                         time.sleep(5)
                         continue
         except:
-            lib.bot.send_error_msg(utils.getExceptionString())
+            Controller.send_error_msg(utils.getExceptionString())

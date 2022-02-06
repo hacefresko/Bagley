@@ -1,4 +1,4 @@
-import threading, time, requests, logging, inspect
+import time, requests, logging, inspect
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from seleniumwire import webdriver
@@ -6,14 +6,14 @@ from seleniumwire.utils import decode
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 
-import config, lib.bot
+import config
 from lib.entities import *
+from lib.modules.module import Module
+from lib.controller import Controller
 
-class Crawler (threading.Thread):
+class Crawler (Module):
     def __init__(self, stop):
-        threading.Thread.__init__(self)
-
-        self.stop = stop
+        super().__init__(["chromedriver"], stop)
 
         # Init queue for other modules to send urls to crawl
         self.queue = []
@@ -244,8 +244,8 @@ class Crawler (threading.Thread):
                             s = Script.insert(src, content)
                         if s:
                             s.link(response)
-                    except Exception as e:
-                        lib.bot.send_error_msg(utils.getExceptionString())
+                    except:
+                        Controller.send_error_msg(utils.getExceptionString())
                         continue
 
             elif element.name == 'iframe':
@@ -313,7 +313,7 @@ class Crawler (threading.Thread):
             return
         domain = path.domain
 
-        lib.bot.send_msg('GET: %s' % parent_url, "crawler")
+        Controller.send_msg('GET: %s' % parent_url, "crawler")
 
         # Request resource
         try:
@@ -339,7 +339,7 @@ class Crawler (threading.Thread):
             elif method == 'POST':
                 self.__post(parent_url, data, headers)
         except Exception as e:
-            lib.bot.send_error_msg(utils.getExceptionString())
+            Controller.send_error_msg(utils.getExceptionString())
             return
 
         # Copy browser cookies to local copy
@@ -376,11 +376,11 @@ class Crawler (threading.Thread):
                 code = main_response.code
                 if code//100 == 3:
                     if code == 304:
-                        lib.bot.send_msg("304 received: Chached response", "crawler")
+                        Controller.send_msg("304 received: Chached response", "crawler")
                     else:
                         redirect_to = main_response.getHeader('location').value
                         if not redirect_to:
-                            lib.bot.send_error_msg("Received %d but location header is not present" % code, "crawler")
+                            Controller.send_error_msg("Received %d but location header is not present" % code, "crawler")
                         else:
                             redirect_to = urljoin(parent_url, redirect_to)
 
@@ -389,11 +389,11 @@ class Crawler (threading.Thread):
                                 data = None
 
                             if Domain.checkScope(urlparse(redirect_to).netloc):
-                                lib.bot.send_msg("%d received: Redirect to %s" % (code, redirect_to), "crawler")
+                                Controller.send_msg("%d received: Redirect to %s" % (code, redirect_to), "crawler")
                                 if Request.checkExtension(redirect_to) and not Request.check(redirect_to, method, data=data, cookies=self.cookies):
                                     self.__crawl(redirect_to, method, data, headers)
                             else:
-                                lib.bot.send_msg("%d received: Redirect to %s [OUT OF SCOPE]" % (code, redirect_to), "crawler")
+                                Controller.send_msg("%d received: Redirect to %s [OUT OF SCOPE]" % (code, redirect_to), "crawler")
 
                     return
 
@@ -417,7 +417,7 @@ class Crawler (threading.Thread):
                         continue
 
                     elif Request.checkExtension(request.url) and not Request.check(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), self.cookies):
-                        lib.bot.send_msg('%s: DYNAMIC REQUEST to %s' % (request.method, request.url), "crawler")
+                        Controller.send_msg('%s: DYNAMIC REQUEST to %s' % (request.method, request.url), "crawler")
                         
                         req = self.__processRequest(request)
                         resp = self.__processResponse(request, req)
@@ -447,7 +447,7 @@ class Crawler (threading.Thread):
                 try:
                     requests.get(url, allow_redirects=False, verify=False)
                 except Exception as e:
-                    lib.bot.send_error_msg(utils.getExceptionString())
+                    Controller.send_error_msg(utils.getExceptionString())
                     continue
             else:
                 domain = next(domains)
@@ -481,25 +481,25 @@ class Crawler (threading.Thread):
                 elif https_request is not None:
                     url = https_request.url
                 else:
-                    lib.bot.send_error_msg('Cannot request %s' % domain_name, "crawler")
+                    Controller.send_error_msg('Cannot request %s' % domain_name, "crawler")
                     continue
 
                 if http_request:
-                    lib.bot.send_msg("HTTP protocol used by %s" % http_request.url, "crawler")
+                    Controller.send_msg("HTTP protocol used by %s" % http_request.url, "crawler")
 
             # If url already in database, skip
             if Request.check(url, 'GET'):
                 continue
 
             try:
-                lib.bot.send_msg("Started crawling %s" % url, "crawler")
+                Controller.send_msg("Started crawling %s" % url, "crawler")
                 
                 if domain.headers:
                     headers_string = "Headers used:\n"
                     for header in domain.headers:
                         headers_string += str(header) + "\n"
                     headers_string += "\n"
-                    lib.bot.send_msg(headers_string, "crawler")
+                    Controller.send_msg(headers_string, "crawler")
 
                 if domain.cookies:
                     valid = []
@@ -510,17 +510,17 @@ class Crawler (threading.Thread):
                             valid.append(cookie)
                             del self.driver.requests
                         except Exception as e:
-                            lib.bot.send_error_msg(utils.getExceptionString())
+                            Controller.send_error_msg(utils.getExceptionString())
                     
                     cookies_string = "Cookies used:\n"
                     for cookie in valid:
                         cookies_string += str(cookie) + "\n"
                     cookies_string += "\n"
-                    lib.bot.send_msg(cookies_string, "crawler")
+                    Controller.send_msg(cookies_string, "crawler")
                 
                 self.__crawl(url, 'GET', headers=domain.headers)
             except Exception as e:
-                lib.bot.send_error_msg(utils.getExceptionString())
+                Controller.send_error_msg(utils.getExceptionString())
             finally:
-                lib.bot.send_msg('Finished crawling %s' % url, "crawler")
+                Controller.send_msg('Finished crawling %s' % url, "crawler")
                 continue

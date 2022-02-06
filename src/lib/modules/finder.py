@@ -1,16 +1,23 @@
-import logging
-import threading, subprocess, json, shutil, time, socket
+import subprocess, json, shutil, time, socket, os
 from urllib.parse import urljoin, urlparse
 
-import config, lib.bot
+import config
+from lib.modules import Module
 from lib.entities import *
+from lib.controller import Controller
 
-class Finder(threading.Thread):
+class Finder(Module):
     def __init__(self, stop, crawler):
-        threading.Thread.__init__(self)
+        super().__init__(["gobuster", "subfinder", "gau"], stop)
         self.crawler = crawler
-        self.stop = stop
         self.analyzed = []
+
+    def checkDependences(self):
+        for f in [config.DIR_FUZZING, config.DOMAIN_FUZZING]:
+            if not os.path.exists(f):
+                print('%s from config file not found' % f)
+                return False
+        return super().checkDependences()
 
     def __fuzzPaths(self, path, headers, cookies, errcodes=[]):
         url = str(path)
@@ -40,7 +47,7 @@ class Finder(threading.Thread):
 
         # If function hasn't been called by itself
         if len(errcodes) == 0:
-            lib.bot.send_msg("Fuzzing path %s" % url, "finder")
+            Controller.send_msg("Fuzzing path %s" % url, "finder")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -51,7 +58,7 @@ class Finder(threading.Thread):
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
                 if code != 404 and not Request.check(discovered, 'GET'):
                     if Path.insert(discovered):
-                        lib.bot.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
+                        Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
                         self.crawler.addToQueue(discovered)
             except:
                 pass
@@ -73,12 +80,12 @@ class Finder(threading.Thread):
     def __findPaths(self, domain):
         command = [shutil.which('gau')]
 
-        lib.bot.send_msg("Finding paths for domain %s" % str(domain), "finder")
+        Controller.send_msg("Finding paths for domain %s" % str(domain), "finder")
         
         for line in subprocess.run(command, capture_output=True, encoding='utf-8', input=str(domain)).stdout.splitlines():
             domain = urlparse(line).netloc
             if Domain.checkScope(domain):
-                lib.bot.send_msg("PATH FOUND: Queued %s to crawler" % line, "finder")
+                Controller.send_msg("PATH FOUND: Queued %s to crawler" % line, "finder")
                 if not Domain.get(domain):
                     Domain.insert(domain)
                 Path.insert(line)
@@ -90,7 +97,7 @@ class Finder(threading.Thread):
             command.append('-s')
             command.append(','.join(errcodes))
 
-        lib.bot.send_msg("Fuzzing domain %s" % str(domain)[1:], "finder")
+        Controller.send_msg("Fuzzing domain %s" % str(domain)[1:], "finder")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -99,7 +106,7 @@ class Finder(threading.Thread):
             try:
                 discovered = line.split('Found: ')[1].rstrip()
                 if Domain.checkScope(discovered) and not Domain.get(discovered):
-                    lib.bot.send_msg("DOMAIN FOUND: Inserted %s to database" % discovered, "finder")
+                    Controller.send_msg("DOMAIN FOUND: Inserted %s to database" % discovered, "finder")
                     Domain.insert(discovered)
             except:
                 pass
@@ -122,7 +129,7 @@ class Finder(threading.Thread):
     def __findSubDomains(self,domain):
         command = [shutil.which('subfinder'), '-oJ', '-nC', '-silent', '-all', '-d', str(domain)[1:]]
 
-        lib.bot.send_msg("Finding subdomains for %s" % str(domain)[1:], "finder")
+        Controller.send_msg("Finding subdomains for %s" % str(domain)[1:], "finder")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         
@@ -136,7 +143,7 @@ class Finder(threading.Thread):
                         # Check if domain really exist, since subfinder does not check it
                         socket.gethostbyname(d)
                         if Domain.checkScope(d) and not Domain.get(discovered):
-                            lib.bot.send_msg("DOMAIN FOUND: Inserted %s to database" % d, "finder")
+                            Controller.send_msg("DOMAIN FOUND: Inserted %s to database" % d, "finder")
                             Domain.insert(d)
                     except:
                         continue
@@ -167,5 +174,5 @@ class Finder(threading.Thread):
                 if not executed:
                     time.sleep(5)
         except:
-            lib.bot.send_error_msg(utils.getExceptionString())
+            Controller.send_error_msg(utils.getExceptionString())
                 
