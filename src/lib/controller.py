@@ -7,7 +7,7 @@ from lib.traffic_controller import TrafficController
 class Controller:
     def __init__(self): 
         self.traffic_controller = TrafficController(config.REQ_PER_SEC)
-        if not self.traffic_controller:
+        if self.traffic_controller is None:
             return None
 
         self.stopThread = threading.Event()
@@ -28,8 +28,7 @@ class Controller:
 
         # Check dependences for the modules
         for m in self.modules.values():
-            if not m.checkDependeces():
-                return None
+            m.checkDependences()           
 
     # Methods to communicate with traffic controller
 

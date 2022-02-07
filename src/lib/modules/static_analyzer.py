@@ -6,7 +6,7 @@ from lib.modules.module import Module
 
 class Static_Analyzer (Module):
     def __init__(self, stop):
-        super().__init__(stop)
+        super().__init__([], stop)
 
     @staticmethod
     def __searchKeys(element):
