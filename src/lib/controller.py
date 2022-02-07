@@ -114,7 +114,7 @@ class Controller:
     @staticmethod
     def send_msg(msg, channel):
         logging.info("[%s] %s", channel, msg)
-        lib.bot.dispatch("bagley_msg", msg, channel)
+        lib.bot.dispatch(msg, channel)
 
     @staticmethod
     def send_error_msg(msg, channel, exception=None):
@@ -124,11 +124,11 @@ class Controller:
         else:
             logging.error(msg)
 
-        lib.bot.dispatch("bagley_msg", msg, channel)
-        lib.bot.dispatch("bagley_msg", msg, "errors")
+        lib.bot.dispatch(msg, channel)
+        lib.bot.dispatch(msg, "errors")
 
     @staticmethod
     def send_vuln_msg(msg, channel):
         logging.critical(msg)
-        lib.bot.dispatch("bagley_msg", msg, channel)
-        lib.bot.dispatch("bagley_msg", msg, "vulnerabilities")
+        lib.bot.dispatch(msg, channel)
+        lib.bot.dispatch(msg, "vulnerabilities")

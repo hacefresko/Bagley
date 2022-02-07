@@ -1,10 +1,10 @@
 import discord, logging
 import config, lib.utils
 
-def initBot(controller):
-    # Init discord bot
-    bot = discord.Client()
+# Init discord bot
+bot = discord.Client()
 
+def initBot(controller):
     @bot.event
     async def on_ready():
         logging.info("Connected to Discord bot")
@@ -84,3 +84,6 @@ def initBot(controller):
         await bot.get_channel(config.DISCORD_CHANNELS.get(channel)).send("`"+msg+"`")
 
     bot.run(config.DISCORD_TOKEN)
+
+def dispatch(message, channel):
+    bot.dispatch("bagley_msg", message, channel)
