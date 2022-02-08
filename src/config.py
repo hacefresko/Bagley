@@ -1,7 +1,7 @@
 import os
 
 # Log file
-LOG_FILE = 'bagley.log'
+LOG_FILE = '/var/log/bagley.log'
 
 # Database variables
 DB_USER = os.getenv("DB_USER") if os.getenv("DB_USER") else 'bagley'
