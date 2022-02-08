@@ -15,19 +15,8 @@ if not DISCORD_TOKEN:
     print('DISCORD_TOKEN environment variable not found')
     exit()
 
-DISCORD_CHANNELS = {
-    "terminal": 877376214774472806,
-    "errors": 934946181526732811,
-    "crawler": 877376384891232376,
-    "dynamic analyzer": 934219567167840316,
-    "finder": 877376449827455017,
-    "injector": 934219638529740800,
-    "static analyzer": 934219688240623626,
-    "vulnerabilities": 934219838149251122
-}
-
 # Default value for requests per second
-REQ_PER_SEC = 1
+REQ_PER_SEC = 5
 
 # Timeout for selenium
 TIMEOUT = 120

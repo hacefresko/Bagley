@@ -17,13 +17,13 @@ class Dynamic_Analyzer (Module):
         fetched = 0
         total_results = 1
 
-        lib.controller.Controller.send_msg("Searching for known vulnerabilites for %s %s" % (tech.name, tech.version), "dynamic analyzer")
+        lib.controller.Controller.send_msg("Searching for known vulnerabilites for %s %s" % (tech.name, tech.version), "dynamic-analyzer")
 
         while fetched < total_results:
             url = api % (fetched, cpe)
             r = requests.get(url)
             if not r.ok:
-                lib.controller.Controller.send_error_msg('There was a problem requesting %s for CVE looking' % url, "dynamic analyzer")
+                lib.controller.Controller.send_error_msg('There was a problem requesting %s for CVE looking' % url, "dynamic-analyzer")
                 break
             j = json.loads(r.text)
 
@@ -41,12 +41,12 @@ class Dynamic_Analyzer (Module):
                 str += "\t" + v + "\n"
         
         if str != '':
-            lib.controller.Controller.send_vuln_msg('CVE: Vulnerabilities found at %s %s\n%s' % (tech.name, tech.version, str), "dynamic analyzer")
+            lib.controller.Controller.send_vuln_msg('CVE: Vulnerabilities found at %s %s\n%s' % (tech.name, tech.version, str), "dynamic-analyzer")
 
     def __wappalyzer(self, path):
         command = [shutil.which('wappalyzer'), str(path), '--probe', "-t", str(self.getDelay())]
 
-        lib.controller.Controller.send_msg("Getting technologies used by %s" % str(path), "dynamic analyzer")
+        lib.controller.Controller.send_msg("Getting technologies used by %s" % str(path), "dynamic-analyzer")
 
         if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
             time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
@@ -67,12 +67,12 @@ class Dynamic_Analyzer (Module):
                     if tech:
                         tech.link(path)
         except:
-            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "dynamic analyzer")
+            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "dynamic-analyzer")
 
     def __subdomainTakeover(self, domain):
         command = [shutil.which('subjack'), '-a', '-m', '-d', str(domain)]
 
-        lib.controller.Controller.send_msg("Testing subdomain takeover for domain %s" % str(domain), "dynamic analyzer")
+        lib.controller.Controller.send_msg("Testing subdomain takeover for domain %s" % str(domain), "dynamic-analyzer")
 
         if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
             time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
@@ -83,7 +83,7 @@ class Dynamic_Analyzer (Module):
 
         if result.stdout != '':
             Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
-            lib.controller.Controller.send_vuln_msg('TAKEOVER: Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout), "dynamic analyzer")
+            lib.controller.Controller.send_vuln_msg('TAKEOVER: Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout), "dynamic-analyzer")
 
     def __bypass4xx(self, request):
         bypass_headers = {
@@ -160,7 +160,7 @@ class Dynamic_Analyzer (Module):
 
                 if r.status_code//100 == 2:
                     Vulnerability.insert('Broken Access Control', "Method: " + method, str(request.path))
-                    lib.controller.Controller.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using method "%s" (original was %d)' % (r.status_code, request.path, method, request.response.code), "dynamic analyzer")
+                    lib.controller.Controller.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using method "%s" (original was %d)' % (r.status_code, request.path, method, request.response.code), "dynamic-analyzer")
 
             for k,v in bypass_headers.items():
                 req_headers = headers
@@ -178,7 +178,7 @@ class Dynamic_Analyzer (Module):
 
                 if r.status_code//100 == 2:
                     Vulnerability.insert('Broken Access Control', k+": "+v, str(request.path))
-                    lib.controller.Controller.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using header "%s: %s" (original was %d)' % (r.status_code, request.path, k,v, request.response.code), "dynamic analyzer")
+                    lib.controller.Controller.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using header "%s: %s" (original was %d)' % (r.status_code, request.path, k,v, request.response.code), "dynamic-analyzer")
 
             time.sleep(1/config.REQ_PER_SEC)
 
@@ -212,4 +212,4 @@ class Dynamic_Analyzer (Module):
                     time.sleep(5)
 
         except Exception as e:
-            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "dynamic analyzer")
+            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "dynamic-analyzer")

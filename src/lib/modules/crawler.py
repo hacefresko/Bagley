@@ -1,4 +1,3 @@
-import logging
 import time, requests, datetime
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
@@ -40,6 +39,7 @@ class Crawler (Module):
         opts.add_argument("--disable-dev-shm-usage"); # https://stackoverflow.com/a/50725918/1689770
         opts.add_argument("--disable-browser-side-navigation"); # https://stackoverflow.com/a/49123152/1689770
         opts.add_argument("--disable-gpu"); # https://stackoverflow.com/questions/51959986/how-to-solve-selenium-chromedriver-timed-out-receiving-message-from-renderer-exc
+        opts.add_experimental_option("excludeSwitches", ["enable-logging"]) # Turn off loggingqqqqqqqqqqqqqqqqqq
 
         self.driver = webdriver.Chrome(options=opts)
 

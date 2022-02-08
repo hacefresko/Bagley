@@ -10,7 +10,7 @@ class Injector (Module):
 
     def __sqli(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')
-        command = [shutil.which('sqlmap'), '--random-agent', '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method, "--delay="+str(self.getDelay())]
+        command = [shutil.which('sqlmap'), '--random-agent', '--flush-session', '--batch', '-u',  url, '--method', request.method, "--delay="+str(self.getDelay()), '-v', '0', '-o']
 
         # Add POST data
         if request.method == 'POST' and request.data:

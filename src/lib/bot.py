@@ -1,14 +1,21 @@
+from os import terminal_size
 import discord, logging
 import config, lib.utils
 
 # Init discord bot
 bot = discord.Client()
 
+def getTerminal():
+    # Get terminal channel
+    for c in bot.get_all_channels():
+        if c.name == "terminal":
+            return c
+
 def initBot(controller):
     @bot.event
     async def on_ready():
         logging.info("Connected to Discord bot")
-        await  bot.get_channel(config.DISCORD_CHANNELS.get("terminal")).send("`Hello`")
+        await getTerminal().send("`Hello`")
 
     @bot.event
     async def on_message(message):
@@ -16,8 +23,8 @@ def initBot(controller):
         `This should be helpful. but there is no help message yet :D`
         """
 
+        terminal_channel = getTerminal()
         try:
-            terminal_channel = bot.get_channel(config.DISCORD_CHANNELS.get("terminal"))
             if message.author.id != bot.user.id:
                 logging.info("Received %s from Discord", message.content)
                 if message.content.lower() == 'help':
@@ -85,11 +92,9 @@ def initBot(controller):
 
     @bot.event
     async def on_bagley_msg(msg, channel):
-        if not config.DISCORD_CHANNELS.get(channel):
-            logging.error("Tried sending message to inexistent channel %s", channel)
-            return
-
-        await bot.get_channel(config.DISCORD_CHANNELS.get(channel)).send("`"+msg+"`")
+        for c in bot.get_all_channels():
+            if c.name == channel:
+                await c.send("`"+msg+"`")
 
     bot.run(config.DISCORD_TOKEN)
 
