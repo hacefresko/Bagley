@@ -44,7 +44,7 @@ class Dynamic_Analyzer (Module):
             lib.controller.Controller.send_vuln_msg('CVE: Vulnerabilities found at %s %s\n%s' % (tech.name, tech.version, str), "dynamic analyzer")
 
     def __wappalyzer(self, path):
-        command = [shutil.which('wappalyzer'), '--probe', str(path), "-t", str(self.getDelay())]
+        command = [shutil.which('wappalyzer'), str(path), '--probe', "-t", str(self.getDelay())]
 
         lib.controller.Controller.send_msg("Getting technologies used by %s" % str(path), "dynamic analyzer")
 
@@ -62,12 +62,12 @@ class Dynamic_Analyzer (Module):
                     if not tech:
                         tech = Technology.insert(t.get('cpe'), t.get('name'), t.get('version'))
                         if tech:
-                            Dynamic_Analyzer.__lookupCVEs(tech)
+                            self.__lookupCVEs(tech)
 
                     if tech:
                         tech.link(path)
         except:
-            return
+            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "dynamic analyzer")
 
     def __subdomainTakeover(self, domain):
         command = [shutil.which('subjack'), '-a', '-m', '-d', str(domain)]
