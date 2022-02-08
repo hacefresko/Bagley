@@ -47,7 +47,13 @@ class Dynamic_Analyzer (Module):
 
         lib.controller.Controller.send_msg("Getting technologies used by %s" % str(path), "dynamic analyzer")
 
+        if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
+            time.sleep((datetime.datetime.now() - self.t).total_seconds())
+
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
+        
+        self.t = datetime.datetime.now()
+
         try:
             for t in json.loads(result.stdout).get('technologies'):
                 if t.get('cpe') and t.get('version'):
@@ -67,7 +73,12 @@ class Dynamic_Analyzer (Module):
 
         lib.controller.Controller.send_msg("Testing subdomain takeover for domain %s" % str(domain), "dynamic analyzer")
 
+        if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
+            time.sleep((datetime.datetime.now() - self.t).total_seconds())
+
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
+
+        self.t = datetime.datetime.now()
 
         if result.stdout != '':
             Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
@@ -153,11 +164,17 @@ class Dynamic_Analyzer (Module):
             for k,v in bypass_headers.items():
                 req_headers = headers
                 req_headers[k] = v
+
+                if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
+                    time.sleep((datetime.datetime.now() - self.t).total_seconds())
+
                 if request.method == 'GET':
                     r = requests.get(str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
                 elif request.method == 'POST':
                     r = requests.get(str(request.url), request.params, request.data, headers, cookies, verify=False)
                 
+                self.t = datetime.datetime.now()
+
                 if r.status_code//100 == 2:
                     Vulnerability.insert('Broken Access Control', k+": "+v, str(request.path))
                     lib.controller.Controller.send_vuln_msg('ACCESS CONTROL: Got code %d for %s using header "%s: %s" (original was %d)' % (r.status_code, request.path, k,v, request.response.code), "dynamic analyzer")
