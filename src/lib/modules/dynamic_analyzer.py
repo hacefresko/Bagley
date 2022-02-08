@@ -1,4 +1,4 @@
-import threading, subprocess, shutil, requests, time, json, logging
+import datetime, subprocess, shutil, requests, time, json
 
 import config
 from lib.entities import *
@@ -6,11 +6,10 @@ from lib.modules.module import Module
 import lib.controller
 
 class Dynamic_Analyzer (Module):
-    def __init__(self, stop):
-        super().__init__(["subjack", "wappalyzer"], stop)
+    def __init__(self, stop, delay):
+        super().__init__(["subjack", "wappalyzer"], stop, delay)
 
-    @staticmethod
-    def __lookupCVEs(tech):
+    def __lookupCVEs(self, tech):
         vulns = []
         api = 'https://services.nvd.nist.gov/rest/json/cpes/1.0?addOns=cves&startIndex=%d&cpeMatchString=%s&resultsPerPage=5'
         cpe = tech.cpe + ':' + tech.version
@@ -43,9 +42,8 @@ class Dynamic_Analyzer (Module):
         if str != '':
             lib.controller.Controller.send_vuln_msg('CVE: Vulnerabilities found at %s %s\n%s' % (tech.name, tech.version, str), "dynamic analyzer")
 
-    @staticmethod
-    def __wappalyzer(path):
-        command = [shutil.which('wappalyzer'), '--probe', str(path)]
+    def __wappalyzer(self, path):
+        command = [shutil.which('wappalyzer'), '--probe', str(path), "-t", str(self.delay)]
 
         lib.controller.Controller.send_msg("Getting technologies used by %s" % str(path), "dynamic analyzer")
 
@@ -64,8 +62,7 @@ class Dynamic_Analyzer (Module):
         except:
             return
 
-    @staticmethod
-    def __subdomainTakeover(domain):
+    def __subdomainTakeover(self, domain):
         command = [shutil.which('subjack'), '-a', '-m', '-d', str(domain)]
 
         lib.controller.Controller.send_msg("Testing subdomain takeover for domain %s" % str(domain), "dynamic analyzer")
@@ -76,8 +73,7 @@ class Dynamic_Analyzer (Module):
             Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
             lib.controller.Controller.send_vuln_msg('TAKEOVER: Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout), "dynamic analyzer")
 
-    @staticmethod
-    def __bypass4xx(request):
+    def __bypass4xx(self, request):
         bypass_headers = {
             "Host": "127.0.0.1",
             "Referer": "127.0.0.1",
@@ -143,7 +139,12 @@ class Dynamic_Analyzer (Module):
                 cookies[c.name] = c.value
 
             for method in methods:
+                if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
+                    time.sleep((datetime.datetime.now() - self.t).total_seconds())
+
                 r = requests.request(method, str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
+
+                self.t = datetime.datetime.now()
 
                 if r.status_code//100 == 2:
                     Vulnerability.insert('Broken Access Control', "Method: " + method, str(request.path))
@@ -189,4 +190,4 @@ class Dynamic_Analyzer (Module):
                     time.sleep(5)
 
         except Exception as e:
-            lib.controller.Controller.send_error_msg(utils.getExceptionString())
+            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "dynamic analyzer")

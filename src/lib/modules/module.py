@@ -1,10 +1,12 @@
 import threading, shutil
 
 class Module (threading.Thread):
-    def __init__(self, dependences, stop):
+    def __init__(self, dependences, stop, delay=None):
         super().__init__()
-        self.stop = stop
         self.dependences = dependences
+        self.stop = stop
+        if delay:
+            self.delay = delay
 
     def checkDependences(self):
         for d in self.dependences:

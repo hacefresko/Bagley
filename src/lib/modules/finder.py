@@ -7,8 +7,8 @@ from lib.entities import *
 import lib.controller
 
 class Finder(Module):
-    def __init__(self, stop, crawler):
-        super().__init__(["gobuster", "subfinder", "gau"], stop)
+    def __init__(self, stop, delay, crawler):
+        super().__init__(["gobuster", "subfinder", "gau"], stop, delay)
         self.crawler = crawler
         self.analyzed = []
 
@@ -25,7 +25,7 @@ class Finder(Module):
         if not Request.check(url, 'GET'):
             self.crawler.addToQueue(url)
 
-        command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-w', config.DIR_FUZZING, '-u', url]
+        command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-w', config.DIR_FUZZING, '-u', url, '--delay', str(self.delay)+'ms']
 
         # Add headers
         for header in headers:
@@ -91,7 +91,7 @@ class Finder(Module):
                 Path.insert(line)
 
     def __fuzzSubDomain(self, domain, errcodes=[]):
-        command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:]]
+        command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', str(self.delay)+'ms']
         # Add errorcodes if specified
         if len(errcodes) != 0:
             command.append('-s')
@@ -174,5 +174,5 @@ class Finder(Module):
                 if not executed:
                     time.sleep(5)
         except:
-            lib.controller.Controller.send_error_msg(utils.getExceptionString())
+            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "finder")
                 

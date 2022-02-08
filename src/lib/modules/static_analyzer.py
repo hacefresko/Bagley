@@ -83,4 +83,4 @@ class Static_Analyzer (Module):
                         time.sleep(5)
                         continue
         except:
-            lib.controller.Controller.send_error_msg(utils.getExceptionString())
+            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "static analyzer")

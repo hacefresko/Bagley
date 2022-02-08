@@ -5,13 +5,12 @@ from lib.entities import *
 import lib.controller
 
 class Injector (Module):
-    def __init__(self, stop):
-        super().__init__(["sqlmap", "dalfox", "crlfuzz", "tplmap"], stop)
+    def __init__(self, stop, delay):
+        super().__init__(["sqlmap", "dalfox", "crlfuzz", "tplmap"], stop, delay)
 
-    @staticmethod
-    def __sqli(request):
+    def __sqli(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')
-        command = [shutil.which('sqlmap'), '--random-agent', '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method]
+        command = [shutil.which('sqlmap'), '--random-agent', '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method, "--delay="+str(self.delay)]
 
         # Add POST data
         if request.method == 'POST' and request.data:
@@ -45,10 +44,9 @@ class Injector (Module):
             Vulnerability.insert('pSQLi', result.stdout, str(request.path), command)
             lib.controller.Controller.send_vuln_msg("SQL INJECTION: Possible SQL injection in %s! But sqlmap couldn't exploit it\n\n%s\n" % (url, result.stdout), "injector")
 
-    @staticmethod
-    def __xss(request):
+    def __xss(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')
-        command = [shutil.which('dalfox'), 'url', url, '-S', '--skip-bav', '--skip-grepping', '--no-color']
+        command = [shutil.which('dalfox'), 'url', url, '-S', '--skip-bav', '--skip-grepping', '--no-color', "--delay", str(self.delay)]
         
         # Add POST data
         if request.method == 'POST' and request.data:
@@ -81,8 +79,7 @@ class Injector (Module):
             Vulnerability.insert('XSS', result.stdout, str(request.path), command)
             lib.controller.Controller.send_vuln_msg("XSS: %s\n\n%s\n" % (url, result.stdout), "injector")
 
-    @staticmethod
-    def __crlf(request):
+    def __crlf(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')
         command = [shutil.which('crlfuzz'), '-u', url, '-s', '-c', '10']
         
@@ -116,8 +113,7 @@ class Injector (Module):
             Vulnerability.insert('CRLFi', result.stdout, str(request.path), command)
             lib.controller.Controller.send_vuln_msg("CRLF INJECTION: %s\n\n%s\n" % (url, result.stdout), "injector")
 
-    @staticmethod
-    def __ssti(request):
+    def __ssti(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')
         command = [shutil.which('tplmap'), '-u', url]
         
@@ -161,7 +157,7 @@ class Injector (Module):
                 if not request.response or request.id in tested or request.response.code != 200: 
                     continue
                 
-                self.__crlf(request)
+                #self.__crlf(request)
 
                 if request.params or request.data:
                     content_type = request.getHeader('content-type')
@@ -173,5 +169,5 @@ class Injector (Module):
                 # Add request with same keys in POST/GET data to tested list
                 tested = [*[request.id for request in request.getSameKeys()], *tested]
         except:
-            lib.controller.Controller.send_error_msg(utils.getExceptionString())
+            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "injector")
 

@@ -2,20 +2,18 @@ import threading, logging, json
 import lib.modules, lib.bot, config
 
 from lib.entities import *
-from lib.traffic_controller import TrafficController
 
 class Controller:
-    def __init__(self): 
-        self.traffic_controller = TrafficController(config.REQ_PER_SEC)
-        if self.traffic_controller is None:
-            return None
-
+    def __init__(self):
         self.stopThread = threading.Event()
 
-        crawler = lib.modules.Crawler(self.stopThread)
-        finder = lib.modules.Finder(self.stopThread, crawler)
-        injector = lib.modules.Injector(self.stopThread)
-        dynamic_analyzer = lib.modules.Dynamic_Analyzer(self.stopThread)
+        modules_using_delay = 4
+        delay = modules_using_delay/config.REQ_PER_SEC
+
+        crawler = lib.modules.Crawler(self.stopThread, delay)
+        finder = lib.modules.Finder(self.stopThread, delay, crawler)
+        injector = lib.modules.Injector(self.stopThread, delay)
+        dynamic_analyzer = lib.modules.Dynamic_Analyzer(self.stopThread, delay)
         static_analyzer = lib.modules.Static_Analyzer(self.stopThread)
 
         self.modules = {
@@ -33,10 +31,13 @@ class Controller:
     # Methods to communicate with traffic controller
 
     def getRPS(self):
-        return self.traffic_controller.get_rps()
+        return config.REQ_PER_SEC
 
     def setRPS(self, rps):
-        return self.traffic_controller.set(rps)
+        if type(rps) != int:
+            return False
+        config.REQ_PER_SEC = rps
+        return True
 
     # Methods to communicate with modules
 

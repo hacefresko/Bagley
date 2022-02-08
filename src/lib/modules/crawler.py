@@ -1,4 +1,4 @@
-import time, requests, logging, inspect
+import time, requests, datetime
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from seleniumwire import webdriver
@@ -12,8 +12,11 @@ from lib.modules.module import Module
 import lib.controller
 
 class Crawler (Module):
-    def __init__(self, stop):
-        super().__init__(["chromedriver"], stop)
+    def __init__(self, stop, delay):
+        super().__init__(["chromedriver"], stop, delay)
+
+        # Init time for applying delay
+        self.t = datetime.datetime.now()
 
         # Init queue for other modules to send urls to crawl
         self.queue = []
@@ -320,6 +323,10 @@ class Crawler (Module):
             # Delete all previous requests so they don't pollute the results
             del self.driver.requests
 
+            # Apply delay
+            if (datetime.datetime.now() - self.t).total_seconds() < delay:
+                time.sleep((datetime.datetime.now() - self.t).total_seconds())
+
             if method == 'GET':
                 if headers:
                     # If we try to acces headers from interceptor by domain.headers, when another variable
@@ -341,6 +348,8 @@ class Crawler (Module):
         except Exception as e:
             lib.controller.Controller.send_error_msg(utils.getExceptionString())
             return
+
+        self.t = datetime.datetime.now()
 
         # Copy browser cookies to local copy
         for cookie in self.driver.get_cookies():
@@ -520,7 +529,7 @@ class Crawler (Module):
                 
                 self.__crawl(url, 'GET', headers=domain.headers)
             except Exception as e:
-                lib.controller.Controller.send_error_msg(utils.getExceptionString())
+                lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
             finally:
                 lib.controller.Controller.send_msg('Finished crawling %s' % url, "crawler")
                 continue
