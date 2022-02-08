@@ -8,13 +8,14 @@ class Controller:
     def __init__(self):
         self.stopThread = threading.Event()
 
+        self.rps = config.REQ_PER_SEC
         self.active_modules = 0
         self.lock = threading.Lock()
 
-        crawler = lib.modules.Crawler(self.stopThread, config.REQ_PER_SEC, self.active_modules, self.lock)
-        finder = lib.modules.Finder(self.stopThread, config.REQ_PER_SEC, self.active_modules, self.lock, crawler)
-        injector = lib.modules.Injector(self.stopThread, config.REQ_PER_SEC, self.active_modules, self.lock)
-        dynamic_analyzer = lib.modules.Dynamic_Analyzer(self.stopThread, config.REQ_PER_SEC, self.active_modules, self.lock)
+        crawler = lib.modules.Crawler(self.stopThread, self.rps, self.active_modules, self.lock)
+        finder = lib.modules.Finder(self.stopThread, self.rps, self.active_modules, self.lock, crawler)
+        injector = lib.modules.Injector(self.stopThread, self.rps, self.active_modules, self.lock)
+        dynamic_analyzer = lib.modules.Dynamic_Analyzer(self.stopThread, self.rps, self.active_modules, self.lock)
         static_analyzer = lib.modules.Static_Analyzer(self.stopThread)
 
         self.modules = {
@@ -32,12 +33,16 @@ class Controller:
     # Methods to communicate with traffic controller
 
     def getRPS(self):
-        return config.REQ_PER_SEC
+        return self.rps
 
     def setRPS(self, rps):
         if type(rps) != int:
             return False
-        config.REQ_PER_SEC = rps
+        
+        self.rps = rps
+        for m in self.modules.values():
+            m.rps = rps
+
         return True
 
     # Methods to communicate with modules

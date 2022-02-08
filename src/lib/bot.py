@@ -66,8 +66,16 @@ def initBot(controller):
                         else:
                             await terminal_channel.send("`%s`" % paths)
 
-                elif message.content.lower().startswith('set'):
-                    pass
+                elif message.content.lower() == "getrps":
+                    await terminal_channel.send("`Requests per second: %d`" % controller.getRPS())
+
+                elif message.content.lower().startswith('setrps'):
+                    if len(message.content.split(" ")) <= 1:
+                        await terminal_channel.send("`Usage: setrps <RPS>`")
+                    else:
+                        rps = int(message.content.split(" ")[1])
+                        controller.setRPS(rps)
+                        await terminal_channel.send("`Requests per second set to %d`" % rps)
 
                 else:
                     await terminal_channel.send('`Cannot understand "%s"`' % message.content)
