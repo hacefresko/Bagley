@@ -42,9 +42,9 @@ Each modules runs in a different thread
 
     *   XSS with [DalFox](https://github.com/hahwul/dalfox)
 
-    *   CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz)
+    *   CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz) (must be specified and does not control requests per second)
 
-    *   SSTI with [Tplmap](https://github.com/epinna/tplmap) on GET and POST parameters
+    *   SSTI with [Tplmap](https://github.com/epinna/tplmap) on GET and POST parameters (must be specified and does not control requests per second)
 
 *   Static_Analyzer: Performs local analysis among obtained data, without generating network traffic:
 
