@@ -324,7 +324,7 @@ class Crawler (Module):
             del self.driver.requests
 
             # Apply delay
-            if (datetime.datetime.now() - self.t).total_seconds() < delay:
+            if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
                 time.sleep((datetime.datetime.now() - self.t).total_seconds())
 
             if method == 'GET':
