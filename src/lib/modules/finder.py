@@ -157,9 +157,7 @@ class Finder(Module):
             directories = Path.yieldDirectories()
             domains = Domain.yieldAll()
             while not self.stop.is_set():
-                executed = False
                 domain = next(domains)
-                
                 if domain:
                     if domain.name[0] == '.':
                         self.__findSubDomains(domain)
@@ -171,7 +169,7 @@ class Finder(Module):
                 if directory:
                     self.__fuzzPaths(directory, directory.domain.headers, directory.domain.cookies)
 
-                if not executed:
+                if not domain and not directory:
                     time.sleep(5)
         except:
             lib.controller.Controller.send_error_msg(utils.getExceptionString(), "finder")
