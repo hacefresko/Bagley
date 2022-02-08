@@ -8,6 +8,7 @@ import lib.controller
 class Dynamic_Analyzer (Module):
     def __init__(self, stop, delay):
         super().__init__(["subjack", "wappalyzer"], stop, delay)
+        self.t = datetime.datetime.now()
 
     def __lookupCVEs(self, tech):
         vulns = []
@@ -48,7 +49,7 @@ class Dynamic_Analyzer (Module):
         lib.controller.Controller.send_msg("Getting technologies used by %s" % str(path), "dynamic analyzer")
 
         if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
-            time.sleep((datetime.datetime.now() - self.t).total_seconds())
+            time.sleep(self.delay - (datetime.datetime.now() - self.t).total_seconds())
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
         
@@ -74,7 +75,7 @@ class Dynamic_Analyzer (Module):
         lib.controller.Controller.send_msg("Testing subdomain takeover for domain %s" % str(domain), "dynamic analyzer")
 
         if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
-            time.sleep((datetime.datetime.now() - self.t).total_seconds())
+            time.sleep(self.delay - (datetime.datetime.now() - self.t).total_seconds())
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
@@ -151,7 +152,7 @@ class Dynamic_Analyzer (Module):
 
             for method in methods:
                 if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
-                    time.sleep((datetime.datetime.now() - self.t).total_seconds())
+                    time.sleep(self.delay - (datetime.datetime.now() - self.t).total_seconds())
 
                 r = requests.request(method, str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
 
@@ -166,7 +167,7 @@ class Dynamic_Analyzer (Module):
                 req_headers[k] = v
 
                 if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
-                    time.sleep((datetime.datetime.now() - self.t).total_seconds())
+                    time.sleep(self.delay - (datetime.datetime.now() - self.t).total_seconds())
 
                 if request.method == 'GET':
                     r = requests.get(str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)

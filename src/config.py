@@ -1,7 +1,7 @@
 import os
 
 # Log file
-LOG_FILE = '/var/log/bagley.log'
+LOG_FILE = 'bagley.log'
 
 # Database variables
 DB_USER = os.getenv("DB_USER") if os.getenv("DB_USER") else 'bagley'
@@ -27,7 +27,7 @@ DISCORD_CHANNELS = {
 }
 
 # Default value for requests per second
-REQ_PER_SEC = 5
+REQ_PER_SEC = 1
 
 # Timeout for selenium
 TIMEOUT = 120

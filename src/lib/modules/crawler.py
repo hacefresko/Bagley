@@ -1,3 +1,4 @@
+import logging
 import time, requests, datetime
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
@@ -325,7 +326,7 @@ class Crawler (Module):
 
             # Apply delay
             if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
-                time.sleep((datetime.datetime.now() - self.t).total_seconds())
+                time.sleep(self.delay - (datetime.datetime.now() - self.t).total_seconds())
 
             if method == 'GET':
                 if headers:
@@ -346,7 +347,7 @@ class Crawler (Module):
             elif method == 'POST':
                 self.__post(parent_url, data, headers)
         except Exception as e:
-            lib.controller.Controller.send_error_msg(utils.getExceptionString())
+            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
             return
 
         self.t = datetime.datetime.now()
@@ -456,7 +457,7 @@ class Crawler (Module):
                 try:
                     requests.get(url, allow_redirects=False, verify=False)
                 except Exception as e:
-                    lib.controller.Controller.send_error_msg(utils.getExceptionString())
+                    lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
                     continue
             else:
                 domain = next(domains)
@@ -519,7 +520,7 @@ class Crawler (Module):
                             valid.append(cookie)
                             del self.driver.requests
                         except Exception as e:
-                            lib.controller.Controller.send_error_msg(utils.getExceptionString())
+                            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
                     
                     cookies_string = "Cookies used:\n"
                     for cookie in valid:
