@@ -7,8 +7,8 @@ from lib.entities import *
 import lib.controller
 
 class Finder(Module):
-    def __init__(self, stop, delay, crawler):
-        super().__init__(["gobuster", "subfinder", "gau"], stop, delay)
+    def __init__(self, stop, rps, active_modules, lock, crawler):
+        super().__init__(["gobuster", "subfinder", "gau"], stop, rps, active_modules, lock)
         self.crawler = crawler
         self.analyzed = []
 
@@ -25,7 +25,7 @@ class Finder(Module):
         if not Request.check(url, 'GET'):
             self.crawler.addToQueue(url)
 
-        command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-w', config.DIR_FUZZING, '-u', url, '--delay', str(self.delay)+'ms']
+        command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-w', config.DIR_FUZZING, '-u', url, '--delay', str(self.getDelay())+'ms']
 
         # Add headers
         for header in headers:
@@ -91,7 +91,7 @@ class Finder(Module):
                 Path.insert(line)
 
     def __fuzzSubDomain(self, domain, errcodes=[]):
-        command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', str(self.delay)+'ms']
+        command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', str(self.getDelay())+'ms']
         # Add errorcodes if specified
         if len(errcodes) != 0:
             command.append('-s')
@@ -159,6 +159,7 @@ class Finder(Module):
             while not self.stop.is_set():
                 domain = next(domains)
                 if domain:
+                    self.setActive()
                     if domain.name[0] == '.':
                         self.__findSubDomains(domain)
                         self.__fuzzSubDomain(domain)
@@ -167,9 +168,11 @@ class Finder(Module):
 
                 directory = next(directories)
                 if directory:
+                    self.setActive()
                     self.__fuzzPaths(directory, directory.domain.headers, directory.domain.cookies)
 
                 if not domain and not directory:
+                    self.setInactive()
                     time.sleep(5)
         except:
             lib.controller.Controller.send_error_msg(utils.getExceptionString(), "finder")

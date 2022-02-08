@@ -1,3 +1,4 @@
+from concurrent.futures import thread
 import threading, logging, json
 import lib.modules, lib.bot, config
 
@@ -7,13 +8,13 @@ class Controller:
     def __init__(self):
         self.stopThread = threading.Event()
 
-        modules_using_delay = 4
-        delay = modules_using_delay/config.REQ_PER_SEC
+        self.active_modules = 0
+        self.lock = threading.Lock()
 
-        crawler = lib.modules.Crawler(self.stopThread, delay)
-        finder = lib.modules.Finder(self.stopThread, delay, crawler)
-        injector = lib.modules.Injector(self.stopThread, delay)
-        dynamic_analyzer = lib.modules.Dynamic_Analyzer(self.stopThread, delay)
+        crawler = lib.modules.Crawler(self.stopThread, config.REQ_PER_SEC, self.active_modules, self.lock)
+        finder = lib.modules.Finder(self.stopThread, config.REQ_PER_SEC, self.active_modules, self.lock, crawler)
+        injector = lib.modules.Injector(self.stopThread, config.REQ_PER_SEC, self.active_modules, self.lock)
+        dynamic_analyzer = lib.modules.Dynamic_Analyzer(self.stopThread, config.REQ_PER_SEC, self.active_modules, self.lock)
         static_analyzer = lib.modules.Static_Analyzer(self.stopThread)
 
         self.modules = {

@@ -13,8 +13,8 @@ from lib.modules.module import Module
 import lib.controller
 
 class Crawler (Module):
-    def __init__(self, stop, delay):
-        super().__init__(["chromedriver"], stop, delay)
+    def __init__(self, stop, rps, active_modules, lock):
+        super().__init__(["chromedriver"], stop, rps, active_modules, lock)
 
         # Init time for applying delay
         self.t = datetime.datetime.now()
@@ -325,8 +325,8 @@ class Crawler (Module):
             del self.driver.requests
 
             # Apply delay
-            if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
-                time.sleep(self.delay - (datetime.datetime.now() - self.t).total_seconds())
+            if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
+                time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
 
             if method == 'GET':
                 if headers:
@@ -445,6 +445,9 @@ class Crawler (Module):
         # Generator for domains
         domains = Domain.yieldAll()
         while not self.stop.is_set():
+            # Mark module as inactive
+            self.setInactive()
+
             # Get url from queue. If queue is empty, get domain from database. If it's also
             # empty, sleeps for 5 seconds and starts again
             if len(self.queue) > 0:
@@ -456,7 +459,7 @@ class Crawler (Module):
 
                 try:
                     requests.get(url, allow_redirects=False, verify=False)
-                except Exception as e:
+                except:
                     lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
                     continue
             else:
@@ -464,6 +467,7 @@ class Crawler (Module):
                 if not domain:
                     time.sleep(5)
                     continue
+
                 domain_name = domain.name if domain.name[0] != '.' else domain.name[1:]
 
                 http_request = None
@@ -500,6 +504,9 @@ class Crawler (Module):
             # If url already in database, skip
             if Request.check(url, 'GET'):
                 continue
+
+            # Mark module as active
+            self.setActive()
 
             try:
                 lib.controller.Controller.send_msg("Started crawling %s" % url, "crawler")

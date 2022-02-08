@@ -5,12 +5,12 @@ from lib.entities import *
 import lib.controller
 
 class Injector (Module):
-    def __init__(self, stop, delay):
-        super().__init__(["sqlmap", "dalfox", "crlfuzz", "tplmap"], stop, delay)
+    def __init__(self, stop, rps, active_modules, lock):
+        super().__init__(["sqlmap", "dalfox", "crlfuzz", "tplmap"], stop, rps, active_modules, lock)
 
     def __sqli(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')
-        command = [shutil.which('sqlmap'), '--random-agent', '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method, "--delay="+str(self.delay)]
+        command = [shutil.which('sqlmap'), '--random-agent', '-v', '0', '--flush-session', '--batch', '-u',  url, '--method', request.method, "--delay="+str(self.getDelay())]
 
         # Add POST data
         if request.method == 'POST' and request.data:
@@ -46,7 +46,7 @@ class Injector (Module):
 
     def __xss(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')
-        command = [shutil.which('dalfox'), 'url', url, '-S', '--skip-bav', '--skip-grepping', '--no-color', "--delay", str(self.delay)]
+        command = [shutil.which('dalfox'), 'url', url, '-S', '--skip-bav', '--skip-grepping', '--no-color', "--delay", str(self.getDelay())]
         
         # Add POST data
         if request.method == 'POST' and request.data:
@@ -152,11 +152,14 @@ class Injector (Module):
             while not self.stop.is_set():
                 request = next(requests)
                 if not request:
+                    self.setInactive()
                     time.sleep(5)
                     continue
-                if not request.response or request.id in tested or request.response.code != 200: 
+                if not request.response or request.id in tested or request.response.code != 200:
+                    self.setInactive()
                     continue
                 
+                self.setActive()
                 #self.__crlf(request)
 
                 if request.params or request.data:

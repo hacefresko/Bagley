@@ -6,8 +6,8 @@ from lib.modules.module import Module
 import lib.controller
 
 class Dynamic_Analyzer (Module):
-    def __init__(self, stop, delay):
-        super().__init__(["subjack", "wappalyzer"], stop, delay)
+    def __init__(self, stop, rps, active_modules, lock):
+        super().__init__(["subjack", "wappalyzer"], stop, rps, active_modules, lock)
         self.t = datetime.datetime.now()
 
     def __lookupCVEs(self, tech):
@@ -44,12 +44,12 @@ class Dynamic_Analyzer (Module):
             lib.controller.Controller.send_vuln_msg('CVE: Vulnerabilities found at %s %s\n%s' % (tech.name, tech.version, str), "dynamic analyzer")
 
     def __wappalyzer(self, path):
-        command = [shutil.which('wappalyzer'), '--probe', str(path), "-t", str(self.delay)]
+        command = [shutil.which('wappalyzer'), '--probe', str(path), "-t", str(self.getDelay())]
 
         lib.controller.Controller.send_msg("Getting technologies used by %s" % str(path), "dynamic analyzer")
 
-        if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
-            time.sleep(self.delay - (datetime.datetime.now() - self.t).total_seconds())
+        if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
+            time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
         
@@ -74,8 +74,8 @@ class Dynamic_Analyzer (Module):
 
         lib.controller.Controller.send_msg("Testing subdomain takeover for domain %s" % str(domain), "dynamic analyzer")
 
-        if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
-            time.sleep(self.delay - (datetime.datetime.now() - self.t).total_seconds())
+        if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
+            time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
@@ -151,8 +151,8 @@ class Dynamic_Analyzer (Module):
                 cookies[c.name] = c.value
 
             for method in methods:
-                if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
-                    time.sleep(self.delay - (datetime.datetime.now() - self.t).total_seconds())
+                if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
+                    time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
 
                 r = requests.request(method, str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
 
@@ -166,8 +166,8 @@ class Dynamic_Analyzer (Module):
                 req_headers = headers
                 req_headers[k] = v
 
-                if (datetime.datetime.now() - self.t).total_seconds() < self.delay:
-                    time.sleep(self.delay - (datetime.datetime.now() - self.t).total_seconds())
+                if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
+                    time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
 
                 if request.method == 'GET':
                     r = requests.get(str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
@@ -191,20 +191,24 @@ class Dynamic_Analyzer (Module):
                 executed = False
                 path = next(paths)
                 if path:
+                    self.setActive()
                     self.__wappalyzer(path)
                     executed = True
 
                 domain = next(domains)
                 if domain:
+                    self.setActive()
                     self.__subdomainTakeover(domain)
                     executed = True
 
                 request = next(requests)
                 if request and request.response and request.response.code//100 == 4:
+                    self.setActive()
                     self.__bypass4xx(request)
                     executed = True
 
                 if not executed:
+                    self.setInactive()
                     time.sleep(5)
 
         except Exception as e:
