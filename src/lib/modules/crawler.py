@@ -326,7 +326,7 @@ class Crawler (Module):
             return
         domain = path.domain
 
-        lib.controller.Controller.send_msg('GET: %s' % parent_url, "crawler")
+        lib.controller.Controller.send_msg('[%s] %s' % (method,parent_url), "crawler")
 
         # Request resource
         try:
@@ -358,8 +358,6 @@ class Crawler (Module):
         except Exception as e:
             lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
             return
-
-        self.__sendScreenshot()
 
         self.t = datetime.datetime.now()
 
@@ -410,13 +408,16 @@ class Crawler (Module):
                                 data = None
 
                             if Domain.checkScope(urlparse(redirect_to).netloc):
-                                lib.controller.Controller.send_msg("%d received: Redirect to %s" % (code, redirect_to), "crawler")
+                                lib.controller.Controller.send_msg("[%d] Redirect to %s" % (code, redirect_to), "crawler")
                                 if Request.checkExtension(redirect_to) and not Request.check(redirect_to, method, data=data, cookies=self.cookies):
                                     self.__crawl(redirect_to, method, data, headers)
                             else:
-                                lib.controller.Controller.send_msg("%d received: Redirect to %s [OUT OF SCOPE]" % (code, redirect_to), "crawler")
+                                lib.controller.Controller.send_msg("[%d] Redirect to %s [OUT OF SCOPE]" % (code, redirect_to), "crawler")
 
                     return
+
+                # Send screenshot once we know if the request was redirected or not
+                self.__sendScreenshot()
 
                 resp_to_analyze.append({'url': parent_url, 'response':main_response})
 
@@ -438,7 +439,7 @@ class Crawler (Module):
                         continue
 
                     elif Request.checkExtension(request.url) and not Request.check(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), self.cookies):
-                        lib.controller.Controller.send_msg('%s: DYNAMIC REQUEST to %s' % (request.method, request.url), "crawler")
+                        lib.controller.Controller.send_msg('[%s][DYNAMIC] %s' % (request.method, request.url), "crawler")
                         
                         req = self.__processRequest(request)
                         resp = self.__processResponse(request, req)
