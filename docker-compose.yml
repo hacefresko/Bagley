@@ -6,7 +6,7 @@ services:
       - MARIADB_ROOT_PASSWORD=xwpogivnoqipwm,elvwp4ebqw`rv,
       - MARIADB_DATABASE=bagley
       - MARIADB_USER=bagley
-      - MARIADB_PASSWORD=bagley
+      - MARIADB_PASSWORD=vgytufqiyoguwpifbnweie/(=932)
     volumes:
       - ./sql/bagley.sql:/docker-entrypoint-initdb.d/bagley.sql
     network_mode: "host"
@@ -19,7 +19,7 @@ services:
       - DB_HOST=127.0.0.1
       - DB_NAME=bagley
       - DB_USER=bagley
-      - DB_PASSWORD=bagley
+      - DB_PASSWORD=vgytufqiyoguwpifbnweie/(=932)
       - DISCORD_TOKEN=OTA3NzY1MTg1NTA5NDYyMDk2.YYr8NQ.gTmNzNO_RwEEFPgTrUkKcW5HuNk
     cap_add:
       - NET_ADMIN

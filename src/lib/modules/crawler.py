@@ -15,8 +15,6 @@ class Crawler (Module):
     def __init__(self, stop, rps, active_modules, lock):
         super().__init__(["chromedriver"], stop, rps, active_modules, lock)
 
-        os.mkdir(config.SCREENSHOT_FOLDER)
-
         # Init time for applying delay
         self.t = datetime.datetime.now()
 
@@ -47,11 +45,19 @@ class Crawler (Module):
         # Set timeout
         self.driver.set_page_load_timeout(config.TIMEOUT)
 
+    def checkDependences(self):
+        if not os.path.exists(config.SCREENSHOT_FOLDER):
+            raise Exception('%s not found' % config.SCREENSHOT_FOLDER)
+        
+        super().checkDependences()
+
     def addToQueue(self, url):
         self.queue.append(url)
 
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
     def __post(self, path, data, headers):
+        current_requests = len(self.driver.requests)
+
         headers_dict = {}
         for header in headers:
             headers_dict[header.key] = header.value
@@ -67,6 +73,10 @@ class Crawler (Module):
         
         post(arguments[0], arguments[1], arguments[2]);
         """, path, data, headers_dict)
+
+        while len(self.driver.requests) == current_requests:
+            print("Wait")
+            time.sleep(1)
 
     # Inserts in the database the request if url belongs to the scope
     # If an error occur, returns None

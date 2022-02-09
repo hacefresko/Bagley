@@ -184,4 +184,3 @@ class Finder(Module):
                     time.sleep(5)
         except:
             lib.controller.Controller.send_error_msg(utils.getExceptionString(), "finder")
-                

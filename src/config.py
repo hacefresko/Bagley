@@ -1,13 +1,13 @@
 import os
 
 # Log file
-LOG_FILE = '/var/log/bagley.log'
+LOG_FILE = 'bagley.log'
 
 # Database variables
 DB_USER = os.getenv("DB_USER") if os.getenv("DB_USER") else 'bagley'
 DB_HOST = os.getenv("DB_HOST") if os.getenv("DB_HOST") else '127.0.0.1'
 DB_NAME = os.getenv("DB_NAME") if os.getenv("DB_NAME") else 'bagley'
-DB_PASSWORD = os.getenv("DB_PASSWORD") if os.getenv("DB_PASSWORD") else ''
+DB_PASSWORD = os.getenv("DB_PASSWORD") if os.getenv("DB_PASSWORD") else 'bagley'
 
 # Discord variables
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")

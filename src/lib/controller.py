@@ -20,10 +20,10 @@ class Controller:
 
         self.modules = {
             "crawler": crawler,
-            "finder": finder,
-            "injector": injector,
-            "dynamic_analyzer": dynamic_analyzer,
-            "static_analyzer": static_analyzer
+            #"finder": finder,
+            #"injector": injector,
+            #"dynamic_analyzer": dynamic_analyzer,
+            #"static_analyzer": static_analyzer
         }
 
         # Check dependences for the modules
