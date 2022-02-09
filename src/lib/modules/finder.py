@@ -1,4 +1,4 @@
-import subprocess, json, shutil, time, socket, os
+import subprocess, json, shutil, time, socket, os, datetime, requests
 from urllib.parse import urljoin, urlparse
 
 import config
@@ -85,10 +85,18 @@ class Finder(Module):
         for line in subprocess.run(command, capture_output=True, encoding='utf-8', input=str(domain)).stdout.splitlines():
             domain = urlparse(line).netloc
             if Domain.checkScope(domain):
-                lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % line, "finder")
-                if not Domain.get(domain):
-                    Domain.insert(domain)
-                Path.insert(line)
+                if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
+                    time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
+
+                ok = requests.get(line).ok
+
+                self.t = datetime.datetime.now()
+                
+                if ok:
+                    lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % line, "finder")
+                    if not Domain.get(domain):
+                        Domain.insert(domain)
+                    Path.insert(line)
 
     def __fuzzSubDomain(self, domain, errcodes=[]):
         command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', str(self.getDelay())+'ms']

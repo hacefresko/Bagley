@@ -85,7 +85,7 @@ class Dynamic_Analyzer (Module):
             Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
             lib.controller.Controller.send_vuln_msg('TAKEOVER: Subdomain Takeover found at %s!\n\n%s\n' % (str(domain), result.stdout), "dynamic-analyzer")
 
-    def __bypass4xx(self, request):
+    def __bypass403(self, request):
         bypass_headers = {
             "Host": "127.0.0.1",
             "Referer": "127.0.0.1",
@@ -141,7 +141,7 @@ class Dynamic_Analyzer (Module):
             "PATCH"
         }
 
-        if request.response.code//100 == 4:
+        if request.response.code == 403:
             headers = {}
             for h in request.headers:
                 headers[h.key] = h.value
@@ -149,6 +149,8 @@ class Dynamic_Analyzer (Module):
             cookies = {}
             for c in request.cookies:
                 cookies[c.name] = c.value
+
+            lib.controller.Controller.send_msg("Trying to bypass 403 in %s" % str(request.path), "dynamic-analyzer")
 
             for method in methods:
                 if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
@@ -204,7 +206,7 @@ class Dynamic_Analyzer (Module):
                 request = next(requests)
                 if request and request.response and request.response.code//100 == 4:
                     self.setActive()
-                    self.__bypass4xx(request)
+                    self.__bypass403(request)
                     executed = True
 
                 if not executed:
