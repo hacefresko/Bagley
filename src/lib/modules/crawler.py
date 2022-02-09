@@ -1,4 +1,4 @@
-import time, requests, datetime
+import time, requests, datetime, random, string, os
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from seleniumwire import webdriver
@@ -15,10 +15,12 @@ class Crawler (Module):
     def __init__(self, stop, rps, active_modules, lock):
         super().__init__(["chromedriver"], stop, rps, active_modules, lock)
 
+        os.mkdir(config.SCREENSHOT_FOLDER)
+
         # Init time for applying delay
         self.t = datetime.datetime.now()
 
-        # Init queue for other modules to send urls to crawl
+        # Init queue for other modules to send urls to crawler
         self.queue = []
 
         # Cookies inside the scope that the browser has stored
@@ -39,7 +41,6 @@ class Crawler (Module):
         opts.add_argument("--disable-dev-shm-usage"); # https://stackoverflow.com/a/50725918/1689770
         opts.add_argument("--disable-browser-side-navigation"); # https://stackoverflow.com/a/49123152/1689770
         opts.add_argument("--disable-gpu"); # https://stackoverflow.com/questions/51959986/how-to-solve-selenium-chromedriver-timed-out-receiving-message-from-renderer-exc
-        opts.add_experimental_option("excludeSwitches", ["enable-logging"]) # Turn off loggingqqqqqqqqqqqqqqqqqq
 
         self.driver = webdriver.Chrome(options=opts)
 
@@ -305,6 +306,14 @@ class Crawler (Module):
                 except:
                     continue
    
+    def __sendScreenshot(self):
+        filename = config.SCREENSHOT_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.png'
+        if not self.driver.save_screenshot(filename):
+            return False
+
+        lib.controller.Controller.send_img(filename, "crawler")
+        return True
+
     # Main method of crawler
     def __crawl(self, parent_url, method, data=None, headers = []):
         # If execution is stopped
@@ -349,6 +358,8 @@ class Crawler (Module):
         except Exception as e:
             lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
             return
+
+        self.__sendScreenshot()
 
         self.t = datetime.datetime.now()
 

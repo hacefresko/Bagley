@@ -1,7 +1,7 @@
 import os
 
 # Log file
-LOG_FILE = 'bagley.log'
+LOG_FILE = '/var/log/bagley.log'
 
 # Database variables
 DB_USER = os.getenv("DB_USER") if os.getenv("DB_USER") else 'bagley'
@@ -29,6 +29,9 @@ PARAMS_BLACKLIST = ['csrf']
 
 # Headers whose value won't be stored
 HEADERS_BLACKLIST = ['date', 'cookie', 'set-cookie', 'content-length']
+
+# Absolute path to screenshot folder
+SCREENSHOT_FOLDER = '/tmp/screenshots/'
 
 # Directory fuzzing wordlist
 DIR_FUZZING = '/usr/lib/SecLists/Discovery/Web-Content/big.txt'

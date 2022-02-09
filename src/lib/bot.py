@@ -1,4 +1,3 @@
-from os import terminal_size
 import discord, logging
 import config, lib.utils
 
@@ -96,7 +95,16 @@ def initBot(controller):
             if c.name == channel:
                 await c.send("`"+msg+"`")
 
+    @bot.event
+    async def on_bagley_img(filename, channel):
+        for c in bot.get_all_channels():
+            if c.name == channel:
+                await c.send(file=discord.File(filename))
+
     bot.run(config.DISCORD_TOKEN)
 
-def dispatch(message, channel):
+def dispatch_msg(message, channel):
     bot.dispatch("bagley_msg", message, channel)
+
+def dispatch_img(filename, channel):
+    bot.dispatch("bagley_img", filename, channel)
