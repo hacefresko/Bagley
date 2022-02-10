@@ -75,7 +75,6 @@ class Crawler (Module):
         """, path, data, headers_dict)
 
         while len(self.driver.requests) == current_requests:
-            print("Wait")
             time.sleep(1)
 
     # Inserts in the database the request if url belongs to the scope
