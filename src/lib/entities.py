@@ -371,7 +371,7 @@ class Path:
                 return path
             parent = path
 
-    # Inserts each path inside the URL if not already inserted and returns last inserted path (last element from URL).
+    # Inserts each path inside the URL if not already inserted and returns last path (last element from URL).
     # If domain is not in scope or there is an error parsing url, returns None. If domain is in scope but not in database, inserts it
     @staticmethod
     def insert(url):
