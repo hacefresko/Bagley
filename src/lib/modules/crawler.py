@@ -146,7 +146,7 @@ class Crawler (Module):
         else:
             body = decode(response.body, response.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
         
-        response_hash = Response.hash(response.status_code, response.body, response_headers, response_cookies)
+        response_hash = Response.hash(response.status_code, body, response_headers, response_cookies)
         resp = Response.get(response_hash)
         if not resp:
             resp = Response.insert(response.status_code, body, response_headers, response_cookies, processed_request)
