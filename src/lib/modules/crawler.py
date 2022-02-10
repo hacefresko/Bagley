@@ -1,9 +1,8 @@
-import time, requests, datetime, random, string, os
+import time, requests, datetime, random, string, os, re
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from seleniumwire import webdriver
 from seleniumwire.utils import decode
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 
 import config
@@ -74,6 +73,7 @@ class Crawler (Module):
         post(arguments[0], arguments[1], arguments[2]);
         """, path, data, headers_dict)
 
+        # Wait until request is received by selenium
         while len(self.driver.requests) == current_requests:
             time.sleep(1)
 
@@ -146,6 +146,8 @@ class Crawler (Module):
         else:
             body = decode(response.body, response.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
         
+        body = re.sub('\s+(?=<)', '', body)
+
         response_hash = Response.hash(response.status_code, body, response_headers, response_cookies)
         resp = Response.get(response_hash)
         if not resp:
@@ -279,24 +281,27 @@ class Crawler (Module):
                     continue
                 
                 try:
-                    # Click the button
-                    if element.get('id'):
-                        button_id = element.get('id')
-
-                        self.driver.get(parent_url)
-                        del self.driver.requests
-                        self.driver.execute_script("document.getElementById(arguments[0]).click();", button_id)
-
-                    elif element.get('class'):
-                        button_class = element.get('class')
-                        if isinstance(button_class, list):
-                            button_class = ' '.join(button_class)
-
-                        self.driver.get(parent_url)
-                        del self.driver.requests
-                        self.driver.execute_script("document.getElementsByClassName(arguments[0])[0].click();", button_class)
+                    # Get CSS selector of button
+                    def get_css_element(e):
+                        s = list(e.previous_siblings)
+                        length = len(s)
+                        return '%s:nth-child(%s)' % (e.name, length) if length > 1 else e.name
                     
-                    time.sleep(1)
+                    path = [get_css_element(element)]
+                    for parent in element.parents:
+                        if parent.name == 'body':
+                            break
+                        path.insert(0, get_css_element(parent))
+                    css_path = ' > '.join(path)
+
+                    # Click the button to check if requests have been made or URL has been changed
+                    self.driver.get(parent_url)
+                    del self.driver.requests
+                    self.driver.execute_script("document.querySelector(arguments[0]).click();", css_path)
+
+                    # Wait until request is received by selenium
+                    while len(self.driver.requests) == 0:
+                        time.sleep(1)
 
                     #Check if requests have been made
                     if self.driver.requests[0]:
