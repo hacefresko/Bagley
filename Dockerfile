@@ -59,6 +59,9 @@ RUN mkdir /usr/lib/SecLists && mkdir /usr/lib/SecLists/Discovery && mkdir /usr/l
 RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1million-110000.txt -O /usr/lib/SecLists/Discovery/DNS/subdomains-top1million-110000.txt
 RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/big.txt -O /usr/lib/SecLists/Discovery/Web-Content/big.txt
 
+# Create directory for screenshots
+RUN mkdir /tmp/screenshots
+
 # Copy src files
 COPY src/ /root/bagley
 

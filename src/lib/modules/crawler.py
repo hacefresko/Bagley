@@ -171,8 +171,8 @@ class Crawler (Module):
                     continue
 
                 # Cut the html id selector from url
-                if '#' in path:
-                    path = path[:path.find('#')]
+                if path[-1] == '#':
+                    path = path[:-1]
 
                 url = urljoin(parent_url, path)
                 domain = urlparse(url).netloc
@@ -261,7 +261,7 @@ class Crawler (Module):
                         if s:
                             s.link(response)
                     except:
-                        lib.controller.Controller.send_error_msg(utils.getExceptionString())
+                        lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
                         continue
 
             elif element.name == 'iframe':

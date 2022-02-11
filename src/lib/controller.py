@@ -20,10 +20,10 @@ class Controller:
 
         self.modules = {
             "crawler": crawler,
-            "finder": finder,
-            "injector": injector,
-            "dynamic_analyzer": dynamic_analyzer,
-            "static_analyzer": static_analyzer
+            #"finder": finder,
+            #"injector": injector,
+            #"dynamic_analyzer": dynamic_analyzer,
+            #"static_analyzer": static_analyzer
         }
 
         # Check dependences for the modules
@@ -72,38 +72,41 @@ class Controller:
             return -1
 
         if options:
-            opts = json.loads(options)
+            try:
+                opts = json.loads(options)
 
-            # Get and insert headers
-            if opts.get('headers'):
-                for k,v in opts.get('headers').items():
-                    header = Header.insert(k,v, False)
-                    if header:
-                        d.add(header)
-                        self.send_msg("Added header %s" % str(header), "terminal")
+                # Get and insert headers
+                if opts.get('headers'):
+                    for k,v in opts.get('headers').items():
+                        header = Header.insert(k,v, False)
+                        if header:
+                            d.add(header)
+                            self.send_msg("Added header %s" % str(header), "terminal")
 
-            # Get and insert cookies
-            if opts.get('cookies'):
-                for c in opts.get('cookies'):
-                    cookie = Cookie.insert(c)
-                    if cookie:
-                        d.add(cookie)
-                        self.send_msg("Added cookie %s" % str(cookie), "terminal")
+                # Get and insert cookies
+                if opts.get('cookies'):
+                    for c in opts.get('cookies'):
+                        cookie = Cookie.insert(c)
+                        if cookie:
+                            d.add(cookie)
+                            self.send_msg("Added cookie %s" % str(cookie), "terminal")
 
-            # If group of subdomains specified, get out of scope domains
-            if domain[0] == '.':
-                excluded = opts.get('excluded')
-                if excluded:
-                    for e in excluded:
-                        if Domain.insertOutOfScope(e):
-                            self.send_msg("Added domain %s out of scope" % str(e), "terminal")
+                # If group of subdomains specified, get out of scope domains
+                if domain[0] == '.':
+                    excluded = opts.get('excluded')
+                    if excluded:
+                        for e in excluded:
+                            if Domain.insertOutOfScope(e):
+                                self.send_msg("Added domain %s out of scope" % str(e), "terminal")
 
-            # Add to queue
-            if opts.get("queue"):
-                for q in opts.get("queue"):
-                    self.addToQueue(q)
-                    self.send_msg("Added %s to queue" % str(q), "terminal")
-        
+                # Add to queue
+                if opts.get("queue"):
+                    for q in opts.get("queue"):
+                        self.addToQueue(q)
+                        self.send_msg("Added %s to queue" % str(q), "terminal")
+            except:
+                self.send_error_msg("Couldn't parse options:\n %s" % options, "terminal")
+
         self.send_msg("Added domain %s" % str(d), "terminal")
 
     def getDomains(self):

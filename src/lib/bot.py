@@ -45,8 +45,8 @@ def initBot(controller):
                 elif message.content.lower().startswith('add'):
                     if len(message.content.split(" ")) == 2:
                         controller.addDomain(message.content.split(" ")[1])
-                    elif len(message.content.split(" ")) == 3:
-                        controller.addDomain(message.content.split(" ")[1], message.content.split(" ")[2])
+                    elif len(message.content.split(" ")) > 2:
+                        controller.addDomain(message.content.split(" ")[1], " ".join(message.content.split(" ")[2:]))
                     else:
                         await terminal_channel.send("`Usage: add <domain> [options]`")
 
