@@ -329,7 +329,7 @@ class Crawler (Module):
         return True
 
     # Main method of crawler
-    def __crawl(self, parent_url, method, data=None, headers = []):
+    def __crawl(self, parent_url, method, data=None, headers=[]):
         # If execution is stopped
         if self.stop.is_set():
             return
@@ -339,8 +339,6 @@ class Crawler (Module):
         if not path:
             return
         domain = path.domain
-
-        lib.controller.Controller.send_msg('[%s] %s' % (method,parent_url), "crawler")
 
         # Request resource
         try:
@@ -430,6 +428,8 @@ class Crawler (Module):
 
                     return
 
+                lib.controller.Controller.send_msg('[%s] %s' % (method,parent_url), "crawler")
+                
                 # Send screenshot once we know if the request was redirected or not
                 self.__sendScreenshot()
 
