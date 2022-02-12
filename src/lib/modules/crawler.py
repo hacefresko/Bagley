@@ -339,6 +339,8 @@ class Crawler (Module):
         if not path:
             return
         domain = path.domain
+        
+        lib.controller.Controller.send_msg('[%s] %s' % (method,parent_url), "crawler")
 
         # Request resource
         try:
@@ -428,8 +430,6 @@ class Crawler (Module):
 
                     return
 
-                lib.controller.Controller.send_msg('[%s] %s' % (method,parent_url), "crawler")
-                
                 # Send screenshot once we know if the request was redirected or not
                 self.__sendScreenshot()
 
