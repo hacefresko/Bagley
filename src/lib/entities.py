@@ -1016,7 +1016,7 @@ class Cookie:
             return False
 
 class Script:
-    def __init__(self, id, hash, content, path_id):
+    def __init__(self, id, hash, content, path_id=None):
         self.id = id
         self.hash = hash
         self.content = content
@@ -1026,6 +1026,20 @@ class Script:
     @staticmethod 
     def __getHash(url, content):
         return hashlib.sha1((str(url) + content).encode('utf-8')).hexdigest()
+
+    # Returns response associated to script if any, else None
+    def getResponse(self):
+        if self.path:
+            return None
+
+        db = DB()
+        responses = db.query_all('SELECT * FROM responses INNER JOIN response_scripts on hash = response WHERE script = %s', (self.hash,))
+
+        result = []
+        for response in responses:
+            result.append(Response(response[0], response[1], response[2], response[3]))
+
+        return result
 
     # Returns script by url and content or False if it does not exist   
     @staticmethod 

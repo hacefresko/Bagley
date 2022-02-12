@@ -54,13 +54,16 @@ RUN git clone https://github.com/epinna/tplmap /usr/lib/tplmap && sed -i "s/#!\/
 # Install wappalyzer
 RUN git clone https://github.com/AliasIO/wappalyzer.git /usr/lib/wappalyzer && cd /usr/lib/wappalyzer && yarn install && yarn run link && ln -s /usr/lib/wappalyzer/src/drivers/npm/cli.js /usr/local/sbin/wappalyzer
 
+# Install linkfinder
+RUN git clone https://github.com/GerbenJavado/LinkFinder.git /usr/lib/linkfinder && cd /usr/lib/linkfinder && python3 setup.py install && ln -s /usr/lib/linkfinder/linkfinder.py /usr/local/sbin/linkfinder
+
 # Download SecLists used
 RUN mkdir /usr/lib/SecLists && mkdir /usr/lib/SecLists/Discovery && mkdir /usr/lib/SecLists/Discovery/DNS/ && mkdir /usr/lib/SecLists/Discovery/Web-Content
 RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1million-110000.txt -O /usr/lib/SecLists/Discovery/DNS/subdomains-top1million-110000.txt
 RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/big.txt -O /usr/lib/SecLists/Discovery/Web-Content/big.txt
 
-# Create directory for screenshots
-RUN mkdir /tmp/screenshots
+# Create temporal directories
+RUN mkdir /tmp/screenshots /tmp/files
 
 # Copy src files
 COPY src/ /root/bagley

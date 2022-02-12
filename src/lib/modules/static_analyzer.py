@@ -1,4 +1,5 @@
-import time, re
+import time, re, random, string, shutil, subprocess
+from urllib.parse import urljoin
 
 from lib.entities import *
 import lib.controller
@@ -6,10 +7,9 @@ from lib.modules.module import Module
 
 class Static_Analyzer (Module):
     def __init__(self, stop):
-        super().__init__([], stop)
+        super().__init__(['linkfinder'], stop)
 
-    @staticmethod
-    def __searchKeys(element):
+    def __searchKeys(self, element):
         # https://github.com/m4ll0k/SecretFinder pattern list + https://github.com/hahwul/dalfox greeping list
         patterns = {
             'rsa-key':                          r'-----BEGIN RSA PRIVATE KEY-----|-----END RSA PRIVATE KEY-----',
@@ -67,17 +67,53 @@ class Static_Analyzer (Module):
                     paths = paths[:-2]
                     lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at %s\n\n%s\n\n" % (name, paths, value), "static-analyzer")
 
+    def __findLinks(self, script):
+        filename = config.SCREENSHOT_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.js'
+        fd = open(filename, 'w')
+        fd.write(script.content)
+        fd.close()
+
+        command = [shutil.which('linkfinder'), '-i', filename, '-o', 'cli']
+
+        if script.path:
+            paths = [str(script.path)]
+            lib.controller.Controller.send_msg("Looking for links in script %s" % str(script.path), "static-finder")
+        else:
+            paths = []
+            response = script.getResponse()
+            for r in response.getRequests():
+                paths.append(str(r.path))
+            lib.controller.Controller.send_msg("Looking for links in script of response from %s" % ", ".join(paths), "static-finder")
+
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        line = process.stdout.readline().decode('utf-8', errors='ignore')
+        while line:
+            try:
+                for p in paths:
+                    discovered = urljoin(p, line.rstrip())
+                    if not Request.check(discovered, 'GET') and Path.insert(discovered):
+                        lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "static-analyzer")
+                        self.crawler.addToQueue(discovered)
+            except:
+                pass
+            finally:
+                line = process.stdout.readline().decode('utf-8', errors='ignore')
+
     def run(self):
         try:
             scripts = Script.yieldAll()
             responses = Response.yieldAll()
             while not self.stop.is_set():
                 script = next(scripts)
-                if script and script.path and script.content:
-                   self.__searchKeys(script)
+                if script:
+                    self.__findLinks(script)
+                    # Scripts embedded in html file are analyzed with the whole response body
+                    if script.path and script.content:
+                        self.__searchKeys(script)
                 else:
                     response = next(responses)
-                    if response and response.body:
+                    if response and response.body and response.code == 200:
                         self.__searchKeys(response)
                     else:
                         time.sleep(5)

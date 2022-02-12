@@ -16,7 +16,7 @@ if not DISCORD_TOKEN:
     exit()
 
 # Default value for requests per second
-REQ_PER_SEC = 3
+REQ_PER_SEC = 1
 
 # Timeout for selenium
 TIMEOUT = 120
@@ -32,6 +32,9 @@ HEADERS_BLACKLIST = ['date', 'cookie', 'set-cookie', 'content-length']
 
 # Absolute path to screenshot folder
 SCREENSHOT_FOLDER = '/tmp/screenshots/'
+
+# Absolute path to temportal files folder
+FILES_FOLDER = '/tmp/files/'
 
 # Directory fuzzing wordlist
 DIR_FUZZING = '/usr/lib/SecLists/Discovery/Web-Content/big.txt'
