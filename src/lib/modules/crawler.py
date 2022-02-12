@@ -521,7 +521,7 @@ class Crawler (Module):
                 elif https_request is not None:
                     url = https_request.url
                 else:
-                    lib.controller.Controller.send_error_msg('Cannot request %s' % domain_name, "crawler")
+                    lib.controller.Controller.send_msg('Cannot request %s' % domain_name, "crawler")
                     continue
 
                 if http_request:
