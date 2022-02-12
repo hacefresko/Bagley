@@ -135,7 +135,8 @@ class Finder(Module):
                     return
 
     def __findSubDomains(self,domain):
-        command = [shutil.which('subfinder'), '-oJ', '-nC', '-silent', '-all', '-d', str(domain)[1:]]
+        # Rate is limited to 1 always because if doesn't, it adds too much traffic and ISPs are very greedy
+        command = [shutil.which('subfinder'), '-oJ', '-nC', '-silent', '-all', '-d', str(domain)[1:], '-rate-limit', '1']
 
         lib.controller.Controller.send_msg("Finding subdomains for %s" % str(domain)[1:], "finder")
 
