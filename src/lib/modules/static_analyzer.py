@@ -6,8 +6,9 @@ import lib.controller
 from lib.modules.module import Module
 
 class Static_Analyzer (Module):
-    def __init__(self, stop):
+    def __init__(self, stop, crawler):
         super().__init__(['linkfinder'], stop)
+        self.crawler = crawler
 
     def __searchKeys(self, element):
         # https://github.com/m4ll0k/SecretFinder pattern list + https://github.com/hahwul/dalfox greeping list
@@ -80,9 +81,9 @@ class Static_Analyzer (Module):
             lib.controller.Controller.send_msg("Looking for links in script %s" % str(script.path), "static-finder")
         else:
             paths = []
-            response = script.getResponse()
-            for r in response.getRequests():
-                paths.append(str(r.path))
+            for response in script.getResponse():
+                for r in response.getRequests():
+                    paths.append(str(r.path))
             lib.controller.Controller.send_msg("Looking for links in script of response from %s" % ", ".join(paths), "static-finder")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

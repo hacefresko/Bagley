@@ -80,8 +80,8 @@ CREATE TABLE cookies (
 CREATE TABLE scripts (
     id INT UNIQUE KEY AUTO_INCREMENT,
     hash VARCHAR(255) PRIMARY KEY,
-    path INT,
     content LONGTEXT,
+    path INT,
     FOREIGN KEY (path) REFERENCES paths(id)
 );
 

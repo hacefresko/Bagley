@@ -255,11 +255,12 @@ class Crawler (Module):
                         continue
                     try:
                         content = requests.get(src, verify=False).text
-                        s = Script.get(src, content)
-                        if not s:
-                            s = Script.insert(src, content)
-                        if s:
-                            s.link(response)
+                        if content:
+                            s = Script.get(src, content)
+                            if not s:
+                                s = Script.insert(src, content)
+                            if s:
+                                s.link(response)
                     except:
                         lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
                         continue
@@ -281,23 +282,33 @@ class Crawler (Module):
                     continue
                 
                 try:
-                    # Get CSS selector of button
-                    def get_css_element(e):
-                        s = list(e.previous_siblings)
-                        length = len(s)
-                        return '%s:nth-child(%s)' % (e.name, length) if length > 1 else e.name
-                    
-                    path = [get_css_element(element)]
-                    for parent in element.parents:
-                        if parent.name == 'body':
-                            break
-                        path.insert(0, get_css_element(parent))
-                    css_path = ' > '.join(path)
+                    ## Get CSS selector of button
+                    #def get_css_element(e):
+                    #    s = list(e.previous_siblings)
+                    #    length = len(s)
+                    #    return '%s:nth-child(%s)' % (e.name, length) if length > 1 else e.name
+                    #
+                    #path = [get_css_element(element)]
+                    #for parent in element.parents:
+                    #    if parent.name == 'body':
+                    #        break
+                    #    path.insert(0, get_css_element(parent))
+                    #css_path = ' > '.join(path)
+
+                    # Generate XPATH selector
+                    components = []
+                    child = element if element.name else element.parent
+                    for parent in child.parents:
+                        siblings = parent.find_all(child.name, recursive=False)
+                        components.append(child.name if siblings == [child] else '%s[%d]' % (child.name, 1 + siblings.index(child)))
+                        child = parent
+                    components.reverse()
+                    xpath_selector = '/%s' % '/'.join(components)
 
                     # Click the button to check if requests have been made or URL has been changed
                     self.driver.get(parent_url)
                     del self.driver.requests
-                    self.driver.execute_script("document.querySelector(arguments[0]).click();", css_path)
+                    self.driver.execute_script("document.evaluate(arguments[0], document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;", xpath_selector)
 
                     # Wait until request is received by selenium
                     while len(self.driver.requests) == 0:

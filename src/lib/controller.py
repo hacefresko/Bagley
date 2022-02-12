@@ -16,13 +16,13 @@ class Controller:
         finder = lib.modules.Finder(self.stopThread, self.rps, self.active_modules, self.lock, crawler)
         injector = lib.modules.Injector(self.stopThread, self.rps, self.active_modules, self.lock)
         dynamic_analyzer = lib.modules.Dynamic_Analyzer(self.stopThread, self.rps, self.active_modules, self.lock)
-        static_analyzer = lib.modules.Static_Analyzer(self.stopThread)
+        static_analyzer = lib.modules.Static_Analyzer(self.stopThread, crawler)
 
         self.modules = {
             "crawler": crawler,
-            "finder": finder,
-            "injector": injector,
-            "dynamic_analyzer": dynamic_analyzer,
+            #"finder": finder,
+            #"injector": injector,
+            #"dynamic_analyzer": dynamic_analyzer,
             "static_analyzer": static_analyzer
         }
 
