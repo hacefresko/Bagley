@@ -85,7 +85,7 @@ class Crawler (Module):
         if not Path.insert(url):
             return None
 
-        # Add cookies that haven't been added via set-cookie header to request by taking them from the browser
+        #
         request_cookies = []
         if request.headers.get('cookie'):
             for cookie in request.headers.get('cookie').split('; '):
@@ -157,6 +157,15 @@ class Crawler (Module):
 
         return resp
 
+    # Check if requests can be crawled based on the scope, the type of document to be requested and if the request has been already made
+    def __isCrawleable(self, url, method, content_type=None, data=None):
+        domain = urlparse(url).netloc
+
+        if Domain.checkScope(domain) and Request.checkExtension(url) and not Request.check(url, method, content_type, data, self.cookies):
+            return True
+
+        return False
+
     # Traverse the HTML looking for paths to crawl
     def __parseHTML(self, parent_url, response, headers):
         parser = BeautifulSoup(response.body, 'html.parser')
@@ -175,9 +184,8 @@ class Crawler (Module):
                     path = path[:-1]
 
                 url = urljoin(parent_url, path)
-                domain = urlparse(url).netloc
 
-                if Domain.checkScope(domain) and Request.checkExtension(url) and not Request.check(url, 'GET', cookies=self.cookies):
+                if self.__isCrawleable(url, 'GET'):
                     self.__crawl(url, 'GET', headers)
                 
             elif element.name == 'form':
@@ -186,55 +194,53 @@ class Crawler (Module):
                 action = element.get('action') if element.get('action') is not None else ''
 
                 url = urljoin(parent_url, action)
-                domain = urlparse(url).netloc
 
-                if Domain.checkScope(domain) and Request.checkExtension(url):
-                    # Parse input, select and textarea (textarea may be outside forms, linked by form attribute)
-                    data = ''
-                    external_textareas = parser('textarea', form=form_id) if form_id is not None else []
-                    for input in element(['input','select']):
-                        if input.get('name') is not None:
-                            if input.get('value') is None or input.get('value') == '':
-                                t = input.get('type')
-                                if t == 'number':
-                                    data += input.get('name') + "=1337&"
-                                elif t == 'email':
-                                    data += input.get('name') + "=1337@lel.com&"
-                                else:
-                                    data += input.get('name') + "=lel&"
-                            else:
-                                data += input.get('name') + "=" + input.get('value') + "&"
-                    for input in element(['textarea']) + external_textareas:
-                        if input.get('name') is not None:
-                            # If value is empty, put '1337'
-                            if input.get('value'):
-                                data += input.get('name') + "=" + input.get('value') + "&"
-                            elif input.string:
-                                data += input.get('name') + "=" + input.string + "&"
+                # Parse input, select and textarea (textarea may be outside forms, linked by form attribute)
+                data = ''
+                external_textareas = parser('textarea', form=form_id) if form_id is not None else []
+                for input in element(['input','select']):
+                    if input.get('name') is not None:
+                        if input.get('value') is None or input.get('value') == '':
+                            t = input.get('type')
+                            if t == 'number':
+                                data += input.get('name') + "=1337&"
+                            elif t == 'email':
+                                data += input.get('name') + "=1337@lel.com&"
                             else:
                                 data += input.get('name') + "=lel&"
-                            
-                    data = data[:-1] if data != '' else None
+                        else:
+                            data += input.get('name') + "=" + input.get('value') + "&"
+                for input in element(['textarea']) + external_textareas:
+                    if input.get('name') is not None:
+                        # If value is empty, put '1337'
+                        if input.get('value'):
+                            data += input.get('name') + "=" + input.get('value') + "&"
+                        elif input.string:
+                            data += input.get('name') + "=" + input.string + "&"
+                        else:
+                            data += input.get('name') + "=lel&"
                         
-                    req_headers = headers
-                    # If form method is GET, append data to URL as params and set data and content type to None
-                    if method == 'GET':
-                        content_type = None
-                        if data:
-                            if url.find('?'):
-                                url = url.split('?')[0]
-                            url += '?' + data
-                            data = None
-                    else:
-                        content_type = 'application/x-www-form-urlencoded'
-                        h = Header.get('content-type', content_type)
-                        if not h:
-                            h = Header.insert('content-type', content_type)
-                        
-                        req_headers += [h]
+                data = data[:-1] if data != '' else None
+                    
+                req_headers = headers
+                # If form method is GET, append data to URL as params and set data and content type to None
+                if method == 'GET':
+                    content_type = None
+                    if data:
+                        if url.find('?'):
+                            url = url.split('?')[0]
+                        url += '?' + data
+                        data = None
+                else:
+                    content_type = 'application/x-www-form-urlencoded'
+                    h = Header.get('content-type', content_type)
+                    if not h:
+                        h = Header.insert('content-type', content_type)
+                    
+                    req_headers += [h]
 
-                    if not Request.check(url, method, content_type, data, self.cookies):
-                        self.__crawl(url, method, data, req_headers)
+                if self.__isCrawleable(url, method, content_type, data):
+                    self.__crawl(url, method, data, req_headers)
 
             elif element.name == 'script':
                 src = element.get('src')
@@ -271,10 +277,9 @@ class Crawler (Module):
                     continue
 
                 url = urljoin(parent_url, path)
-                domain = urlparse(url).netloc
 
-                if Domain.checkScope(domain) and Request.checkExtension(url) and not Request.check(url, 'GET', cookies=self.cookies):
-                    self.__crawl(url, 'GET', headers)
+                if self.__isCrawleable(url, 'GET'):
+                    self.__crawl(url, 'GET', headers)   
 
             elif element.name == 'button':
                 # If button belongs to a form                
@@ -282,18 +287,6 @@ class Crawler (Module):
                     continue
                 
                 try:
-                    ## Get CSS selector of button
-                    #def get_css_element(e):
-                    #    s = list(e.previous_siblings)
-                    #    length = len(s)
-                    #    return '%s:nth-child(%s)' % (e.name, length) if length > 1 else e.name
-                    #
-                    #path = [get_css_element(element)]
-                    #for parent in element.parents:
-                    #    if parent.name == 'body':
-                    #        break
-                    #    path.insert(0, get_css_element(parent))
-                    #css_path = ' > '.join(path)
 
                     # Generate XPATH selector
                     components = []
@@ -318,14 +311,14 @@ class Crawler (Module):
                     if self.driver.requests[0]:
                         req = self.driver.requests[0]
                         data = req.body.decode('utf-8', errors='ignore')
-                        domain = urlparse(req.url).netloc
-                        if Domain.checkScope(domain) and Request.checkExtension(req.url) and not Request.check(req.url, req.method, req.headers.get_content_type(), data, self.cookies):
+                        
+                        if self.__isCrawleable(req.url, req.method, req.headers.get_content_type(), data):
                             self.__crawl(req.url, req.method, data, headers)
 
                     #Else, check if at least the url has changed
                     elif self.driver.current_url != parent_url:
-                        domain = urlparse(self.driver.current_url).netloc
-                        if Domain.checkScope(domain) and Request.checkExtension(self.driver.current_url) and not Request.check(self.driver.current_url, 'GET', cookies=self.cookies):
+                        
+                        if self.__isCrawleable(self.driver.current_url, 'GET'):
                             self.__crawl(self.driver.current_url, 'GET', headers)
 
                 except:
@@ -387,12 +380,17 @@ class Crawler (Module):
         self.t = datetime.datetime.now()
 
         # Copy browser cookies to local copy
-        for cookie in self.driver.get_cookies():
-            c = Cookie.get(cookie['name'])
-            if not c or c.value != cookie.get('value'):
-                c = Cookie.insert(cookie)
-            if c and c not in self.cookies:
-                self.cookies.append(c)
+        n_cookies = 0
+        self.cookies = []
+        while n_cookies != self.driver.get_cookies():
+            n_cookies = self.driver.get_cookies()
+            for cookie in self.driver.get_cookies():
+                c = Cookie.get(cookie['name'])
+                if not c or c.value != cookie.get('value'):
+                    c = Cookie.insert(cookie)
+                if c and c not in self.cookies:
+                    self.cookies.append(c)
+            time.sleep(0.5)
 
         # List of responses to analyze
         resp_to_analyze = []
@@ -432,9 +430,10 @@ class Crawler (Module):
                                 method = 'GET'
                                 data = None
 
+
                             if Domain.checkScope(urlparse(redirect_to).netloc):
-                                lib.controller.Controller.send_msg("[%d] Redirect to %s" % (code, redirect_to), "crawler")
-                                if Request.checkExtension(redirect_to) and not Request.check(redirect_to, method, data=data, cookies=self.cookies):
+                                if self.__isCrawleable(redirect_to, method, data=data):
+                                    lib.controller.Controller.send_msg("[%d] Redirect to %s" % (code, redirect_to), "crawler")
                                     self.__crawl(redirect_to, method, data, headers)
                             else:
                                 lib.controller.Controller.send_msg("[%d] Redirect to %s [OUT OF SCOPE]" % (code, redirect_to), "crawler")

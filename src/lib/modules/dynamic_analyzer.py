@@ -57,11 +57,13 @@ class Dynamic_Analyzer (Module):
 
         try:
             for t in json.loads(result.stdout).get('technologies'):
-                if t.get('cpe') and t.get('version'):
+                if t.get('cpe'):
                     tech = Technology.get(t.get('cpe'), t.get('version'))
                     if not tech:
                         tech = Technology.insert(t.get('cpe'), t.get('name'), t.get('version'))
-                        if tech:
+
+                        # Only techs with version will be scanned for vulns
+                        if tech and t.get('version'):
                             self.__lookupCVEs(tech)
 
                     if tech:

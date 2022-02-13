@@ -130,11 +130,11 @@ class Domain:
         if first == second:
             return True
         elif first[0] == '.' and second[0] == '.':
-            return True if first in second or second in first else False
+            return True if (first in second) or (second in first) else False
         elif first[0] == '.':
-            return True if first in second or first[1:] == second else False
+            return True if (first in second) or (first[1:] == second) else False
         elif second[0] == '.':
-            return True if second in first or second[1:] == first else False
+            return True if (second in first) or (second[1:] == first) else False
         else:
             return False
 
@@ -533,6 +533,8 @@ class Request:
             for c in req_cookies:
                 if db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
                     existing_cookies += 1
+                else: 
+                    print("lele")
             if existing_cookies == len(req_cookies):
                 return True
         return False
@@ -988,7 +990,7 @@ class Cookie:
 
     # Check if cookie domain and cookie path matches path
     def check(self, path):
-        if Domain.compare(self.domain, str(path.domain)) and (path.protocol == 'http' or (path.protocol == 'https' and self.secure)):
+        if Domain.compare(self.domain, str(path.domain)):
             url = path.protocol + '://' + str(path.domain) + self.path
             if self.path != '/':
                 url += self.path[1:]
@@ -1125,15 +1127,17 @@ class Technology:
         self.version = version
 
     @staticmethod
-    def get(cpe, version):
+    def get(cpe, version=None):
         db = DB()
         query = 'SELECT * FROM technologies WHERE cpe = %s '
         if version:
             query += 'AND version = %s'
+            args = (cpe, version)
         else:
             query += 'AND version is Null'
+            args = (cpe,)
             
-        tech = db.query_one(query, (cpe, version))
+        tech = db.query_one(query, args)
         return Technology(tech[0], tech[1], tech[2], tech[3]) if tech else None
 
     @staticmethod

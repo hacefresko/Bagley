@@ -98,7 +98,7 @@ class Finder(Module):
                     Path.insert(line)
 
     def __fuzzSubDomain(self, domain, errcodes=[]):
-        command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', str(self.getDelay())+'ms']
+        command = [shutil.which('gobuster'), 'dns', '-q', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', str(self.getDelay())+'ms', '-k']
         # Add errorcodes if specified
         if len(errcodes) != 0:
             command.append('-s')
