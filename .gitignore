@@ -6,3 +6,5 @@ __pycache__/
 scope.txt
 .DS_Store
 .vscode
+screenshots/
+files/
