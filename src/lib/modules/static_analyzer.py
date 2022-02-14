@@ -69,7 +69,7 @@ class Static_Analyzer (Module):
                     lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at %s\n\n%s\n\n" % (name, paths, value), "static-analyzer")
 
     def __findLinks(self, script):
-        filename = config.SCREENSHOT_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.js'
+        filename = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.js'
         fd = open(filename, 'w')
         fd.write(script.content)
         fd.close()
@@ -78,13 +78,13 @@ class Static_Analyzer (Module):
 
         if script.path:
             paths = [str(script.path)]
-            lib.controller.Controller.send_msg("Looking for links in script %s" % str(script.path), "static-finder")
+            lib.controller.Controller.send_msg("Looking for links in script %s" % str(script.path), "static-analyzer")
         else:
             paths = []
             for response in script.getResponse():
                 for r in response.getRequests():
                     paths.append(str(r.path))
-            lib.controller.Controller.send_msg("Looking for links in script of response from %s" % ", ".join(paths), "static-finder")
+            lib.controller.Controller.send_msg("Looking for links in script of response from %s" % ", ".join(paths), "static-analyzer")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
