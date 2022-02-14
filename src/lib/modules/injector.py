@@ -163,9 +163,11 @@ class Injector (Module):
                 #self.__crlf(request)
 
                 if request.params or request.data:
-                    content_type = request.getHeader('content-type')
-                    if content_type and ('text/html' in str(content_type)):
-                        self.__xss(request)
+                    response = request.getResponse()
+                    if response:
+                        content_type = response.getHeader('content-type')
+                        if content_type and ('text/html' in str(content_type)):
+                            self.__xss(request)
                     #self.__ssti(request)
                     self.__sqli(request)
 

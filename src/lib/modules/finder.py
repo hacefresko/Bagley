@@ -11,6 +11,7 @@ class Finder(Module):
         super().__init__(["gobuster", "subfinder", "gau"], stop, rps, active_modules, lock)
         self.crawler = crawler
         self.analyzed = []
+        self.t = datetime.datetime.now()
 
     def checkDependences(self):
         for f in [config.DIR_FUZZING, config.DOMAIN_FUZZING]:

@@ -1,4 +1,5 @@
 import hashlib, pathlib, iptools
+from urllib import response
 from urllib.parse import urlparse, urlunparse
 
 from requests.sessions import session
@@ -473,6 +474,16 @@ class Request:
             if header.key == key:
                 return header
         return None
+
+    def getResponse(self):
+        db = DB()
+    
+        r = db.query_one('SELECT response FROM requests WHERE id = %d', (self.id,))
+        if not r:
+            return None
+
+        return Response.get(r[0])
+        
 
     # Returns True if request exists in database else False. 
     # If there are already some (5) requests with the same path and method but different params/data with same key, it returns True to avoid saving same requests with different CSRFs, session values, etc.
