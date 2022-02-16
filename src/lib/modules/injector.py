@@ -39,10 +39,10 @@ class Injector (Module):
 
         if "---" in result.stdout:
             Vulnerability.insert('SQLi', result.stdout, str(request.path))
-            lib.controller.Controller.send_vuln_msg("SQL INJECTION: Found in %s!\n\n%s\n%s" % (url, result.stdout, command), "injector")
+            lib.controller.Controller.send_vuln_msg("SQL INJECTION: Found in %s!\n\n%s\n%s" % (url, result.stdout, " ".join(command)), "injector")
         elif "[WARNING] false positive or unexploitable injection point detected" in result.stdout:
             Vulnerability.insert('pSQLi', result.stdout, str(request.path), command)
-            lib.controller.Controller.send_vuln_msg("SQL INJECTION: Possible SQL injection in %s! But sqlmap couldn't exploit it\n\n%s\n" % (url, result.stdout), "injector")
+            lib.controller.Controller.send_vuln_msg("SQL INJECTION: Possible SQL injection in %s! But sqlmap couldn't exploit it\n\n%s\n%s" % (url, result.stdout, " ".join(command)), "injector")
 
     def __xss(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')

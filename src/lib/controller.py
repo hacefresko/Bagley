@@ -142,9 +142,15 @@ class Controller:
     @staticmethod
     def send_vuln_msg(msg, channel):
         logging.critical(msg)
-        lib.bot.dispatch_msg(msg, channel)
-        lib.bot.dispatch_msg(msg, "vulnerabilities")
-
+        sent = 0
+        while sent < len(msg):
+            if len(msg) > 1000:
+                print("lel")
+            m = msg[sent:sent+1000]
+            sent += len(m)
+            lib.bot.dispatch_msg(m, channel)
+            lib.bot.dispatch_msg(m, "vulnerabilities")
+        
     @staticmethod
     def send_img(filename, channel):
         logging.info("[%s] Sent image %s", channel, filename)

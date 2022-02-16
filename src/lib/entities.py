@@ -544,8 +544,6 @@ class Request:
             for c in req_cookies:
                 if db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
                     existing_cookies += 1
-                else: 
-                    print("lele")
             if existing_cookies == len(req_cookies):
                 return True
         return False
