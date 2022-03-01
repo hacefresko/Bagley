@@ -63,18 +63,18 @@ class Controller:
 
     def addDomain(self, domain, options=None):
         if Domain.check(domain):
-            self.send_error_msg("Domain %s already in database" % domain, "terminal")
+            self.send_msg("Domain %s already in database" % domain, "terminal")
             return -1
 
         if options:
             try:
                 opts = json.loads(options)
             except:
-                self.send_error_msg("Couldn't parse options:\n %s" % options, "terminal")
+                self.send_msg("Couldn't parse options:\n %s" % options, "terminal")
 
         d = Domain.insert(domain)
         if not d:
-            self.send_error_msg("Couldn't add domain %s" % domain, "terminal")
+            self.send_msg("Couldn't add domain %s" % domain, "terminal")
             return -1
 
         if options:

@@ -26,7 +26,7 @@ class Finder(Module):
         if not Request.check(url, 'GET'):
             self.crawler.addToQueue(url)
 
-        command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-w', config.DIR_FUZZING, '-u', url, '--delay', str(self.getDelay())+'ms']
+        command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-w', config.DIR_FUZZING, '-u', url, '--delay', str(self.getDelay())+'ms', '--random-agent', '-r']
 
         # Add headers
         for header in headers:

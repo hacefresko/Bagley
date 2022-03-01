@@ -85,7 +85,6 @@ class Crawler (Module):
         if not Path.insert(url):
             return None
 
-        #
         request_cookies = []
         if request.headers.get('cookie'):
             for cookie in request.headers.get('cookie').split('; '):
