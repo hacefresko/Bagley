@@ -57,9 +57,10 @@ class Finder(Module):
             try:
                 code = int(line.split('(')[1].split(')')[0].split(':')[1].strip())
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
-                if code != 404 and not Request.check(discovered, 'GET') and Path.insert(discovered):
-                    lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
-                    self.crawler.addToQueue(discovered)
+                if code != 404 and code != 400 and not Path.parseURL(discovered, 'GET'):
+                    if Path.insert(discovered):
+                        lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
+                        self.crawler.addToQueue(discovered)
             except:
                 pass
             finally:
@@ -93,8 +94,8 @@ class Finder(Module):
                 self.t = datetime.datetime.now()
                 
                 if ok:
-                    lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % line, "finder")
                     if not Domain.get(domain):
+                        lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % line, "finder")
                         Domain.insert(domain)
                     Path.insert(line)
 
