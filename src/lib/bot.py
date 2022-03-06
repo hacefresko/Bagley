@@ -23,71 +23,73 @@ def initBot(controller):
         """
 
         terminal_channel = getTerminal()
-        try:
-            if message.author.id != bot.user.id:
-                logging.info("Received %s from Discord", message.content)
-                if message.content.lower() == 'help':
-                    await terminal_channel.send(help_msg)
 
-                elif message.content.lower() == 'start':
-                    controller.start()
-                    await terminal_channel.send('`Started`')
+        for line in message.content.split('\n'):
+            try:
+                if message.author.id != bot.user.id:
+                    logging.info("Received %s from Discord", line)
+                    if line.lower() == 'help':
+                        await terminal_channel.send(help_msg)
 
-                elif message.content.lower() == 'stop':
-                    await terminal_channel.send('`Stopping`')
-                    controller.stop()
-                    await terminal_channel.send('`Stopped`')
+                    elif line.lower() == 'start':
+                        controller.start()
+                        await terminal_channel.send('`Started`')
 
-                elif message.content.lower() == 'restart':
-                    controller.stop()
-                    controller.start()
+                    elif line.lower() == 'stop':
+                        await terminal_channel.send('`Stopping`')
+                        controller.stop()
+                        await terminal_channel.send('`Stopped`')
 
-                elif message.content.lower().startswith('add'):
-                    if len(message.content.split(" ")) == 2:
-                        controller.addDomain(message.content.split(" ")[1])
-                    elif len(message.content.split(" ")) > 2:
-                        controller.addDomain(message.content.split(" ")[1], " ".join(message.content.split(" ")[2:]))
-                    else:
-                        await terminal_channel.send("`Usage: add <domain> [options]`")
+                    elif line.lower() == 'restart':
+                        controller.stop()
+                        controller.start()
 
-                elif message.content.lower() == 'getdomains':
-                    domains = controller.getDomains()
-                    if len(domains) == 0:
-                        await terminal_channel.send("`There are no domains yet`")
-                    else:
-                        s = '`'
-                        for d in domains:
-                            s += str(d) + "\n"
-                        s += '`'
-                        await terminal_channel.send(s)
-
-                elif message.content.lower().startswith('getpaths'):
-                    if len(message.content.split(" ")) <= 1:
-                        await terminal_channel.send("`Usage: getpaths <domain>`")
-                    else:
-                        domain = message.content.split(" ")[1]
-                        paths = controller.getPaths(domain)
-                        if not paths:
-                            await terminal_channel.send("`%s does not exists`" % domain)
+                    elif line.lower().startswith('add'):
+                        if len(line.split(" ")) == 2:
+                            controller.addDomain(line.split(" ")[1])
+                        elif len(line.split(" ")) > 2:
+                            controller.addDomain(line.split(" ")[1], " ".join(line.split(" ")[2:]))
                         else:
-                            await terminal_channel.send("`%s`" % paths)
+                            await terminal_channel.send("`Usage: add <domain> [options]`")
 
-                elif message.content.lower() == "getrps":
-                    await terminal_channel.send("`Requests per second: %d`" % controller.getRPS())
+                    elif line.lower() == 'getdomains':
+                        domains = controller.getDomains()
+                        if len(domains) == 0:
+                            await terminal_channel.send("`There are no domains yet`")
+                        else:
+                            s = '`'
+                            for d in domains:
+                                s += str(d) + "\n"
+                            s += '`'
+                            await terminal_channel.send(s)
 
-                elif message.content.lower().startswith('setrps'):
-                    if len(message.content.split(" ")) <= 1:
-                        await terminal_channel.send("`Usage: setrps <RPS>`")
+                    elif line.lower().startswith('getpaths'):
+                        if len(line.split(" ")) <= 1:
+                            await terminal_channel.send("`Usage: getpaths <domain>`")
+                        else:
+                            domain = line.split(" ")[1]
+                            paths = controller.getPaths(domain)
+                            if not paths:
+                                await terminal_channel.send("`%s does not exists`" % domain)
+                            else:
+                                await terminal_channel.send("`%s`" % paths)
+
+                    elif line.lower() == "getrps":
+                        await terminal_channel.send("`Requests per second: %d`" % controller.getRPS())
+
+                    elif line.lower().startswith('setrps'):
+                        if len(line.split(" ")) <= 1:
+                            await terminal_channel.send("`Usage: setrps <RPS>`")
+                        else:
+                            rps = int(line.split(" ")[1])
+                            controller.setRPS(rps)
+                            await terminal_channel.send("`Requests per second set to %d`" % rps)
+
                     else:
-                        rps = int(message.content.split(" ")[1])
-                        controller.setRPS(rps)
-                        await terminal_channel.send("`Requests per second set to %d`" % rps)
+                        await terminal_channel.send('`Cannot understand "%s"`' % line)
 
-                else:
-                    await terminal_channel.send('`Cannot understand "%s"`' % message.content)
-
-        except Exception as e:
-            await terminal_channel.send("`" + lib.utils.getExceptionString() + "`")
+            except Exception as e:
+                await terminal_channel.send("`" + lib.utils.getExceptionString() + "`")
 
     @bot.event
     async def on_bagley_msg(msg, channel):
