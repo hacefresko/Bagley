@@ -20,10 +20,10 @@ class Controller:
 
         self.modules = {
             "crawler": crawler,
-            #"finder": finder,
-            #"injector": injector,
-            #"dynamic_analyzer": dynamic_analyzer,
-            #"static_analyzer": static_analyzer
+            "finder": finder,
+            "injector": injector,
+            "dynamic_analyzer": dynamic_analyzer,
+            "static_analyzer": static_analyzer
         }
 
         # Check dependences for the modules
@@ -129,13 +129,8 @@ class Controller:
         lib.bot.dispatch_msg(msg, channel)
 
     @staticmethod
-    def send_error_msg(msg, channel, exception=None):
-        if exception:
-            msg +="\n" + str(exception)
-            logging.exception(msg)
-        else:
-            logging.error(msg)
-
+    def send_error_msg(msg, channel):
+        logging.error(msg)
         lib.bot.dispatch_msg(msg, channel)
         lib.bot.dispatch_msg(msg, "errors")
 

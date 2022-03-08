@@ -1,4 +1,4 @@
-import time, re, random, string, shutil, subprocess
+import time, re, random, string, shutil, subprocess, os
 from urllib.parse import urljoin
 
 from lib.entities import *
@@ -70,9 +70,9 @@ class Static_Analyzer (Module):
 
     def __findLinks(self, script):
         filename = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.js'
-        fd = open(filename, 'w')
-        fd.write(script.content)
-        fd.close()
+        temp_file = open(filename, 'w')
+        temp_file.write(script.content)
+        temp_file.close()
 
         command = [shutil.which('linkfinder'), '-i', filename, '-o', 'cli']
 
@@ -101,6 +101,8 @@ class Static_Analyzer (Module):
                 pass
             finally:
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
+
+        os.remove(filename)
 
     def run(self):
         try:
