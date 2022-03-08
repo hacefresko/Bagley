@@ -300,7 +300,7 @@ class Crawler (Module):
                     # Click the button to check if requests have been made or URL has been changed
                     self.driver.get(parent_url)
                     del self.driver.requests
-                    self.driver.execute_script("document.evaluate(arguments[0], document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;", xpath_selector)
+                    self.driver.execute_script("document.evaluate(arguments[0], document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.click();", xpath_selector)
 
                     # Wait until request is received by selenium
                     while len(self.driver.requests) == 0:
