@@ -50,6 +50,8 @@ Each modules runs in a different thread
 
     *   Searches for API keys with a pattern list mainly obtained from [SecretFinder](https://github.com/m4ll0k/SecretFinder)
 
+    *   Searches for links inside the scope with [linkfinder](https://github.com/GerbenJavado/LinkFinder)
+
 *   Dynamic_Analyzer: Performs lightweighted analysis among discovered assets, generating network traffic:
 
     *   Gets technologies used by the application with [Wappalyzer](https://github.com/AliasIO/wappalyzer)
@@ -76,6 +78,7 @@ Each modules runs in a different thread
 *   [Wappalyzer](https://github.com/AliasIO/wappalyzer)
 *   [Subjack](https://github.com/haccer/subjack)
 *   [Gau](https://github.com/lc/gau)
+*   [linkfinder](https://github.com/GerbenJavado/LinkFinder)
 
 ## Useful documentation
 
