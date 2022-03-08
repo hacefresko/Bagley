@@ -323,8 +323,8 @@ class Crawler (Module):
                 except:
                     continue
    
-    def __sendScreenshot(self):
-        filename = config.SCREENSHOT_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.png'
+    def __sendScreenshot(self, path):
+        filename = config.SCREENSHOT_FOLDER + "".join(str(path).split('?')[0]).replace('://', '_').replace('/', '_') + '-' + ''.join(random.choices(string.ascii_lowercase, k=10)) + '.png'
         if not self.driver.save_screenshot(filename):
             return False
 
@@ -440,7 +440,7 @@ class Crawler (Module):
                     return
 
                 # Send screenshot once we know if the request was redirected or not
-                self.__sendScreenshot()
+                self.__sendScreenshot(main_request.path)
 
                 resp_to_analyze.append({'url': parent_url, 'response':main_response})
 
