@@ -373,7 +373,10 @@ class Crawler (Module):
             elif method == 'POST':
                 self.__post(parent_url, data, headers)
         except Exception as e:
-            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
+            if "timeout: Timed out receiving message from renderer" in e.msg:
+                lib.controller.Controller.send_msg("Timeout exception requesting %s" % parent_url, "crawler")
+            else:
+                lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
             return
 
         self.t = datetime.datetime.now()
