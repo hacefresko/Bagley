@@ -7,7 +7,7 @@ def getExceptionString():
     filename = f.f_code.co_filename
     linecache.checkcache(filename)
     line = linecache.getline(filename, lineno, f.f_globals)
-    return 'Exception occured in %s, line  %d "%s"): %s' % (filename, lineno, line.strip(), exc_obj)
+    return 'Exception occured in %s, line  %d "%s": %s' % (filename, lineno, line.strip(), exc_obj)
 
 def replaceURLencoded(data, match, newValue):
     if not data:

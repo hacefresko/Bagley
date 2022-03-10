@@ -46,7 +46,7 @@ class Injector (Module):
 
     def __xss(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')
-        command = [shutil.which('dalfox'), 'url', url, '-S', '--skip-bav', '--skip-grepping', '--no-color', "--delay", str(int(self.getDelay()*1000))]
+        command = [shutil.which('dalfox'), 'url', url, '-S', '--skip-bav', '--skip-grepping', '--no-color', "--delay", str(int(self.getDelay()*1000)), "-X", request.method]
         
         # Add POST data
         if request.method == 'POST' and request.data:

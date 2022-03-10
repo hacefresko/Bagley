@@ -139,8 +139,6 @@ class Controller:
         logging.critical(msg)
         sent = 0
         while sent < len(msg):
-            if len(msg) > 1000:
-                print("lel")
             m = msg[sent:sent+1000]
             sent += len(m)
             lib.bot.dispatch_msg(m, channel)
