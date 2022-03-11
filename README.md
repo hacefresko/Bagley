@@ -18,11 +18,13 @@ Options:
 
 *   cookies: Specifies the cookies that will be sent with every request to the target. Fields `name`, `value` and `domain` are maandatory, the other ones are optional.
 
+*   localStorage: Adds key value pairs to the local storage of a given domain
+
 *   queue: Specifies list of URLs to start crawling from. Domain must be already added.
 
 ### Example for adding domains
 
-    add .example.com -o {"excluded": ["test.example.com"], "queue": ["https://www.example.com/example?e=1337"]}
+    add .example.com -o {"excluded": ["test.example.com"], "queue": ["https://www.example.com/example?e=1337"], "localStorage": [{"key": "lel", "value": "1337", "url": "https://www.example.com"}]}
     add api.example.com -o {"headers": {"Referer": "google.com", "Accept-Encoding": "gzip, deflate, br"}, "cookies": [{"name":"user_session", "value": "1234567890", "domain": "example.com"}, {"name": "logged_in", "value": "yes", "domain": ".example.com"}]}
 
 ## Available modules
