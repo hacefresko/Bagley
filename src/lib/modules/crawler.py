@@ -55,9 +55,7 @@ class Crawler (Module):
 
     def addCookie(self, cookie):
         try:
-            url = "http://" + cookie.domain
-            if cookie.path:
-                url += cookie.path
+            url = "http://" + cookie.domain + cookie.path
             self.driver.get(url)
             self.driver.add_cookie(cookie.getDict())
             del self.driver.requests
@@ -402,8 +400,8 @@ class Crawler (Module):
         # Copy browser cookies to local copy
         n_cookies = 0
         self.cookies = []
-        while n_cookies != self.driver.get_cookies():
-            n_cookies = self.driver.get_cookies()
+        while n_cookies != len(self.driver.get_cookies()):
+            n_cookies = len(self.driver.get_cookies())
             for cookie in self.driver.get_cookies():
                 c = Cookie.get(cookie['name'])
                 if not c or c.value != cookie.get('value'):

@@ -91,7 +91,10 @@ class Controller:
                 for c in opts.get('cookies'):
                     cookie = Cookie.insert(c)
                     if cookie:
-                        self.modules.get("crawler").addCookie(cookie)
+                        if self.modules.get("crawler").addCookie(cookie):
+                            self.send_msg("Added cookie %s" % str(cookie), "terminal")
+                        else:
+                            self.send_msg("Couldn't add cookie %s" % str(cookie), "terminal")
 
             # If group of subdomains specified, get out of scope domains
             if domain[0] == '.':
