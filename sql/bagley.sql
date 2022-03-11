@@ -9,7 +9,6 @@ DROP TABLE IF EXISTS headers;
 DROP TABLE IF EXISTS cookies;
 DROP TABLE IF EXISTS scripts;
 DROP TABLE IF EXISTS domain_headers;
-DROP TABLE IF EXISTS domain_cookies;
 DROP TABLE IF EXISTS request_headers;
 DROP TABLE IF EXISTS request_cookies;
 DROP TABLE IF EXISTS response_headers;
@@ -91,14 +90,6 @@ CREATE TABLE domain_headers (
     header INT NOT NULL,
     FOREIGN KEY (domain) REFERENCES domains(id),
     FOREIGN KEY (header) REFERENCES headers(id)
-);
-
--- Cookies sent in all request made to that domain
-CREATE TABLE domain_cookies (
-    domain INT NOT NULL,
-    cookie INT NOT NULL,
-    FOREIGN KEY (domain) REFERENCES domains(id),
-    FOREIGN KEY (cookie) REFERENCES cookies(id)
 );
 
 CREATE TABLE request_headers (

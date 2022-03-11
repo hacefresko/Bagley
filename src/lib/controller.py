@@ -83,7 +83,7 @@ class Controller:
                 for k,v in opts.get('headers').items():
                     header = Header.insert(k,v, False)
                     if header:
-                        d.add(header)
+                        d.addHeader(header)
                         self.send_msg("Added header %s" % str(header), "terminal")
 
             # Get and insert cookies
@@ -91,8 +91,7 @@ class Controller:
                 for c in opts.get('cookies'):
                     cookie = Cookie.insert(c)
                     if cookie:
-                        d.add(cookie)
-                        self.send_msg("Added cookie %s" % str(cookie), "terminal")
+                        self.modules.get("crawler").addCookie(cookie)
 
             # If group of subdomains specified, get out of scope domains
             if domain[0] == '.':
