@@ -53,17 +53,6 @@ class Crawler (Module):
     def addToQueue(self, url):
         self.queue.append(url)
 
-    def addCookie(self, cookie):
-        try:
-            url = "http://" + cookie.domain + cookie.path
-            self.driver.get(url)
-            self.driver.add_cookie(cookie.getDict())
-            del self.driver.requests
-            return True
-        except Exception as e:
-            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
-            return False
-
     # https://stackoverflow.com/questions/46361494/how-to-get-the-localstorage-with-python-and-selenium-webdriver
     def addToLocalStorage(self, url, key, value):
         self.driver.get(url)
@@ -571,6 +560,24 @@ class Crawler (Module):
                     headers_string += str(header) + "\n"
                 headers_string += "\n"
                 lib.controller.Controller.send_msg(headers_string, "crawler")
+
+            # Add cookie headers
+            if domain.cookies:
+                valid = []
+                for cookie in domain.cookies:
+                    try:
+                        self.driver.get(url)
+                        self.driver.add_cookie(cookie.getDict())
+                        valid.append(cookie)
+                        del self.driver.requests
+                    except Exception as e:
+                        lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
+                
+                cookies_string = "Cookies used:\n"
+                for cookie in valid:
+                    cookies_string += str(cookie) + "\n"
+                cookies_string += "\n"
+                lib.controller.Controller.send_msg(cookies_string, "crawler")
             
             self.__crawl(url, 'GET', headers=domain.headers)
 

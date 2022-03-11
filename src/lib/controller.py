@@ -83,7 +83,7 @@ class Controller:
                 for k,v in opts.get('headers').items():
                     header = Header.insert(k,v, False)
                     if header:
-                        d.addHeader(header)
+                        d.add(header)
                         self.send_msg("Added header %s" % str(header), "terminal")
 
             # Get and insert cookies

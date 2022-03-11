@@ -12,6 +12,7 @@ class Domain:
         self.id = id
         self.name = name
         self.headers = self.__getHeaders()
+        self.cookies = self.__getCookies()
 
     def __eq__(self, other):
         return self.id == other.id
@@ -28,6 +29,18 @@ class Domain:
         result = []
         for header in headers:
             result.append(Header(header[0], header[1], header[2]))
+
+        return result
+
+    # Returns the list of cookies of the domain
+    def __getCookies(self):
+        db = DB()
+    
+        cookies = db.query_all('SELECT * FROM cookies INNER JOIN domain_cookies on id = cookie WHERE domain_cookies.domain = %d', (self.id,))
+
+        result = []
+        for cookie in cookies:
+            result.append(Cookie(cookie[0], cookie[1], cookie[2], cookie[3], cookie[4], cookie[5], cookie[6], cookie[7], cookie[8], cookie[9]))
 
         return result
 
@@ -186,9 +199,9 @@ class Domain:
 
         return Domain(db.exec_and_get_last_id('INSERT INTO domains (name) VALUES (%s)', (domain_name,)), domain_name)
 
-    # Links header to domain
-    def addHeader(self, header):
-        header.link(self)
+    # Links cookie or header (element) to domain
+    def add(self, element):
+        element.link(self)
 
     # Inserts an out of scope domain if not already inserted neither in scope nor out
     @staticmethod
@@ -1006,6 +1019,9 @@ class Cookie:
             return True
         elif isinstance(target, Response):
             db.exec('INSERT INTO response_cookies (response, cookie) VALUES (%s,%d)', (target.hash, self.id))
+            return True
+        elif isinstance(target, Domain):
+            db.exec('INSERT INTO domain_cookies(domain, cookie) VALUES (%s,%d)', (target.id, self.id))
             return True
         else:
             return False
