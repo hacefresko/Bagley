@@ -23,6 +23,9 @@ class Crawler (Module):
         # Cookies inside the scope that the browser has stored
         self.cookies = []
 
+        # Initial local storage to be maintained along the crawl
+        self.localStorage = {}
+
         # Init selenium driver http://www.assertselenium.com/java/list-of-chrome-driver-command-line-arguments/
         opts = Options()
         opts.headless = True
@@ -54,10 +57,8 @@ class Crawler (Module):
         self.queue.append(url)
 
     # https://stackoverflow.com/questions/46361494/how-to-get-the-localstorage-with-python-and-selenium-webdriver
-    def addToLocalStorage(self, url, dict):
-        self.driver.get(url)
-        for k,v in dict.items():
-            self.driver.execute_script("window.localStorage.setItem(arguments[0], arguments[1]);", k, v)
+    def addToLocalStorage(self, url, d):
+        self.localStorage[url] = d
 
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
     def __post(self, path, data, headers):
@@ -350,6 +351,22 @@ class Crawler (Module):
         domain = path.domain
         
         lib.controller.Controller.send_msg('[%s] %s' % (method,parent_url), "crawler")
+
+        # Add local storage in case it has been deleted
+        # https://stackoverflow.com/questions/46361494/how-to-get-the-localstorage-with-python-and-selenium-webdriver
+        parsed = urlparse(parent_url)
+        location = parsed.scheme + '://' + parsed.netloc + '/'
+        if self.localStorage.get(location):
+            # Apply delay
+            if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
+                time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
+
+            self.driver.get(location)
+
+            self.t = datetime.datetime.now()
+
+            for k,v in dict.items():
+                self.driver.execute_script("window.localStorage.setItem(arguments[0], arguments[1]);", k, v)
 
         # Request resource
         try:
