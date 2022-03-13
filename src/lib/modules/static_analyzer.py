@@ -105,10 +105,11 @@ class Static_Analyzer (Module):
         os.remove(filename)
 
     def run(self):
-        try:
-            scripts = Script.yieldAll()
-            responses = Response.yieldAll()
-            while not self.stop.is_set():
+        
+        scripts = Script.yieldAll()
+        responses = Response.yieldAll()
+        while not self.stop.is_set():
+            try:
                 script = next(scripts)
                 if script:
                     self.__findLinks(script)
@@ -122,5 +123,5 @@ class Static_Analyzer (Module):
                     else:
                         time.sleep(5)
                         continue
-        except:
-            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "static-analyzer")
+            except:
+                lib.controller.Controller.send_error_msg(utils.getExceptionString(), "static-analyzer")

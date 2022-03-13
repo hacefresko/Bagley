@@ -187,11 +187,11 @@ class Dynamic_Analyzer (Module):
             time.sleep(1/config.REQ_PER_SEC)
 
     def run(self):
-        try:
-            paths = Path.yieldAll()
-            domains = Domain.yieldAll()
-            requests = Request.yieldAll()
-            while not self.stop.is_set():
+        paths = Path.yieldAll()
+        domains = Domain.yieldAll()
+        requests = Request.yieldAll()
+        while not self.stop.is_set():
+            try:
                 executed = False
                 path = next(paths)
                 if path:
@@ -215,5 +215,5 @@ class Dynamic_Analyzer (Module):
                     self.setInactive()
                     time.sleep(5)
 
-        except Exception as e:
-            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "dynamic-analyzer")
+            except Exception as e:
+                lib.controller.Controller.send_error_msg(utils.getExceptionString(), "dynamic-analyzer")

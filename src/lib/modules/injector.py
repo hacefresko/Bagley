@@ -146,10 +146,10 @@ class Injector (Module):
             lib.controller.Controller.send_vuln_msg("SSTI: %s\n\n%s\n" % (url, result.stdout), "injector")
 
     def run(self):
-        try:
-            tested = []
-            requests = Request.yieldAll()
-            while not self.stop.is_set():
+        tested = []
+        requests = Request.yieldAll()
+        while not self.stop.is_set():
+            try:
                 request = next(requests)
                 if not request:
                     self.setInactive()
@@ -173,6 +173,6 @@ class Injector (Module):
 
                 # Add request with same keys in POST/GET data to tested list
                 tested = [*[request.id for request in request.getSameKeys()], *tested]
-        except:
-            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "injector")
+            except:
+                lib.controller.Controller.send_error_msg(utils.getExceptionString(), "injector")
 

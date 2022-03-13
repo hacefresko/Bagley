@@ -163,10 +163,10 @@ class Finder(Module):
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
         
     def run(self):
-        try:
-            directories = Path.yieldDirectories()
-            domains = Domain.yieldAll()
-            while not self.stop.is_set():
+        directories = Path.yieldDirectories()
+        domains = Domain.yieldAll()
+        while not self.stop.is_set():
+            try:
                 domain = next(domains)
                 if domain:
                     self.setActive()
@@ -184,5 +184,5 @@ class Finder(Module):
                 if not domain and not directory:
                     self.setInactive()
                     time.sleep(5)
-        except:
-            lib.controller.Controller.send_error_msg(utils.getExceptionString(), "finder")
+            except:
+                lib.controller.Controller.send_error_msg(utils.getExceptionString(), "finder")
