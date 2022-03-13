@@ -461,12 +461,13 @@ class Crawler (Module):
                     # If resource is a JS file
                     if pathlib.Path(request.url.split('?')[0]).suffix.lower() == '.js':
                         resp = request.response
-                        content = decode(resp.body, resp.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
-                        s = Script.get(request.url, content)
-                        if not s:
-                            s = Script.insert(request.url, content)
-                        if s:
-                            s.link(main_response)
+                        if resp:
+                            content = decode(resp.body, resp.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
+                            s = Script.get(request.url, content)
+                            if not s:
+                                s = Script.insert(request.url, content)
+                            if s:
+                                s.link(main_response)
                             
                         continue
 
