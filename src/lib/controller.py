@@ -62,17 +62,19 @@ class Controller:
     # Methods to communicate with entities
 
     def addDomain(self, domain, options=None):
-        try:
-            if Domain.check(domain):
-                self.send_msg("Domain %s already in database" % domain, "terminal")
-                return -1
+        if Domain.check(domain):
+            self.send_msg("Domain %s already in database" % domain, "terminal")
+            return -1
 
-            d = Domain.insert(domain)
-            if not d:
-                self.send_msg("Couldn't add domain %s" % domain, "terminal")
-                return -1
+        d = Domain.insert(domain)
+        if not d:
+            self.send_msg("Couldn't add domain %s" % domain, "terminal")
+            return -1
 
-            if options:
+        self.send_msg("Added domain %s" % str(d), "terminal")
+
+        if options:
+            try:
                 opts = json.loads(options)
 
                 # Get and insert headers
@@ -112,11 +114,9 @@ class Controller:
                     for q in opts.get("queue"):
                         self.addToQueue(q)
                         self.send_msg("Added %s to queue" % str(q), "terminal")
-                
-                self.send_msg("Added domain %s" % str(d), "terminal")
 
-        except:
-            self.send_msg("Couldn't parse options", "terminal")
+            except:
+                self.send_msg("Couldn't parse options", "terminal")
 
     def getDomains(self):
         return Domain.getAll()
