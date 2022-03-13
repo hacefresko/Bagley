@@ -365,7 +365,7 @@ class Crawler (Module):
 
             self.t = datetime.datetime.now()
 
-            for k,v in dict.items():
+            for k,v in self.localStorage.get(location).items():
                 self.driver.execute_script("window.localStorage.setItem(arguments[0], arguments[1]);", k, v)
 
         # Request resource
