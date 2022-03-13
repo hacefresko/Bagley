@@ -54,9 +54,10 @@ class Crawler (Module):
         self.queue.append(url)
 
     # https://stackoverflow.com/questions/46361494/how-to-get-the-localstorage-with-python-and-selenium-webdriver
-    def addToLocalStorage(self, url, key, value):
+    def addToLocalStorage(self, url, dict):
         self.driver.get(url)
-        self.driver.execute_script("window.localStorage.setItem(arguments[0], arguments[1]);", key, value)
+        for k,v in dict.items():
+            self.driver.execute_script("window.localStorage.setItem(arguments[0], arguments[1]);", k, v)
 
     # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
     def __post(self, path, data, headers):

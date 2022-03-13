@@ -62,56 +62,61 @@ class Controller:
     # Methods to communicate with entities
 
     def addDomain(self, domain, options=None):
-        if Domain.check(domain):
-            self.send_msg("Domain %s already in database" % domain, "terminal")
-            return -1
+        try:
+            if Domain.check(domain):
+                self.send_msg("Domain %s already in database" % domain, "terminal")
+                return -1
 
-        if options:
-            try:
+            d = Domain.insert(domain)
+            if not d:
+                self.send_msg("Couldn't add domain %s" % domain, "terminal")
+                return -1
+
+            if options:
                 opts = json.loads(options)
-            except:
-                self.send_msg("Couldn't parse options:\n %s" % options, "terminal")
 
-        d = Domain.insert(domain)
-        if not d:
-            self.send_msg("Couldn't add domain %s" % domain, "terminal")
-            return -1
+                # Get and insert headers
+                if opts.get('headers'):
+                    for k,v in opts.get('headers').items():
+                        header = Header.insert(k,v, False)
+                        if header:
+                            d.add(header)
+                            self.send_msg("Added header %s" % str(header), "terminal")
 
-        if options:
-            # Get and insert headers
-            if opts.get('headers'):
-                for k,v in opts.get('headers').items():
-                    header = Header.insert(k,v, False)
-                    if header:
-                        d.add(header)
-                        self.send_msg("Added header %s" % str(header), "terminal")
+                # Get and insert cookies
+                if opts.get('cookies'):
+                    for c in opts.get('cookies'):
+                        cookie = Cookie.insert(c)
+                        if cookie:
+                            if self.modules.get("crawler").addCookie(cookie):
+                                self.send_msg("Added cookie %s" % str(cookie), "terminal")
+                            else:
+                                self.send_msg("Couldn't add cookie %s" % str(cookie), "terminal")
 
-            # Get and insert cookies
-            if opts.get('cookies'):
-                for c in opts.get('cookies'):
-                    cookie = Cookie.insert(c)
-                    if cookie:
-                        if self.modules.get("crawler").addCookie(cookie):
-                            self.send_msg("Added cookie %s" % str(cookie), "terminal")
-                        else:
-                            self.send_msg("Couldn't add cookie %s" % str(cookie), "terminal")
+                if opts.get('localStorage'):
+                    ls = opts.get('localStorage')
+                    if ls.get('url') is not None and ls.get('items') is not None:
+                        self.modules.get('crawler').addToLocalStorage(ls.get('url'), ls.get('items'))
+                        self.send_msg("Succesfully added local storage", "terminal")
+                    else:
+                        self.send_msg("Couldn't add local storage", "terminal")
 
-            # If group of subdomains specified, get out of scope domains
-            if domain[0] == '.':
-                excluded = opts.get('excluded')
-                if excluded:
-                    for e in excluded:
+                # If group of subdomains specified, get out of scope domains
+                if (domain[0] == '.') and (opts.get('excluded')):
+                    for e in opts.get('excluded'):
                         if Domain.insertOutOfScope(e):
                             self.send_msg("Added domain %s out of scope" % str(e), "terminal")
 
-            # Add to queue
-            if opts.get("queue"):
-                for q in opts.get("queue"):
-                    self.addToQueue(q)
-                    self.send_msg("Added %s to queue" % str(q), "terminal")
-            
+                # Add to queue
+                if opts.get("queue"):
+                    for q in opts.get("queue"):
+                        self.addToQueue(q)
+                        self.send_msg("Added %s to queue" % str(q), "terminal")
+                
+                self.send_msg("Added domain %s" % str(d), "terminal")
 
-        self.send_msg("Added domain %s" % str(d), "terminal")
+        except:
+            self.send_msg("Couldn't parse options", "terminal")
 
     def getDomains(self):
         return Domain.getAll()
