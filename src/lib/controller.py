@@ -115,7 +115,7 @@ class Controller:
                         self.addToQueue(q)
                         self.send_msg("Added %s to queue" % str(q), "terminal")
 
-            except:
+            except Exception as e:
                 self.send_msg("Couldn't parse options", "terminal")
 
     def getDomains(self):
