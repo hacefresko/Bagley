@@ -89,7 +89,7 @@ class Static_Analyzer (Module):
                 for p in paths:
                     discovered = urljoin(p, line.rstrip())
                     domain = urlparse(discovered).netloc
-                    if Domain.checkScope(domain) and not Request.check(discovered, 'GET') and Path.insert(discovered):
+                    if (Domain.checkScope(domain)) and (Path.parseURL(discovered) is None) and (Path.insert(discovered)):
                         lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "static-analyzer")
                         self.crawler.addToQueue(discovered)
             except:

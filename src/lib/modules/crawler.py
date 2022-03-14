@@ -564,7 +564,7 @@ class Crawler (Module):
                     lib.controller.Controller.send_msg("HTTP protocol used by %s" % http_request.url, "crawler")
 
             # If url already in database, skip
-            if Request.check(url, 'GET'):
+            if Path.parseURL(url):
                 continue
 
             # Mark module as active

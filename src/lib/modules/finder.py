@@ -23,7 +23,7 @@ class Finder(Module):
     def __fuzzPaths(self, path, headers, cookies, errcodes=[]):
         url = str(path)
         # Crawl all urls on the database that has not been crawled
-        if not Request.check(url, 'GET'):
+        if Path.parseURL(url) is None:
             self.crawler.addToQueue(url)
 
         command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-w', config.DIR_FUZZING, '-u', url, '--delay', str(self.getDelay())+'ms', '--random-agent', '-r']
@@ -57,7 +57,7 @@ class Finder(Module):
             try:
                 code = int(line.split('(')[1].split(')')[0].split(':')[1].strip())
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
-                if code != 404 and code != 400 and not Path.parseURL(discovered, 'GET'):
+                if (code != 404) and (code != 400) and (Path.parseURL(discovered) is None):
                     if Path.insert(discovered):
                         lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
                         self.crawler.addToQueue(discovered)
