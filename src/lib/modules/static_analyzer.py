@@ -68,12 +68,7 @@ class Static_Analyzer (Module):
                     paths = paths[:-2]
                     lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at %s\n\n%s\n\n" % (name, paths, value), "static-analyzer")
 
-    def __findLinks(self, script):
-        filename = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.js'
-        temp_file = open(filename, 'w')
-        temp_file.write(script.content)
-        temp_file.close()
-
+    def __findLinks(self, filename, script):
         command = [shutil.which('linkfinder'), '-i', filename, '-o', 'cli']
 
         if script.path:
@@ -102,7 +97,26 @@ class Static_Analyzer (Module):
             finally:
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
 
-        os.remove(filename)
+    def __findVulns(self, filename, script):
+        command = [shutil.which('eslint'), '-c', 'eslintrc.js', filename]
+
+        if script.path:
+            paths = [str(script.path)]
+            lib.controller.Controller.send_msg("Looking for vulnerabilities in script %s" % str(script.path), "static-analyzer")
+        else:
+            paths = []
+            for response in script.getResponse():
+                for r in response.getRequests():
+                    paths.append(str(r.path))
+            lib.controller.Controller.send_msg("Looking for vulnerabilities in script of response from %s" % ", ".join(paths), "static-analyzer")
+        paths = ",".join(paths)
+
+        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+        if result.stdout != '':
+            lib.controller.Controller.send_vuln_msg("VULN FOUND at script in %s\n\n%s\n\n" % (paths, result.stdout), "static-analyzer")
+            Vulnerability.insert('Vulnerability', result.stdout, paths)
+        if result.stderr != '':
+            lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
 
     def run(self):
         scripts = Script.yieldAll()
@@ -110,10 +124,19 @@ class Static_Analyzer (Module):
         while not self.stop.is_set():
             try:
                 script = next(scripts)
-                if script:
-                    self.__findLinks(script)
+                if script and script.content:
+                    filename = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=10)) + '.js'
+                    temp_file = open(filename, 'w')
+                    temp_file.write(script.content)
+                    temp_file.close()
+
+                    self.__findLinks(filename, script)
+                    self.__findVulns(filename, script)
+
+                    os.remove(filename)
+
                     # Scripts embedded in html file are analyzed with the whole response body
-                    if script.path and script.content:
+                    if script.path:
                         self.__searchKeys(script)
                 else:
                     response = next(responses)
