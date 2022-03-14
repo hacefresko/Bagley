@@ -105,7 +105,6 @@ class Static_Analyzer (Module):
         os.remove(filename)
 
     def run(self):
-        
         scripts = Script.yieldAll()
         responses = Response.yieldAll()
         while not self.stop.is_set():
