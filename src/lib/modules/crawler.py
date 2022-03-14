@@ -167,7 +167,7 @@ class Crawler (Module):
     def __isCrawleable(self, url, method, content_type=None, data=None):
         domain = urlparse(url).netloc
 
-        if Domain.checkScope(domain) and Request.checkExtension(url) and not Request.check(url, method, content_type, data, self.cookies):
+        if Domain.checkScope(domain) and Path.checkExtension(url) and not Request.check(url, method, content_type, data, self.cookies):
             return True
 
         return False
@@ -488,7 +488,7 @@ class Crawler (Module):
                             
                         continue
 
-                    elif Request.checkExtension(request.url) and not Request.check(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), self.cookies):
+                    elif Path.checkExtension(request.url) and not Request.check(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), self.cookies):
                         lib.controller.Controller.send_msg('[%s][DYNAMIC] %s' % (request.method, request.url), "crawler")
                         
                         req = self.__processRequest(request)

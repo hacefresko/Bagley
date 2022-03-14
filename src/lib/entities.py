@@ -275,11 +275,14 @@ class Path:
         return Path(path[0], path[1], path[2], path[3], path[4]) if path else None
 
     # Returns a dict with protocol, domain and a list elements with each element from the URL.
-    # If there is an error parsing, returns None
+    # If there is an error parsing or if extension is blacklisted, returns None
     @staticmethod
     def __parseURL(url):
         result = {}
-        
+
+        if not Path.checkExtension(url):
+            return None
+
         # Convert all pathless urls (i.e example.com) into urls with root dir (i.e example.com/)
         if urlparse(url)[2] == '':
             url += '/'
@@ -298,6 +301,11 @@ class Path:
         result['elements'] = [None if i=='' else i for i in urlparse(url).path.split('/')[1:]]
 
         return result if result['protocol'] != '' and result['domain'] != '' else None
+
+     # Returns False if extension is in blacklist from config.py, else True   
+    @staticmethod
+    def checkExtension(url):
+        return False if pathlib.Path(url.split('?')[0]).suffix.lower() in config.EXTENSIONS_BLACKLIST else True
 
     # Returns True if path is parent of current Object, else False
     def checkParent(self, path):
@@ -492,7 +500,7 @@ class Request:
     @staticmethod
     def check(url, method, content_type=None, data=None, cookies=[]):
         path = Path.parseURL(url)
-        if not path or not Request.checkExtension(url):
+        if not path:
             return False
 
         params = Request.__parseParams(urlparse(url).query) if urlparse(url).query else None
@@ -548,11 +556,6 @@ class Request:
                 return True
         return False
 
-    # Returns False if extension is in blacklist from config.py, else True   
-    @staticmethod
-    def checkExtension(url):
-        return False if pathlib.Path(url.split('?')[0]).suffix.lower() in config.EXTENSIONS_BLACKLIST else True
-        
     @staticmethod
     def getById(id):
         db = DB()
@@ -611,7 +614,7 @@ class Request:
     @staticmethod
     def insert(url, method, headers, cookies, data):
         path = Path.parseURL(url)
-        if not path or not Request.checkExtension(url):
+        if not path:
             return None
 
         content_type = None
