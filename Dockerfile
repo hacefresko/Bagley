@@ -59,8 +59,8 @@ RUN git clone https://github.com/GerbenJavado/LinkFinder.git /usr/lib/linkfinder
 
 # Download SecLists used
 RUN mkdir /usr/lib/SecLists && mkdir /usr/lib/SecLists/Discovery && mkdir /usr/lib/SecLists/Discovery/DNS/ && mkdir /usr/lib/SecLists/Discovery/Web-Content
-RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1million-110000.txt -O /usr/lib/SecLists/Discovery/DNS/subdomains-top1million-110000.txt
-RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/big.txt -O /usr/lib/SecLists/Discovery/Web-Content/big.txt
+RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1million-5000.txt -O /usr/lib/SecLists/Discovery/DNS/subdomains-top1million-5000.txt
+RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt -O /usr/lib/SecLists/Discovery/Web-Content/common.txt
 
 # Create temporal directories
 RUN mkdir /tmp/screenshots /tmp/files

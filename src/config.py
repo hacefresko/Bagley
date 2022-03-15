@@ -16,7 +16,7 @@ if not DISCORD_TOKEN:
     exit()
 
 # Default value for requests per second
-REQ_PER_SEC = 1
+REQ_PER_SEC = 3
 
 # Timeout for selenium
 TIMEOUT = 30
@@ -37,7 +37,7 @@ SCREENSHOT_FOLDER = '/tmp/screenshots/'
 FILES_FOLDER = '/tmp/files/'
 
 # Directory fuzzing wordlist
-DIR_FUZZING = '/usr/lib/SecLists/Discovery/Web-Content/big.txt'
+DIR_FUZZING = '/usr/lib/SecLists/Discovery/Web-Content/common.txt'
 
 # Domain fuzzing wordlist
-DOMAIN_FUZZING = '/usr/lib/SecLists/Discovery/DNS/subdomains-top1million-110000.txt'
+DOMAIN_FUZZING = '/usr/lib/SecLists/Discovery/DNS/subdomains-top1million-5000.txt'

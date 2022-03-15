@@ -206,7 +206,7 @@ class Dynamic_Analyzer (Module):
                     executed = True
 
                 request = next(requests)
-                if request and request.response and request.response.code//100 == 4:
+                if (request) and (request.response) and (request.response.code == 403):
                     self.setActive()
                     self.__bypass403(request)
                     executed = True
