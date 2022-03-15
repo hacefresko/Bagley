@@ -58,7 +58,7 @@ class Static_Analyzer (Module):
         for name, pattern in patterns.items():
             for value in re.findall(pattern, text):
                 if isinstance(element, Script):
-                    lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at script %s\n\n%s\n\n" % (name, str(element.path), value), "static-analyzer")
+                    lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at script %s\n%s" % (name, str(element.path), value), "static-analyzer")
                     Vulnerability.insert('Key Leak', name + ":" + value, str(element.path))
 
                 elif isinstance(element, Response):
@@ -66,7 +66,7 @@ class Static_Analyzer (Module):
                         paths += str(r.path) + ', '
                         Vulnerability.insert('Key Leak', name + ":" + value, str(r.path))
                     paths = paths[:-2]
-                    lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at %s\n\n%s\n\n" % (name, paths, value), "static-analyzer")
+                    lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at %s\n%s" % (name, paths, value), "static-analyzer")
 
     def __findLinks(self, filename, script):
         command = [shutil.which('linkfinder'), '-i', filename, '-o', 'cli']
@@ -113,7 +113,7 @@ class Static_Analyzer (Module):
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
         if result.stdout != '':
-            lib.controller.Controller.send_vuln_msg("WARNING at script in %s\n\n%s\n\n" % (paths, result.stdout[:1000]), "static-analyzer")
+            lib.controller.Controller.send_vuln_msg("WARNING at script in %s\n%s" % (paths, result.stdout[:900]), "static-analyzer")
             Vulnerability.insert('warning', result.stdout, paths)
         if result.stderr != '':
             lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")

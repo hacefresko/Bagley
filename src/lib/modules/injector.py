@@ -39,7 +39,7 @@ class Injector (Module):
 
         if "---" in result.stdout:
             Vulnerability.insert('SQLi', result.stdout, str(request.path))
-            lib.controller.Controller.send_vuln_msg("SQL INJECTION: Found in %s!\n\n%s\n%s" % (url, result.stdout, " ".join(command)), "injector")
+            lib.controller.Controller.send_vuln_msg("SQL INJECTION: Found in %s!\n%s\n%s" % (url, result.stdout, " ".join(command)), "injector")
         elif "[WARNING] false positive or unexploitable injection point detected" in result.stdout:
             Vulnerability.insert('pSQLi', result.stdout, str(request.path), command)
             lib.controller.Controller.send_vuln_msg("SQL INJECTION: Possible SQL injection in %s! But sqlmap couldn't exploit it\n\n%s\n%s" % (url, result.stdout, " ".join(command)), "injector")
@@ -80,7 +80,7 @@ class Injector (Module):
 
         if "[POC]" in result.stdout:
             Vulnerability.insert('XSS', result.stdout, str(request.path), command)
-            lib.controller.Controller.send_vuln_msg("XSS: %s\n\n%s\n" % (url, result.stdout), "injector")
+            lib.controller.Controller.send_vuln_msg("XSS: %s\n%s\n" % (url, result.stdout), "injector")
         if result.stderr != '':
             lib.controller.Controller.send_error_msg(result.stderr, "injector")
 
@@ -116,7 +116,7 @@ class Injector (Module):
 
         if "[VLN]" in result.stdout:
             Vulnerability.insert('CRLFi', result.stdout, str(request.path), command)
-            lib.controller.Controller.send_vuln_msg("CRLF INJECTION: %s\n\n%s\n" % (url, result.stdout), "injector")
+            lib.controller.Controller.send_vuln_msg("CRLF INJECTION: %s\n%s\n" % (url, result.stdout), "injector")
         if result.stderr != '':
             lib.controller.Controller.send_error_msg(result.stderr, "injector")
 
@@ -150,7 +150,7 @@ class Injector (Module):
 
         if "Tplmap identified the following injection point" in result.stdout:
             Vulnerability.insert('SSTI', result.stdout, str(request.path), " ".join(command))
-            lib.controller.Controller.send_vuln_msg("SSTI: %s\n\n%s\n" % (url, result.stdout), "injector")
+            lib.controller.Controller.send_vuln_msg("SSTI: %s\n%s\n" % (url, result.stdout), "injector")
         if result.stderr != '':
             lib.controller.Controller.send_error_msg(result.stderr, "injector")
             
