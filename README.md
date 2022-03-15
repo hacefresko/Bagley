@@ -25,7 +25,7 @@ Options:
     add .example.com -o {"excluded": ["test.example.com"], "queue": ["https://www.example.com/example?e=1337"], "localStorage": [{"key": "lel", "value": "1337", "url": "https://www.example.com"}]}
     add api.example.com -o {"headers": {"Referer": "google.com", "Accept-Encoding": "gzip, deflate, br"}, "cookies": [{"name":"user_session", "value": "1234567890", "domain": "example.com"}, {"name": "logged_in", "value": "yes", "domain": ".example.com"}]}
 
-## Available modules
+## Modules
 
 Each modules runs in a different thread
 
@@ -46,7 +46,7 @@ Each modules runs in a different thread
 
     *   SSTI with [Tplmap](https://github.com/epinna/tplmap) (must be specified and does not control requests per second)
 
-*   Static_Analyzer: Performs local analysis among obtained data, without generating network traffic:
+*   Static Analyzer: Performs local analysis among obtained data, without generating network traffic:
 
     *   Searches for API keys with a pattern list mainly obtained from [SecretFinder](https://github.com/m4ll0k/SecretFinder)
 
@@ -54,7 +54,7 @@ Each modules runs in a different thread
 
     *   Searches for common vulnerabilities by statically analyzing JS files with [ESlint](https://github.com/eslint/eslint) and some rules taken from [eslint-security-scanner-configs](https://github.com/Greenwolf/eslint-security-scanner-configs)
 
-*   Dynamic_Analyzer: Performs lightweighted analysis among discovered assets, generating network traffic:
+*   Dynamic Analyzer: Performs lightweighted analysis among discovered assets, generating network traffic:
 
     *   Gets technologies used by the application with [Wappalyzer](https://github.com/AliasIO/wappalyzer)
 
