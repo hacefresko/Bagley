@@ -4,9 +4,7 @@
 
 Bagley is a tool made for bug bounty environments to automate the finding of vulnerabilities in web applications
 
-## Usage
-
-File config.py defines some global variables that you may have to change, such as path for the directory fuzzing wordlist, the DNS fuzzing wordlist, the database parameters, etc. 
+## Usage 
 
 Options:
 
