@@ -69,10 +69,9 @@ RUN mkdir /tmp/screenshots /tmp/files
 COPY src/ /root/bagley
 WORKDIR /root/bagley
 
-# Install eslint + used plugins and copy config file
+# Install eslint + used plugins
 RUN npm install -g eslint
 RUN npm install --save-dev eslint-plugin-standard eslint-plugin-import eslint-plugin-node eslint-plugin-promise eslint-config-standard eslint-config-semistandard eslint-plugin-scanjs-rules eslint-plugin-no-unsanitized eslint-plugin-prototype-pollution-security-rules eslint-plugin-angularjs-security-rules eslint-plugin-react eslint-plugin-security eslint-plugin-no-wildcard-postmessage 
-COPY modules-config/eslintrc.js eslintrc.js
 
 # Install requirements
 RUN pip3 install -r  requirements.txt

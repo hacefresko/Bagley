@@ -98,7 +98,7 @@ class Static_Analyzer (Module):
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
 
     def __findVulns(self, filename, script):
-        command = [shutil.which('eslint'), '-c', 'eslintrc.js', filename]
+        command = [shutil.which('eslint'), '-c', config.ESLINT_CONFIG, filename]
 
         if script.path:
             paths = [str(script.path)]
