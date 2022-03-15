@@ -16,7 +16,7 @@ if not DISCORD_TOKEN:
     exit()
 
 # Default value for requests per second
-REQ_PER_SEC = 3
+REQ_PER_SEC = 10
 
 # Timeout for selenium
 TIMEOUT = 30

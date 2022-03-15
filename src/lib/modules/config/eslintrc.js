@@ -14,10 +14,6 @@ module.exports = {
       // React Rules
       "react"
     ],
-    "extends" : [
-      /** security (include all nodeJS rules) rules**/
-      "plugin:security/recommended",
-    ],
     "rules" : {
       /** useful rules from eslint **/
   

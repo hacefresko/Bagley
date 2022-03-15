@@ -102,19 +102,19 @@ class Static_Analyzer (Module):
 
         if script.path:
             paths = [str(script.path)]
-            lib.controller.Controller.send_msg("Looking for vulnerabilities in script %s" % str(script.path), "static-analyzer")
+            lib.controller.Controller.send_msg("Looking for warnings in script %s" % str(script.path), "static-analyzer")
         else:
             paths = []
             for response in script.getResponse():
                 for r in response.getRequests():
                     paths.append(str(r.path))
-            lib.controller.Controller.send_msg("Looking for vulnerabilities in script of response from %s" % ", ".join(paths), "static-analyzer")
+            lib.controller.Controller.send_msg("Looking for warnings in script of response from %s" % ", ".join(paths), "static-analyzer")
         paths = ",".join(paths)
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
         if result.stdout != '':
-            lib.controller.Controller.send_vuln_msg("VULN FOUND at script in %s\n\n%s\n\n" % (paths, result.stdout), "static-analyzer")
-            Vulnerability.insert('Vulnerability', result.stdout, paths)
+            lib.controller.Controller.send_vuln_msg("WARNING at script in %s\n\n%s\n\n" % (paths, result.stdout[:1000]), "static-analyzer")
+            Vulnerability.insert('warning', result.stdout, paths)
         if result.stderr != '':
             lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
 
