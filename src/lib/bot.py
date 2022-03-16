@@ -62,7 +62,7 @@ class StopCommand(Command):
 
 class RestartCommand(Command):
     def __init__(self, controller):
-        super().__init__(controller, "restart", "Stop execution", "restart does not accept arguments")
+        super().__init__(controller, "restart", "Restart execution", "restart does not accept arguments")
 
     def parse(self, args):
         if len(args) > 1:
