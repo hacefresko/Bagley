@@ -61,6 +61,7 @@ async def parseLine(controller, line):
             if len(domains) == 0:
                 await send_msg("There are no domains yet", "terminal")
             else:
+                s = ""
                 for d in domains:
                     s += str(d) + "\n"
                 await send_msg(s, "terminal")
@@ -89,7 +90,7 @@ async def parseLine(controller, line):
 
         elif line.lower() == "getactive":
             active = controller.get_active_modules()
-            await send_msg("Active modules: %d\n%s" % (len(active), "\n\t".join(active)), "terminal")
+            await send_msg("Active modules: %d\n%s" % (len(active), "\n".join(active)), "terminal")
 
         else:
             await send_msg('Cannot understand "%s"' % line, "terminal")

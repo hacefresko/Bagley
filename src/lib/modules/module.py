@@ -5,6 +5,10 @@ class Module (threading.Thread):
         super().__init__()
         self.dependences = dependences
         self.stop = stop
+        self.rps = None
+        self.active = None
+        self.active_modules = None
+        self.lock = None
         if rps is not None and active_modules is not None and lock is not None:
             self.rps = rps
             self.active = False

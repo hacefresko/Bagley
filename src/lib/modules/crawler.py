@@ -516,10 +516,6 @@ class Crawler (Module):
             # empty, sleeps for 5 seconds and starts again
             if len(self.queue) > 0:
                 url = self.queue.pop(0)
-                path = Path.insert(url)
-                if not path:
-                    continue
-                domain = path.domain
 
                 try:
                     requests.get(url, allow_redirects=False, verify=False)
