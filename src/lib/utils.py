@@ -1,4 +1,7 @@
-import json, sys, linecache
+import json, sys, linecache, pathlib
+
+def isScript(url):
+    return pathlib.Path(url.split('?')[0]).suffix.lower() == '.js'
 
 def getExceptionString():
     exc_type, exc_obj, tb = sys.exc_info()
