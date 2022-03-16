@@ -61,8 +61,8 @@ class Crawler (Module):
     def addToLocalStorage(self, url, d):
         self.localStorage[url] = d
 
-    # https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
-    def __post(self, path, data, headers):
+    # Function to use any HTTP method, taken from https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
+    def __request(self, path, method, data, headers):
         current_requests = len(self.driver.requests)
 
         headers_dict = {}
@@ -70,16 +70,16 @@ class Crawler (Module):
             headers_dict[header.key] = header.value
 
         self.driver.execute_script("""
-        function post(path, data, headers) {
+        function req(path, method, data, headers) {
             fetch(path, {
-                method: 'POST',
+                method: method,
                 headers: headers,
                 body: data
             }).then((result)=>{return result;});
         }
         
-        post(arguments[0], arguments[1], arguments[2]);
-        """, path, data, headers_dict)
+        req(arguments[0], arguments[1], arguments[2], arguments[3]);
+        """, path, method, data, headers_dict)
 
         # Wait until request is received by selenium
         while len(self.driver.requests) == current_requests:
@@ -349,8 +349,7 @@ class Crawler (Module):
         path = Path.insert(parent_url)
         if not path:
             return
-        domain = path.domain
-        
+
         lib.controller.Controller.send_msg('[%s] %s' % (method,parent_url), "crawler")
 
         # Add local storage in case it has been deleted
@@ -394,8 +393,8 @@ class Crawler (Module):
                     self.driver.request_interceptor = interceptor
 
                 self.driver.get(parent_url)
-            elif method == 'POST':
-                self.__post(parent_url, data, headers)
+            else:
+                self.__request(parent_url, method, data, headers)
         except Exception as e:
             if "timeout: Timed out receiving message from renderer" in e.msg:
                 lib.controller.Controller.send_msg("Timeout exception requesting %s" % parent_url, "crawler")
@@ -513,10 +512,11 @@ class Crawler (Module):
             self.setInactive()
 
             # Get url from queue. If queue is empty, get domain from database. If it's also
-            # empty, sleeps for 5 seconds and starts again
+            # empty, sleep for 5 seconds and start again
             if len(self.queue) > 0:
                 url = self.queue.pop(0)
 
+                # Check if it's up before sending it to the crawler
                 try:
                     requests.get(url, allow_redirects=False, verify=False)
                 except:
@@ -557,9 +557,6 @@ class Crawler (Module):
                 else:
                     lib.controller.Controller.send_msg('Cannot request %s' % domain_name, "crawler")
                     continue
-
-                if http_request:
-                    lib.controller.Controller.send_msg("HTTP protocol used by %s" % http_request.url, "crawler")
 
             # If url already in database, skip
             if Path.parseURL(url):
