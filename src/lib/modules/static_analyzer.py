@@ -112,8 +112,8 @@ class Static_Analyzer (Module):
         paths = ",".join(paths)
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
-        if result.stdout != '':
-            lib.controller.Controller.send_vuln_msg("WARNING at script in %s\n%s" % (paths, result.stdout[:900]), "static-analyzer")
+        if (result.stdout != '') and ("Parsing error: Unexpected token" not in result.stdout):
+            lib.controller.Controller.send_vuln_msg("WARNING at script in %s\n%s" % (paths, result.stdout[:2000]), "static-analyzer")
             Vulnerability.insert('warning', result.stdout, paths)
         if result.stderr != '':
             lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")

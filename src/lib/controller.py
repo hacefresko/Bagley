@@ -45,6 +45,13 @@ class Controller:
 
         return True
 
+    def get_active_modules(self):
+        result = []
+        for k,v in self.modules.items():
+            if (v.active) or (v.active is None):
+                result.append(k)
+        return result
+
     # Methods to communicate with modules
 
     def start(self):
@@ -63,18 +70,16 @@ class Controller:
 
     def addDomain(self, domain, options=None):
         if Domain.check(domain):
-            self.send_msg("Domain %s already in database" % domain, "terminal")
-            return -1
+            return "Domain %s already in database" % domain
 
         d = Domain.insert(domain)
         if not d:
-            self.send_msg("Couldn't add domain %s" % domain, "terminal")
-            return -1
+            return "Couldn't add domain %s" % domain
 
-        self.send_msg("Added domain %s" % str(d), "terminal")
+        return_str = "Added domain %s" % str(d)
 
-        if options:
-            try:
+        try:
+            if options:
                 opts = json.loads(options)
 
                 # Get and insert headers
@@ -83,7 +88,7 @@ class Controller:
                         header = Header.insert(k,v, False)
                         if header:
                             d.add(header)
-                            self.send_msg("Added header %s" % str(header), "terminal")
+                            return_str += "\nAdded header %s" % str(header)
 
                 # Get and insert cookies
                 if opts.get('cookies'):
@@ -91,32 +96,34 @@ class Controller:
                         cookie = Cookie.insert(c)
                         if cookie:
                             if self.modules.get("crawler").addCookie(cookie):
-                                self.send_msg("Added cookie %s" % str(cookie), "terminal")
+                                return_str += "\nAdded cookie %s" % str(cookie)
                             else:
-                                self.send_msg("Couldn't add cookie %s" % str(cookie), "terminal")
+                                return_str += "\nCouldn't add cookie %s" % str(cookie)
 
                 if opts.get('localStorage'):
                     ls = opts.get('localStorage')
                     if ls.get('url') is not None and ls.get('items') is not None:
                         self.modules.get('crawler').addToLocalStorage(ls.get('url'), ls.get('items'))
-                        self.send_msg("Succesfully added local storage", "terminal")
+                        return_str += "\nSuccesfully added local storage"
                     else:
-                        self.send_msg("Couldn't add local storage", "terminal")
+                        return_str += "\nCouldn't add local storage"
 
                 # If group of subdomains specified, get out of scope domains
                 if (domain[0] == '.') and (opts.get('excluded')):
                     for e in opts.get('excluded'):
                         if Domain.insertOutOfScope(e):
-                            self.send_msg("Added domain %s out of scope" % str(e), "terminal")
+                            return_str += "\nAdded domain %s out of scope" % str(e)
 
                 # Add to queue
                 if opts.get("queue"):
                     for q in opts.get("queue"):
                         self.addToQueue(q)
-                        self.send_msg("Added %s to queue" % str(q), "terminal")
+                        return_str += "\nAdded %s to queue" % str(q)
 
-            except Exception as e:
-                self.send_msg("Couldn't parse options", "terminal")
+        except Exception as e:
+            return_str += "\nCouldn't parse options"
+        finally:
+            return return_str
 
     def getDomains(self):
         return Domain.getAll()
@@ -144,13 +151,9 @@ class Controller:
     @staticmethod
     def send_vuln_msg(msg, channel):
         logging.critical(msg)
-        sent = 0
-        while sent < len(msg):
-            m = msg[sent:sent+1000]
-            sent += len(m)
-            lib.bot.dispatch_msg(m, channel)
-            lib.bot.dispatch_msg(m, "vulnerabilities")
-        
+        lib.bot.dispatch_msg(msg, channel)
+        lib.bot.dispatch_msg(msg, "vulnerabilities")
+ 
     @staticmethod
     def send_img(filename, channel):
         logging.info("[%s] Sent image %s", channel, filename)
