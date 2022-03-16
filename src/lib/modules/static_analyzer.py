@@ -7,7 +7,7 @@ from lib.modules.module import Module
 
 class Static_Analyzer (Module):
     def __init__(self, stop, crawler):
-        super().__init__(['linkfinder'], stop)
+        super().__init__(['linkfinder', 'eslint'], stop)
         self.crawler = crawler
 
     def __searchKeys(self, element):
