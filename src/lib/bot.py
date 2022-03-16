@@ -102,7 +102,7 @@ localStorage    Key/value pairs to be added to the local storage of the specifie
 queue           URLs to start crawling from. Domain must be in scope.
                 {"queue": "http://example.com/example"}""", "terminal")
 
-        if len(args) == 2:
+        elif len(args) == 2:
             s = self.controller.addDomain(args[1])
         else:
             s = self.controller.addDomain(args[1], " ".join(args[2:]))
