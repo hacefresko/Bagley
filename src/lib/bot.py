@@ -88,7 +88,7 @@ class AddCommand(Command):
 
     async def run(self, args):
         if args[1] == 'help':
-            await send_msg("""Options (in JSON format):
+            await send_msg(self.usage_msg + "\n" + """Options (in JSON format):
 excluded        List of domains which are out of scope.
                 Only available if a group of subdomains was specified
                 {"escluded": "example.com"}
@@ -124,7 +124,7 @@ class GetDomainsCommand(Command):
         if len(domains) == 0:
             await send_msg("There are no domains yet", "terminal")
         else:
-            s = ""
+            s = "Domains:\n"
             for d in domains:
                 s += str(d) + "\n"
             await send_msg(s, "terminal")
@@ -145,7 +145,7 @@ class GetPathsCommand(Command):
         if not paths:
             await send_msg("%s does not exists" % domain, "terminal")
         else:
-            await send_msg(paths, "terminal")
+            await send_msg("\n" + paths, "terminal")
 
 class GetRPSCommand(Command):
     def __init__(self, controller):
@@ -218,12 +218,14 @@ class CommandParser():
             await send_msg(help_msg, "terminal")
         else:
             for c in self.commands:
-                if args[0] == c.name:
+                if args[0] == c.name.lower():
                     if c.parse(args):
                         await c.run(args)
                     else:
                         await send_msg(c.usage_msg, "terminal")
-                    break
+                    return
+            
+            await send_msg('Cannot understand "%s"' % line, "terminal")
                 
 # Define dispatchers for custom events
 def dispatch_msg(message, channel):
