@@ -91,9 +91,9 @@ class AddCommand(Command):
             await send_msg(self.usage_msg + "\n" + """Options (in JSON format):
 excluded        List of domains which are out of scope.
                 Only available if a group of subdomains was specified
-                {"escluded": "example.com"}
+                {"excluded": "example.com"}
 headers         Headers that will be added to every request.
-                {"headers": {"key", "value"}}
+                {"headers": {"key": "value"}}
 cookies         Cookies that will be added to the browser and other requests.
                 Fields <name>, <value> and <domain> are mandatory.
                 {"cookies": [{"name": "lel", "value": 1337, "domain": "example.com"}]}
