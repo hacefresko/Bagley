@@ -23,7 +23,7 @@ class Finder(Module):
     def __fuzzPaths(self, path, headers, cookies, errcodes=[]):
         url = str(path)
         # Crawl all urls on the database that has not been crawled
-        if Path.parseURL(url) is None:
+        if self.crawler.isCrawlable(url):
             self.crawler.addToQueue(url)
 
         command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-t', '1', '-w', config.DIR_FUZZING, '-u', url, '--delay', str(int(self.getDelay()*1000))+'ms', '--random-agent', '-r']
@@ -57,8 +57,7 @@ class Finder(Module):
             try:
                 code = int(line.split('(')[1].split(')')[0].split(':')[1].strip())
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
-                if (code != 404) and (code != 400) and (Path.parseURL(discovered) is None):
-                    if Path.insert(discovered):
+                if (code != 404) and (code != 400) and self.crawler.isCrawlable(discovered):
                         lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
                         self.crawler.addToQueue(discovered)
             except:
@@ -83,21 +82,18 @@ class Finder(Module):
 
         lib.controller.Controller.send_msg("Finding paths for domain %s" % str(domain), "finder")
         
-        for line in subprocess.run(command, capture_output=True, encoding='utf-8', input=str(domain)).stdout.splitlines():
-            domain = urlparse(line).netloc
-            if Domain.checkScope(domain):
+        for url in subprocess.run(command, capture_output=True, encoding='utf-8', input=str(domain)).stdout.splitlines():
+            if self.crawler.isCrawlable(url):
                 if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
                     time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
 
-                ok = requests.get(line).ok
+                ok = requests.get(url).ok
 
                 self.t = datetime.datetime.now()
                 
                 if ok:
-                    if not Domain.get(domain):
-                        lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % line, "finder")
-                        Domain.insert(domain)
-                    Path.insert(line)
+                    lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % url, "finder")
+                    self.crawler.addToQueue(url)
 
     def __fuzzSubDomain(self, domain, errcodes=[]):
         command = [shutil.which('gobuster'), 'dns', '-q', '-t', '1', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', str(int(self.getDelay()*1000))+'ms', '-k']

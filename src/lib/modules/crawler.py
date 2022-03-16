@@ -164,8 +164,8 @@ class Crawler (Module):
 
         return resp
 
-    # Check if requests can be crawled based on the scope, the type of document to be requested and if the request has been already made
-    def __isCrawleable(self, url, method, content_type=None, data=None):
+    # Check if requests can be crawled based on the scope, the type of resource to be requested and if the request has been already made
+    def isCrawlable(self, url, method='GET', content_type=None, data=None):
         domain = urlparse(url).netloc
 
         if Domain.checkScope(domain) and Path.checkExtension(url) and not Request.check(url, method, content_type, data, self.cookies):
@@ -192,7 +192,7 @@ class Crawler (Module):
 
                 url = urljoin(parent_url, path)
 
-                if self.__isCrawleable(url, 'GET'):
+                if self.isCrawlable(url, 'GET'):
                     self.__crawl(url, 'GET', headers)
                 
             elif element.name == 'form':
@@ -246,7 +246,7 @@ class Crawler (Module):
                     
                     req_headers += [h]
 
-                if self.__isCrawleable(url, method, content_type, data):
+                if self.isCrawlable(url, method, content_type, data):
                     self.__crawl(url, method, data, req_headers)
 
             elif element.name == 'script':
@@ -285,7 +285,7 @@ class Crawler (Module):
 
                 url = urljoin(parent_url, path)
 
-                if self.__isCrawleable(url, 'GET'):
+                if self.isCrawlable(url, 'GET'):
                     self.__crawl(url, 'GET', headers)   
 
             elif element.name == 'button':
@@ -318,13 +318,13 @@ class Crawler (Module):
                         req = self.driver.requests[0]
                         data = req.body.decode('utf-8', errors='ignore')
                         
-                        if self.__isCrawleable(req.url, req.method, req.headers.get_content_type(), data):
+                        if self.isCrawlable(req.url, req.method, req.headers.get_content_type(), data):
                             self.__crawl(req.url, req.method, data, headers)
 
                     #Else, check if at least the url has changed
                     elif self.driver.current_url != parent_url:
                         
-                        if self.__isCrawleable(self.driver.current_url, 'GET'):
+                        if self.isCrawlable(self.driver.current_url, 'GET'):
                             self.__crawl(self.driver.current_url, 'GET', headers)
 
                 except:
@@ -468,7 +468,7 @@ class Crawler (Module):
 
 
                                 if Domain.checkScope(urlparse(redirect_to).netloc):
-                                    if self.__isCrawleable(redirect_to, method, data=data):
+                                    if self.isCrawlable(redirect_to, method, data=data):
                                         lib.controller.Controller.send_msg("[%d] Redirect to %s" % (code, redirect_to), "crawler")
                                         self.__crawl(redirect_to, method, data, headers)
                                 else:
