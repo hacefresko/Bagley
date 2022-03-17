@@ -88,7 +88,8 @@ class AddCommand(Command):
 
     async def run(self, args):
         if args[1] == 'help':
-            await send_msg(self.usage_msg + "\n" + """Options (in JSON format):
+            s = self.usage_msg + "\n" + """Options (in JSON format):
+
 excluded        List of domains which are out of scope.
                 Only available if a group of subdomains was specified
                 {"excluded": "example.com"}
@@ -100,7 +101,7 @@ cookies         Cookies that will be added to the browser and other requests.
 localStorage    Key/value pairs to be added to the local storage of the specified location
                 {"localStorage": [{"key": "lel", "value": 1337, "url": "https://www.example.com/"}]}
 queue           URLs to start crawling from. Domain must be in scope.
-                {"queue": "http://example.com/example"}""", "terminal")
+                {"queue": "http://example.com/example"}"""
 
         elif len(args) == 2:
             s = self.controller.addDomain(args[1])

@@ -81,9 +81,11 @@ class Crawler (Module):
         req(arguments[0], arguments[1], arguments[2], arguments[3]);
         """, path, method, data, headers_dict)
 
-        # Wait until request is received by selenium
-        while len(self.driver.requests) == current_requests:
+        # Wait until request is received by selenium or until it times out
+        i = 0
+        while (len(self.driver.requests) == current_requests) and (i < config.TIMEOUT):
             time.sleep(1)
+            i += 1
 
     # Inserts in the database the request if url belongs to the scope
     # If an error occur, returns None
@@ -309,9 +311,11 @@ class Crawler (Module):
                     del self.driver.requests
                     self.driver.execute_script("document.evaluate(arguments[0], document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue.click();", xpath_selector)
 
-                    # Wait until request is received by selenium
-                    while len(self.driver.requests) == 0:
+                    # Wait until request is received by selenium or until it times out
+                    i = 0
+                    while (len(self.driver.requests) == 0) and (i < config.TIMEOUT):
                         time.sleep(1)
+                        i += 1
 
                     #Check if requests have been made
                     if self.driver.requests[0]:
@@ -519,23 +523,8 @@ class Crawler (Module):
             # Mark module as inactive
             self.setInactive()
 
-            # Get url from queue. If queue is empty, get domain from database. If it's also
-            # empty, sleep for 5 seconds and start again
-            if len(self.queue) > 0:
-                url = self.queue.pop(0)
-
-                # Check if it's up before sending it to the crawler
-                try:
-                    requests.get(url, allow_redirects=False, verify=False)
-                except:
-                    lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
-                    continue
-            else:
-                domain = next(domains)
-                if not domain:
-                    time.sleep(5)
-                    continue
-
+            domain = next(domain)
+            if domain:
                 domain_name = domain.name if domain.name[0] != '.' else domain.name[1:]
 
                 http_request = None
@@ -565,6 +554,18 @@ class Crawler (Module):
                 else:
                     lib.controller.Controller.send_msg('Cannot request %s' % domain_name, "crawler")
                     continue
+
+            elif len(self.queue) > 0:
+                url = self.queue.pop(0)
+
+                # Check if it's up before sending it to the crawler
+                try:
+                    requests.get(url, allow_redirects=False, verify=False)
+                except:
+                    lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
+                    continue
+            else:
+                time.sleep(5)
 
             # If url already in database, skip
             if Path.parseURL(url):
