@@ -523,8 +523,23 @@ class Crawler (Module):
             # Mark module as inactive
             self.setInactive()
 
-            domain = next(domain)
-            if domain:
+            # Get url from queue. If queue is empty, get domain from database. If it's also
+            # empty, sleep for 5 seconds and start again
+            if len(self.queue) > 0:
+                url = self.queue.pop(0)
+
+                # Check if it's up before sending it to the crawler
+                try:
+                    requests.get(url, allow_redirects=False, verify=False)
+                except:
+                    lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
+                    continue
+            else:
+                domain = next(domains)
+                if not domain:
+                    time.sleep(5)
+                    continue
+
                 domain_name = domain.name if domain.name[0] != '.' else domain.name[1:]
 
                 http_request = None
@@ -554,18 +569,6 @@ class Crawler (Module):
                 else:
                     lib.controller.Controller.send_msg('Cannot request %s' % domain_name, "crawler")
                     continue
-
-            elif len(self.queue) > 0:
-                url = self.queue.pop(0)
-
-                # Check if it's up before sending it to the crawler
-                try:
-                    requests.get(url, allow_redirects=False, verify=False)
-                except:
-                    lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
-                    continue
-            else:
-                time.sleep(5)
 
             # If url already in database, skip
             if Path.parseURL(url):
