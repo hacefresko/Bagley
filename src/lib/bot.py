@@ -81,7 +81,7 @@ class AddCommand(Command):
         super().__init__(controller, "add", "Add a new domain (add help for more info)", "Usage: add <domain/group of subdomains> [options]")
 
     def parse(self, args):
-        if len(args) < 2 or len(args) > 3:
+        if len(args) < 2:
             return False
 
         return True
@@ -99,7 +99,7 @@ cookies         Cookies that will be added to the browser and other requests.
                 Fields <name>, <value> and <domain> are mandatory.
                 {"cookies": [{"name": "lel", "value": 1337, "domain": "example.com"}]}
 localStorage    Key/value pairs to be added to the local storage of the specified location
-                {"localStorage": [{"key": "lel", "value": 1337, "url": "https://www.example.com/"}]}
+                {"localStorage": {"items": {"lel":1337}, "url": "https://www.example.com/"}]}
 queue           URLs to start crawling from. Domain must be in scope.
                 {"queue": "http://example.com/example"}"""
 

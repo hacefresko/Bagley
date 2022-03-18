@@ -100,8 +100,8 @@ class Controller:
                             else:
                                 return_str += "\nCouldn't add cookie %s" % str(cookie)
 
-                if opts.get('localStorage'):
-                    ls = opts.get('localStorage')
+                if opts.get('localstorage'):
+                    ls = opts.get('localstorage')
                     if ls.get('url') is not None and ls.get('items') is not None:
                         self.modules.get('crawler').addToLocalStorage(ls.get('url'), ls.get('items'))
                         return_str += "\nSuccesfully added local storage"
