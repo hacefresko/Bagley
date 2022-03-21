@@ -41,7 +41,7 @@ class Dynamic_Analyzer (Module):
                 str += "\t" + v + "\n"
         
         if str != '':
-            lib.controller.Controller.send_vuln_msg('CVE: Vulnerabilities found at %s %s\n%s' % (tech.name, tech.version, str), "dynamic-analyzer")
+            lib.controller.Controller.send_warn_msg('CVE: Vulnerabilities found at %s %s\n%s' % (tech.name, tech.version, str), "dynamic-analyzer")
 
     def __wappalyzer(self, path):
         command = [shutil.which('wappalyzer'), str(path), '--probe', "-t", str(self.getDelay())]
