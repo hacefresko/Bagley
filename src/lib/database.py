@@ -1,4 +1,6 @@
-import threading, mariadb, config
+import threading, mariadb
+from tabulate import tabulate
+import config
 
 #
 # Singleton module to manage database access
@@ -51,3 +53,16 @@ class DB:
         cursor.close()
 
         return result
+
+    def query_string_like(self, query):
+        cursor = self.__connection.cursor()
+        cursor.execute(query, ())
+        results = cursor.fetchall()
+        headers = []
+        for cd in cursor.description:
+            headers.append(cd[0])
+
+        cursor.close()
+
+        string = tabulate(results, headers, tablefmt='psql')
+        return string

@@ -1,6 +1,6 @@
 from abc import abstractmethod
 import discord, logging, aiohttp
-import config, lib.utils
+import config
 
 # Create bot object
 bot = discord.Client()
@@ -194,6 +194,20 @@ class GetActiveCommand(Command):
         active = self.controller.get_active_modules()
         await send_msg("Active modules: %d\n%s" % (len(active), "\n".join(active)), "terminal")
 
+class QueryCommand(Command):
+    def __init__(self, controller):
+        super().__init__(controller, "query", "Query directly to database", "Usage: query <query>")
+
+    def parse(self, args):
+        if len(args) < 2:
+            return False
+
+        return True
+
+    async def run(self, args):
+        await send_msg("\n" + self.controller.query(" ".join(args[1:])), "terminal")
+
+
 class CommandParser():
     def __init__(self, controller):
         self.commands = [
@@ -205,7 +219,8 @@ class CommandParser():
             GetPathsCommand(controller), 
             GetRPSCommand(controller), 
             SetRPSCommand(controller), 
-            GetActiveCommand(controller)
+            GetActiveCommand(controller),
+            QueryCommand(controller)
         ]
 
     async def parse(self, line):

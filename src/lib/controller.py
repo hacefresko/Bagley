@@ -1,8 +1,8 @@
-from concurrent.futures import thread
 import threading, logging, json
 import lib.modules, lib.bot, config
 
 from lib.entities import *
+from .database import DB
 
 class Controller:
     def __init__(self):
@@ -134,6 +134,11 @@ class Controller:
             return None
         
         return d.getStructure()
+
+    # Meethod to communicate with db
+
+    def query(self, query):
+        return DB().query_string_like(query)
 
     # Methods to communicate with bot
 

@@ -7,3 +7,4 @@ pathlib
 iptools
 discord
 pyjwt
+tabulate
