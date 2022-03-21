@@ -25,7 +25,7 @@ RUN npm install -g yarn
 RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && apt install -y ./google-chrome-stable_current_amd64.deb libxss1 && rm google-chrome-stable_current_amd64.deb
 
 # Install Chrome Driver
-RUN wget https://chromedriver.storage.googleapis.com/97.0.4692.71/chromedriver_linux64.zip && unzip chromedriver_linux64.zip && mv chromedriver /usr/local/sbin && rm chromedriver_linux64.zip
+RUN wget https://chromedriver.storage.googleapis.com/99.0.4844.51/chromedriver_linux64.zip && unzip chromedriver_linux64.zip && mv chromedriver /usr/local/sbin && rm chromedriver_linux64.zip
 
 # Install gobuster
 RUN go install github.com/OJ/gobuster/v3@latest

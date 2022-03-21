@@ -1078,10 +1078,14 @@ class Script:
         if Script.get(url, content):
             return None
         db = DB()
-        # Cannot use lastrowid since scripts table does not have INTEGER PRIMARY KEY but TEXT PRIMARY KEY (hash)
-        db.exec('INSERT INTO scripts (hash, path, content) VALUES (%s,%d,%s)', (Script.__getHash(url, content), path, content))
-        
-        return Script.get(url, content)
+
+        try:
+            # Cannot use lastrowid since scripts table does not have INTEGER PRIMARY KEY but TEXT PRIMARY KEY (hash)
+            db.exec('INSERT INTO scripts (hash, path, content) VALUES (%s,%d,%s)', (Script.__getHash(url, content), path, content))
+            return Script.get(url, content)
+        except:
+            # If script is too large, it's not worth it
+            return None
 
     # Links script to response. If not response, returns False
     def link(self, response):
