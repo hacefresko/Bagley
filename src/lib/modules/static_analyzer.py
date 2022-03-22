@@ -76,7 +76,7 @@ class Static_Analyzer (Module):
             lib.controller.Controller.send_msg("Looking for links in script %s" % str(script.path), "static-analyzer")
         else:
             paths = []
-            for response in script.getResponse():
+            for response in script.responses:
                 for r in response.getRequests():
                     paths.append(str(r.path))
             lib.controller.Controller.send_msg("Looking for links in script of response from %s" % ", ".join(paths), "static-analyzer")
@@ -105,7 +105,7 @@ class Static_Analyzer (Module):
             lib.controller.Controller.send_msg("Looking for warnings in script %s" % str(script.path), "static-analyzer")
         else:
             paths = []
-            for response in script.getResponse():
+            for response in script.responses:
                 for r in response.getRequests():
                     paths.append(str(r.path))
             lib.controller.Controller.send_msg("Looking for warnings in script of response from %s" % ", ".join(paths), "static-analyzer")

@@ -111,9 +111,7 @@ class Crawler (Module):
 
         request_headers = []
         for k,v in request.headers.items():
-            h = Header.get(k,v)
-            if not h:
-                h = Header.insert(k,v)
+            h = Header.get(k,v) or Header.insert(k,v)
             if h:
                 request_headers.append(h)
 
@@ -121,10 +119,7 @@ class Crawler (Module):
 
     # Inserts in the database the response if url belongs to the scope
     # request is a request selenium-wire object
-    # If main is True and code != 3xx, response body will be gotten by self.driver.page_source (selenium always follows 
-    # redirects, so even though the response is 3xx, body given by self.driver.page_source will be the final one, and
-    # we want the inmediate response)
-    def __processResponse(self, request, processed_request, main=False):
+    def __processResponse(self, request, processed_request):
         response = request.response
         if not response:
             time.sleep(3)
@@ -144,27 +139,31 @@ class Crawler (Module):
         
         response_headers = []
         for k,v in response.headers.items():
-            h = Header.get(k,v)
-            if not h:
-                h = Header.insert(k,v)
+            h = Header.get(k,v) or Header.insert(k,v)
             if h:
                 response_headers.append(h)
 
-        if main and response.status_code//100 != 3:
-            body = self.driver.page_source
-        else:
-            body = decode(response.body, response.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
-        
+        body = decode(response.body, response.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
         body = re.sub('\s+(?=<)', '', body)
 
-        response_hash = Response.hash(response.status_code, body, response_headers, response_cookies)
-        resp = Response.get(response_hash)
-        if not resp:
-            resp = Response.insert(response.status_code, body, response_headers, response_cookies, processed_request)
+        resp = Response.get(response.status_code, body) or Response.insert(response.status_code, body, response_headers, response_cookies, processed_request)
         if resp:
             resp.link(processed_request)
 
         return resp
+
+    def __processScript(self, request):
+        if not request.response:
+            return
+
+        path = Path.insert(request.url)
+        if not path:
+            return
+
+        content = decode(request.response.body, request.response.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
+        s = Script.get(content) or Script.insert(content)
+        if s and s.link(path):
+            lib.controller.Controller.send_msg('[SCRIPT] %s' % (request.url), "crawler")
 
     # Check if requests can be crawled based on the scope, the type of resource to be requested and if the request has been already made
     def isCrawlable(self, url, method='GET', content_type=None, data=None):
@@ -242,10 +241,7 @@ class Crawler (Module):
                         data = None
                 else:
                     content_type = 'application/x-www-form-urlencoded'
-                    h = Header.get('content-type', content_type)
-                    if not h:
-                        h = Header.insert('content-type', content_type)
-                    
+                    h = Header.get('content-type', content_type) or  Header.insert('content-type', content_type)
                     req_headers += [h]
 
                 if self.isCrawlable(url, method, content_type, data):
@@ -257,28 +253,26 @@ class Crawler (Module):
                     if element.string is None:
                         continue
 
-                    s = Script.get(None, element.string)
-                    if not s:
-                        s = Script.insert(None, element.string)
+                    s = Script.get(element.string) or Script.insert(element.string)
                     if s:
                         s.link(response)
 
                 else:
                     src = urljoin(parent_url, src)
-                    domain = urlparse(src).netloc
-                    if not Domain.checkScope(domain):
+                    path = Path.insert(src)
+                    if not path:
                         continue
+
                     try:
                         content = requests.get(src, verify=False).text
-                        if content:
-                            s = Script.get(src, content)
-                            if not s:
-                                s = Script.insert(src, content)
-                            if s:
-                                s.link(response)
                     except:
                         lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
                         continue
+
+                    if content:
+                        s = Script.get(content) or Script.insert(content)
+                        if s:
+                            s.link(path)
 
             elif element.name == 'iframe':
                 path = element.get('src')
@@ -429,90 +423,64 @@ class Crawler (Module):
         # Process all requests
         for request in self.driver.iter_requests():
 
+            # Scripts
+            if utils.isScript(request.url) and self.isCrawlable(request.url):
+                self.__processScript(request)
+
             # Main request
-            if request.url == parent_url and main_request is None and main_response is None:
+            elif request.url == parent_url and main_request is None and main_response is None:
 
-                # If resource is a script
-                if utils.isScript(request.url):
-                    resp = request.response
-                    if resp:
-                        content = decode(resp.body, resp.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
-                        s = Script.get(request.url, content)
-                        if not s:
-                            lib.controller.Controller.send_msg('[SCRIPT] %s' % (request.url), "crawler")
-                            s = Script.insert(request.url, content)
-                    break
-                
-                else:
-                    # Only cookies sent in requests are merged because cookies coming in set-cookie headers may not be accepted by the browser. 
-                    # It's easier to only take into account those which get directly accepted by only taking cookies from requests
-                    main_request = self.__processRequest(request)
-                    if not main_request:
-                        return
+                # Only cookies sent in requests are merged because cookies coming in set-cookie headers may not be accepted by the browser. 
+                # It's easier to only take into account those which get directly accepted by only taking cookies from requests
+                main_request = self.__processRequest(request)
+                if not main_request:
+                    return
 
-                    main_response = self.__processResponse(request, main_request, main=True)
-                    if not main_response:
-                        return
+                main_response = self.__processResponse(request, main_request)
+                if not main_response:
+                    return
 
-                    # Follow redirect if 3xx response is received
-                    code = main_response.code
-                    if code//100 == 3:
-                        if code == 304:
-                            lib.controller.Controller.send_msg("304 received: Chached response", "crawler")
+                # Follow redirect if 3xx response is received
+                code = main_response.code
+                if code//100 == 3:
+                    if code == 304:
+                        lib.controller.Controller.send_msg("304 received: Chached response", "crawler")
+                    else:
+                        redirect_to = main_response.getHeader('location').value
+                        if not redirect_to:
+                            lib.controller.Controller.send_error_msg("Received %d but location header is not present" % code, "crawler")
                         else:
-                            redirect_to = main_response.getHeader('location').value
-                            if not redirect_to:
-                                lib.controller.Controller.send_error_msg("Received %d but location header is not present" % code, "crawler")
+                            redirect_to = urljoin(parent_url, redirect_to)
+
+                            if code != 307 and code != 308:
+                                method = 'GET'
+                                data = None
+
+                            if self.isCrawlable(redirect_to, method, data=data):
+                                lib.controller.Controller.send_msg("[%d] Redirect to %s" % (code, redirect_to), "crawler")
+                                self.__crawl(redirect_to, method, data, headers)
                             else:
-                                redirect_to = urljoin(parent_url, redirect_to)
+                                lib.controller.Controller.send_msg("[%d] Redirect to %s [OUT OF SCOPE]" % (code, redirect_to), "crawler")
 
-                                if code != 307 and code != 308:
-                                    method = 'GET'
-                                    data = None
+                    return
 
+                # Send screenshot once we know if the request was redirected or not
+                self.__sendScreenshot(main_request.path)
 
-                                if Domain.checkScope(urlparse(redirect_to).netloc):
-                                    if self.isCrawlable(redirect_to, method, data=data):
-                                        lib.controller.Controller.send_msg("[%d] Redirect to %s" % (code, redirect_to), "crawler")
-                                        self.__crawl(redirect_to, method, data, headers)
-                                else:
-                                    lib.controller.Controller.send_msg("[%d] Redirect to %s [OUT OF SCOPE]" % (code, redirect_to), "crawler")
+                resp_to_analyze.append({'url': parent_url, 'response':main_response})
 
-                        return
+            # Dynamic requests
+            elif self.isCrawlable(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')):
+                lib.controller.Controller.send_msg('[%s][DYNAMIC] %s' % (request.method, request.url), "crawler")
+                
+                req = self.__processRequest(request)
+                resp = self.__processResponse(request, req)
+                if resp:
+                    # If dynamic request responded with HTML, send it to analize
+                    if (resp.body is not None) and (resp.getHeader('content-type').value == "text/html"):
+                        resp_to_analyze.append({'url': request.url, 'response':resp})
 
-                    # Send screenshot once we know if the request was redirected or not
-                    self.__sendScreenshot(main_request.path)
-
-                    resp_to_analyze.append({'url': parent_url, 'response':main_response})
-
-            # Dynamic requests      
-            else:
-                domain = urlparse(request.url).netloc
-                if Domain.checkScope(domain):
-
-                    # If resource is a JS file
-                    if utils.isScript(request.url):
-                        resp = request.response
-                        if resp:
-                            content = decode(resp.body, resp.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
-                            s = Script.get(request.url, content)
-                            if not s:
-                                lib.controller.Controller.send_msg('[SCRIPT] %s' % (request.url), "crawler")
-                                s = Script.insert(request.url, content)
-                            if s:
-                                s.link(main_response)
-
-                    elif Path.checkExtension(request.url) and not Request.check(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore'), self.cookies):
-                        lib.controller.Controller.send_msg('[%s][DYNAMIC] %s' % (request.method, request.url), "crawler")
-                        
-                        req = self.__processRequest(request)
-                        resp = self.__processResponse(request, req)
-                        if resp: 
-                            # If dynamic request responded with HTML, send it to analize
-                            if (resp.body is not None) and (resp.getHeader('content-type').value == "text/html"):
-                                resp_to_analyze.append({'url': request.url, 'response':resp})
-
-        # Process all responses
+        # Process all captured responses that are valid HTML
         for r in resp_to_analyze:
             self.__parseHTML(r['url'], r['response'], headers)
 

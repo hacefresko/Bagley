@@ -1,8 +1,5 @@
-import hashlib, pathlib, iptools
-from urllib import response
+import hashlib, pathlib, iptools, random, string, os
 from urllib.parse import urlparse, urlunparse
-
-from requests.sessions import session
 
 import config, lib.utils as utils
 from .database import DB
@@ -173,7 +170,7 @@ class Domain:
             if domain[0] == '.' and db.query_one('SELECT name FROM domains WHERE name LIKE %s', ("%"+domain,)):
                 return True
 
-            # Construct array with starting and interspersed dots i.e example.com => ['.','example','.','com']
+        # Construct array with starting and interspersed dots i.e example.com => ['.','example','.','com']
         parts = domain.split('.')
         dot_interspersed_parts = (['.']*(2*len(parts)-1))
         dot_interspersed_parts[::2] = parts
@@ -407,13 +404,13 @@ class Path:
         return None
 
 class Request:
-    def __init__(self, id, path_id, params, method, data, response_hash):
+    def __init__(self, id, path_id, params, method, data, response_id):
         self.id = id
         self.path = Path.get(path_id)
         self.params = params
         self.method = method
         self.data = data
-        self.response = Response.get(response_hash)
+        self.response = Response.getById(response_id)
         self.headers = self.__getHeaders()
         self.cookies = self.__getCookies()
 
@@ -482,16 +479,6 @@ class Request:
             if header.key == key:
                 return header
         return None
-
-    def getResponse(self):
-        db = DB()
-    
-        r = db.query_one('SELECT response FROM requests WHERE id = %d', (self.id,))
-        if not r:
-            return None
-
-        return Response.get(r[0])
-        
 
     # Returns True if request exists in database else False. 
     # If there are already some (5) requests with the same path and method but different params/data with same key, it returns True to avoid saving same requests with different CSRFs, session values, etc.
@@ -655,7 +642,7 @@ class Request:
             yield Request(request[0], request[1], request[2], request[3], request[4], request[5])
 
     # Returns a list of requests whose params or data keys are the same as the request the function was called on
-    def getSameKeys(self):
+    def getSameKeysRequests(self):
         if not self.params and not self.data:
             return []
 
@@ -677,27 +664,28 @@ class Request:
         return requests
 
 class Response:
-    def __init__(self, id, hash, code, body):
-        self.id = id
-        self.hash = hash
+    def __init__(self, response_id, response_hash, code, body):
+        self.id = response_id
+        self.hash = response_hash
         self.code = code
         self.body = body
         self.headers = self.__getHeaders()
         self.cookies = self.__getCookies()
         self.scripts = self.__getScripts()
 
-    # Returns response hash
+    def __eq__(self, other):
+        if not other:
+            return False
+        return self.hash == other.hash
+
     @staticmethod
-    def hash(code, body, headers, cookies):
-        to_hash = str(body) + str(code)
-        for element in headers + cookies:
-            to_hash += str(element)
-        return hashlib.sha1(to_hash.encode('utf-8')).hexdigest()
+    def __hash(code, body):
+        return hashlib.sha1((str(body) + str(code)).encode('utf-8')).hexdigest()
 
     # Returns the list of headers of the response
     def __getHeaders(self):
         db = DB()
-        headers = db.query_all('SELECT * FROM headers INNER JOIN response_headers on id = header WHERE response = %s', (self.hash,))
+        headers = db.query_all('SELECT * FROM headers INNER JOIN response_headers on id = header WHERE response = %d', (self.id,))
 
         result = []
         for header in headers:
@@ -708,7 +696,7 @@ class Response:
     # Returns the list of cookies of the response
     def __getCookies(self):
         db = DB()
-        cookies = db.query_all('SELECT * FROM cookies INNER JOIN response_cookies on id = cookie WHERE response = %s', (self.hash,))
+        cookies = db.query_all('SELECT * FROM cookies INNER JOIN response_cookies on id = cookie WHERE response = %d', (self.id,))
 
         result = []
         for cookie in cookies:
@@ -719,7 +707,7 @@ class Response:
     # Returns the list of scripts of the response
     def __getScripts(self):
         db = DB()
-        scripts = db.query_all('SELECT * FROM scripts INNER JOIN response_scripts on hash = script WHERE response = %s', (self.hash,))
+        scripts = db.query_all('SELECT * FROM scripts INNER JOIN response_scripts on id = script WHERE response = %d', (self.id,))
 
         result = []
         for script in scripts:
@@ -729,47 +717,50 @@ class Response:
 
     # Returns True if response exists, else False
     @staticmethod
-    def check(code, body, headers, cookies):
-        if not body:
-            body = None
-
+    def check(code, body):
         db = DB()
-        return True if db.query_one('SELECT * FROM responses WHERE hash = %s', (Response.hash(code, body, headers, cookies),)) else False
+        return True if db.query_one('SELECT * FROM responses WHERE hash = %s', (Response.__hash(code, body),)) else False
     
     # Returns response if exists, else False
     @staticmethod
-    def get(response_hash):
+    def getById(response_id):
         db = DB()
-        response = db.query_one('SELECT * FROM responses WHERE hash = %s', (response_hash,))
+        response = db.query_one('SELECT * FROM responses WHERE id = %d', (response_id,))
         if not response:
             return None
         return Response(response[0], response[1], response[2], response[3])
 
-    # Returns response hash if response succesfully inserted. 
-    # If an error occur or response already inserted, returns None. 
+    # Returns response if exists, else False
+    @staticmethod
+    def get(code, body):
+        db = DB()
+        response = db.query_one('SELECT * FROM responses WHERE hash = %s', (Response.__hash(code, body),))
+        if not response:
+            return None
+        return Response(response[0], response[1], response[2], response[3])
+
+    # Returns response if response succesfully inserted. 
+    # If request is not a Request object or response already inserted, returns None. 
     # Also links header + cookies.
     @staticmethod
     def insert(code, body, headers, cookies, request):
         if not isinstance(request, Request):
             return None
 
-        if not body:
-            body = None
-
         db = DB()
 
-        if Response.check(code, body, headers, cookies):
+        if Response.check(code, body):
             return None
 
-        response_hash = Response.hash(code, body, headers, cookies)
+        response_hash = Response.__hash(code, body)
 
-        db.exec('INSERT INTO responses (hash, code, content) VALUES (%s,%d,%s)', (response_hash, code, body))
+        response_id = db.exec_and_get_last_id('INSERT INTO responses (hash, code, body) VALUES (%s,%d,%s)', (response_hash, code, body))
         
-        response = Response.get(response_hash)
+        response = Response.getById(response_id)
         for element in headers + cookies:
             element.link(response)
 
-        return Response.get(response_hash)
+        return Response(response_id, response_hash, code, body)
 
     # Links response to request. If target not a request, return False, else True
     def link(self, request):
@@ -777,7 +768,7 @@ class Response:
             return False
 
         db = DB()
-        db.exec('UPDATE requests SET response = %s WHERE id = %d', (self.hash, request.id))
+        db.exec('UPDATE requests SET response = %d WHERE id = %d', (self.id, request.id))
         return True
 
     # Returns specified header if request has it, else None
@@ -791,7 +782,7 @@ class Response:
     def getRequests(self):
         result = []
         db = DB()
-        requests = db.query_all("SELECT id FROM requests WHERE response = %s", (self.hash,))
+        requests = db.query_all("SELECT id FROM requests WHERE response = %d", (self.id,))
         for r in requests:
             result.append(Request.getById(r[0]))
         return result
@@ -859,7 +850,7 @@ class Header:
             db.exec('INSERT INTO request_headers (request, header) VALUES (%d, %d)', (target.id, self.id))
             return True
         elif isinstance(target, Response):
-            db.exec('INSERT INTO response_headers (response, header) VALUES (%s,%d)', (target.hash, self.id))
+            db.exec('INSERT INTO response_headers (response, header) VALUES (%s,%d)', (target.id, self.id))
             return True
         elif isinstance(target, Domain):
             db.exec('INSERT INTO domain_headers(domain, header) VALUES (%s,%d)', (target.id, self.id))
@@ -1021,7 +1012,7 @@ class Cookie:
             db.exec('INSERT INTO request_cookies (request, cookie) VALUES (%d,%d)', (target.id, self.id))
             return True
         elif isinstance(target, Response):
-            db.exec('INSERT INTO response_cookies (response, cookie) VALUES (%s,%d)', (target.hash, self.id))
+            db.exec('INSERT INTO response_cookies (response, cookie) VALUES (%s,%d)', (target.id, self.id))
             return True
         elif isinstance(target, Domain):
             db.exec('INSERT INTO domain_cookies(domain, cookie) VALUES (%s,%d)', (target.id, self.id))
@@ -1030,24 +1021,30 @@ class Cookie:
             return False
 
 class Script:
-    def __init__(self, id, hash, content, path_id=None):
+    def __init__(self, id, hash, filename, content=None):
         self.id = id
         self.hash = hash
-        self.content = content
-        self.path = Path.get(path_id)
+        self.filename = filename
+        self.content = content if content is not None else self.__getContent() # If content is not provided, it's read from disk
+        self.responses = self.__getResponses() # All responses containing this script (usually only one but no one knows :/)
+        self.paths = self.__getPaths()
 
-    # Returns hash of the script specified by url and content
-    @staticmethod 
-    def __getHash(url, content):
-        return hashlib.sha1((str(url) + content).encode('utf-8')).hexdigest()
+    def __eq__(self, other):
+        if not other:
+            return False
+        return self.hash == other.hash
 
-    # Returns response associated to script if any, else None
-    def getResponse(self):
-        if self.path:
-            return None
+    def __getContent(self):
+        fd = open(self.filename)
+        content = fd.read()
+        fd.close()
 
+        return content
+
+    # Returns responses associated to script if any, else an empty list
+    def __getResponses(self):
         db = DB()
-        responses = db.query_all('SELECT * FROM responses INNER JOIN response_scripts on hash = response WHERE script = %s', (self.hash,))
+        responses = db.query_all('SELECT * FROM responses INNER JOIN response_scripts on id = response WHERE script = %d', (self.id,))
 
         result = []
         for response in responses:
@@ -1055,47 +1052,70 @@ class Script:
 
         return result
 
+    # Returns responses associated to script if any, else an empty list
+    def __getPaths(self):
+        db = DB()
+        paths = db.query_all('SELECT * FROM paths INNER JOIN script_paths on id = path WHERE script = %d', (self.id,))
+
+        result = []
+        for path in paths:
+            result.append(Path(path[0], path[1], path[2], path[3], path[4]))
+
+        return result
+
+    @staticmethod
+    def __hash(content):
+        return hashlib.sha1(content.encode('utf-8')).hexdigest()
+
     # Returns script by url and content or False if it does not exist   
     @staticmethod 
-    def get(url, content):
+    def get(content):
         db = DB()
 
-        result = db.query_one('SELECT * FROM scripts WHERE hash = %s', (Script.__getHash(url, content),))
+        result = db.query_one('SELECT * FROM scripts WHERE hash = %s', (Script.__hash(content),))
         if not result:
             return None
-        return Script(result[0], result[1], result[2], result[3])
+        return Script(result[0], result[1], result[2])
 
     # Inserts script. If already inserted, returns None
-    def insert(url, content):
-        if url is not None:
-            path = Path.insert(url)
-            if not path:
-                return None
-            path = path.id
+    @staticmethod 
+    def insert(content):
+        if Script.get(content):
+            return None
+
+        # Save script in scripts folder with random name (20 chars)
+        filename = config.SCRIPTS_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.js'
+        while os.path.exists(filename):
+            filename = config.SCRIPTS_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.js'
+        temp_file = open(filename, 'w')
+        temp_file.write(content)
+        temp_file.close()
+
+        db = DB()
+
+        script_hash = Script.__hash(content)
+        script_id = db.exec_and_get_last_id('INSERT INTO scripts (hash, filename) VALUES (%s,%s)', (script_hash, filename))
+        
+        return Script(script_id, script_hash, filename, content)
+
+    # Links script to response or to path. If everything is correct, returns Truee
+    def link(self, element):
+        db = DB()
+
+        if (isinstance(element, Response)) and (element not in self.responses):
+            db.exec('INSERT INTO response_scripts (response, script) VALUES (%d,%d)', (element.id, self.id))
+            # Update object
+            self.responses.append(element)
+            return True
+        
+        elif (isinstance(element, Path)) and (element not in self.paths):
+            db.exec('INSERT INTO script_paths (path, script) VALUES (%d, %d)', (element.id, self.id))
+            # Update object
+            self.paths.append(element)
+            return True
+
         else:
-            path = None
-
-        if Script.get(url, content):
-            return None
-        db = DB()
-
-        try:
-            # Cannot use lastrowid since scripts table does not have INTEGER PRIMARY KEY but TEXT PRIMARY KEY (hash)
-            db.exec('INSERT INTO scripts (hash, path, content) VALUES (%s,%d,%s)', (Script.__getHash(url, content), path, content))
-            return Script.get(url, content)
-        except:
-            # If script is too large, it's not worth it
-            return None
-
-    # Links script to response. If not response, returns False
-    def link(self, response):
-        if not isinstance(response, Response):
             return False
-
-        db = DB()
-        db.exec('INSERT INTO response_scripts (response, script) VALUES (%s,%s)', (response.hash, self.hash))
-
-        return True
 
     # Yields scripts or None if there are no scripts. It continues infinetly until program stops
     @staticmethod

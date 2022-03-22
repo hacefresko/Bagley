@@ -172,7 +172,7 @@ class Injector (Module):
                 #self.__crlf(request)
 
                 if request.params or request.data:
-                    response = request.getResponse()
+                    response = request.response
                     if response:
                         content_type = response.getHeader('content-type')
                         if content_type and ('text/html' in str(content_type)):
@@ -181,7 +181,7 @@ class Injector (Module):
                     self.__sqli(request)
 
                 # Add request with same keys in POST/GET data to tested list
-                tested = [*[request.id for request in request.getSameKeys()], *tested]
+                tested = [*[request.id for request in request.getSameKeysRequests()], *tested]
             except:
                 lib.controller.Controller.send_error_msg(utils.getExceptionString(), "injector")
 

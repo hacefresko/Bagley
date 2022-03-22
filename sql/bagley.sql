@@ -41,10 +41,10 @@ CREATE TABLE paths (
 );
 
 CREATE TABLE responses (
-    id INT UNIQUE KEY AUTO_INCREMENT,
-    hash VARCHAR(255) PRIMARY KEY,
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    hash VARCHAR(255) UNIQUE KEY,
     code INT NOT NULL,
-    content LONGTEXT
+    body LONGTEXT
 );
 
 CREATE TABLE requests (
@@ -53,9 +53,9 @@ CREATE TABLE requests (
     params TEXT,
     method TEXT NOT NULL,
     data TEXT,
-    response VARCHAR(255),
+    response INT,
     FOREIGN KEY (path) REFERENCES paths(id),
-    FOREIGN KEY (response) REFERENCES responses(hash)
+    FOREIGN KEY (response) REFERENCES responses(id)
 );
 
 CREATE TABLE headers (
@@ -69,7 +69,7 @@ CREATE TABLE cookies (
     name TEXT NOT NULL,
     value TEXT,
     domain TEXT,
-    path TEXT,      -- Neither path nor domain are foreign keys since domain can specify a range of subdomains
+    path TEXT,
     expires TEXT,
     maxage TEXT,
     httponly BOOL,
@@ -78,12 +78,11 @@ CREATE TABLE cookies (
 );
 
 CREATE TABLE scripts (
-    id INT UNIQUE KEY AUTO_INCREMENT,
-    hash VARCHAR(255) PRIMARY KEY,
-    content LONGTEXT,
-    path INT,
-    FOREIGN KEY (path) REFERENCES paths(id)
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    hash VARCHAR(255) UNIQUE KEY,
+    filename TEXT
 );
+
 
 -- Headers sent in all request made to that domain
 CREATE TABLE domain_headers (
@@ -101,6 +100,7 @@ CREATE TABLE domain_cookies (
     FOREIGN KEY (cookie) REFERENCES cookies(id)
 );
 
+
 CREATE TABLE request_headers (
     request INT NOT NULL,
     header INT NOT NULL,
@@ -115,26 +115,34 @@ CREATE TABLE request_cookies (
     FOREIGN KEY (cookie) REFERENCES cookies(id)
 );
 
+
 CREATE TABLE response_headers (
-    response VARCHAR(255) NOT NULL,
+    response INT NOT NULL,
     header INT NOT NULL,
-    FOREIGN KEY (response) REFERENCES responses(hash),
+    FOREIGN KEY (response) REFERENCES responses(id),
     FOREIGN KEY (header) REFERENCES headers(id)
 );
 
 -- Cookies sent by response in Set-Cookie headers
 CREATE TABLE response_cookies (
-    response VARCHAR(255) NOT NULL,
+    response INT NOT NULL,
     cookie INT NOT NULL,
-    FOREIGN KEY (response) REFERENCES responses(hash),
+    FOREIGN KEY (response) REFERENCES responses(id),
     FOREIGN KEY (cookie) REFERENCES cookies(id)
 );
 
 CREATE TABLE response_scripts (
-    response VARCHAR(255) NOT NULL,
-    script VARCHAR(255) NOT NULL,
-    FOREIGN KEY (response) REFERENCES responses(hash),
-    FOREIGN KEY (script) REFERENCES scripts(hash)
+    response INT NOT NULL,
+    script INT NOT NULL,
+    FOREIGN KEY (response) REFERENCES responses(id),
+    FOREIGN KEY (script) REFERENCES scripts(id)
+);
+
+CREATE TABLE script_paths (
+    script INT NOT NULL,
+    path INT NOT NULL,
+    FOREIGN KEY (script) REFERENCES scripts(id),
+    FOREIGN KEY (path) REFERENCES paths(id)
 );
 
 CREATE TABLE vulnerabilities (
