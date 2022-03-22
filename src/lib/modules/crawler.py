@@ -162,8 +162,8 @@ class Crawler (Module):
 
         content = decode(request.response.body, request.response.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
         s = Script.get(content) or Script.insert(content)
-        if s and s.link(path):
-            lib.controller.Controller.send_msg('[SCRIPT] %s' % (request.url), "crawler")
+        if s:
+            s.link(path)
 
     # Check if requests can be crawled based on the scope, the type of resource to be requested and if the request has been already made
     def isCrawlable(self, url, method='GET', content_type=None, data=None):
@@ -312,7 +312,7 @@ class Crawler (Module):
                         i += 1
 
                     #Check if requests have been made
-                    if self.driver.requests[0]:
+                    if len(self.driver.requests) > 0:
                         req = self.driver.requests[0]
                         data = req.body.decode('utf-8', errors='ignore')
                         
@@ -424,8 +424,9 @@ class Crawler (Module):
         for request in self.driver.iter_requests():
 
             # Scripts
-            if utils.isScript(request.url) and self.isCrawlable(request.url):
-                self.__processScript(request)
+            if utils.isScript(request.url) and Domain.checkScope(urlparse(request.url).netloc) and request.response.status_code == 200:
+                if self.__processScript(request):
+                    lib.controller.Controller.send_msg('[SCRIPT] %s' % (request.url), "crawler")
 
             # Main request
             elif request.url == parent_url and main_request is None and main_response is None:
