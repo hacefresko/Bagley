@@ -1,6 +1,6 @@
 from abc import abstractmethod
 import discord, logging, aiohttp
-import config
+import config, utils
 
 # Create bot object
 bot = discord.Client()
@@ -205,7 +205,10 @@ class QueryCommand(Command):
         return True
 
     async def run(self, args):
-        await send_msg("\n" + self.controller.query(" ".join(args[1:])), "terminal")
+        try:
+            await send_msg("\n" + self.controller.query(" ".join(args[1:])), "terminal")
+        except:
+            await send_msg(utils.getExceptionString(), "terminal")
 
 
 class CommandParser():

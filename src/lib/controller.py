@@ -48,7 +48,7 @@ class Controller:
     def get_active_modules(self):
         result = []
         for k,v in self.modules.items():
-            if (v.active) or (v.active is None):
+            if v.active:
                 result.append(k)
         return result
 
@@ -134,8 +134,8 @@ class Controller:
             return None
         
         return d.getStructure()
-
-    # Meethod to communicate with db
+        
+    # Method to communicate directly with db
 
     def query(self, query):
         return DB().query_string_like(query)
