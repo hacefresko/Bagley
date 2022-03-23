@@ -125,7 +125,7 @@ class Static_Analyzer (Module):
             try:
                 script = next(scripts)
                 if script and script.content:
-                    filename = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=10)) + '.js'
+                    filename = config.SCRIPTS_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=10)) + '.js'
                     temp_file = open(filename, 'w')
                     temp_file.write(script.content)
                     temp_file.close()
