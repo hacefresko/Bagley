@@ -63,7 +63,7 @@ RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discov
 RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt -O /usr/lib/SecLists/Discovery/Web-Content/common.txt
 
 # Create temporal directories
-RUN mkdir /tmp/screenshots /tmp/files
+RUN mkdir /tmp/screenshots /tmp/scripts
 
 # Copy src files and set workdir
 COPY src/ /root/bagley

@@ -1128,7 +1128,7 @@ class Script:
                 yield None
                 continue
             id += 1
-            yield Script(script[0], script[1], script[2], script[3])
+            yield Script(script[0], script[1], script[2])
 
 class Vulnerability:
     def __init__(self, id, vuln_type, description, element, command):

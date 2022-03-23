@@ -34,7 +34,7 @@ HEADERS_BLACKLIST = ['date', 'cookie', 'set-cookie', 'content-length']
 SCREENSHOT_FOLDER = '/tmp/screenshots/'
 
 # Absolute path to temportal files folder
-FILES_FOLDER = '/tmp/scripts/'
+SCRIPTS_FOLDER = '/tmp/scripts/'
 
 # Directory fuzzing wordlist
 DIR_FUZZING = '/usr/lib/SecLists/Discovery/Web-Content/common.txt'
