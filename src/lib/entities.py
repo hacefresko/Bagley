@@ -1026,8 +1026,6 @@ class Script:
         self.hash = hash
         self.filename = filename
         self.content = content if content is not None else self.__getContent() # If content is not provided, it's read from disk
-        self.responses = self.__getResponses() # All responses containing this script (usually only one but no one knows :/)
-        self.paths = self.__getPaths()
 
     def __eq__(self, other):
         if not other:
@@ -1042,7 +1040,7 @@ class Script:
         return content
 
     # Returns responses associated to script if any, else an empty list
-    def __getResponses(self):
+    def getResponses(self):
         db = DB()
         responses = db.query_all('SELECT * FROM responses INNER JOIN response_scripts on id = response WHERE script = %d', (self.id,))
 
@@ -1053,7 +1051,7 @@ class Script:
         return result
 
     # Returns responses associated to script if any, else an empty list
-    def __getPaths(self):
+    def getPaths(self):
         db = DB()
         paths = db.query_all('SELECT * FROM paths INNER JOIN script_paths on id = path WHERE script = %d', (self.id,))
 
@@ -1102,16 +1100,12 @@ class Script:
     def link(self, element):
         db = DB()
 
-        if (isinstance(element, Response)) and (element not in self.responses):
+        if (isinstance(element, Response)) and (element not in self.getResponses()):
             db.exec('INSERT INTO response_scripts (response, script) VALUES (%d,%d)', (element.id, self.id))
-            # Update object
-            self.responses.append(element)
             return True
         
-        elif (isinstance(element, Path)) and (element not in self.paths):
+        elif (isinstance(element, Path)) and (element not in self.getPaths()):
             db.exec('INSERT INTO script_paths (path, script) VALUES (%d, %d)', (element.id, self.id))
-            # Update object
-            self.paths.append(element)
             return True
 
         else:

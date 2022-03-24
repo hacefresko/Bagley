@@ -48,7 +48,7 @@ class Static_Analyzer (Module):
 
         if isinstance(element, Script):
             paths = []
-            for p in element.paths:
+            for p in element.getPaths():
                 paths.append(str(p))
             lib.controller.Controller.send_msg("Looking for API keys in script in %s" % ",".join(paths), "static-analyzer")
             text = element.content
@@ -75,10 +75,10 @@ class Static_Analyzer (Module):
         command = [shutil.which('linkfinder'), '-i', script.filename, '-o', 'cli']
 
         script_locations = []
-        for p in script.paths:
+        for p in script.getPaths():
             script_locations.append(str(p))
 
-        for response in script.responses:
+        for response in script.getResponses():
             for request in response.getRequests():
                 script_locations.append(str(request.path))
 
@@ -103,10 +103,10 @@ class Static_Analyzer (Module):
         command = [shutil.which('eslint'), '-c', config.ESLINT_CONFIG, script.filename]
 
         script_locations = []
-        for p in script.paths:
+        for p in script.getPaths():
             script_locations.append(str(p))
 
-        for response in script.responses:
+        for response in script.getResponses():
             for request in response.getRequests():
                 script_locations.append(str(request.path))
 
@@ -130,7 +130,7 @@ class Static_Analyzer (Module):
                     self.__findVulns(script)
 
                     # Scripts embedded in html file are analyzed with the whole response body
-                    if len(script.paths) > 0:
+                    if len(script.getPaths()) > 0:
                         self.__searchKeys(script)
                 else:
                     response = next(responses)
