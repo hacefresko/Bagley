@@ -47,7 +47,10 @@ class Static_Analyzer (Module):
         }
 
         if isinstance(element, Script):
-            lib.controller.Controller.send_msg("Looking for API keys in script %s" % str(element.path), "static-analyzer")
+            paths = []
+            for p in element.paths:
+                paths.append(str(p))
+            lib.controller.Controller.send_msg("Looking for API keys in script in %s" % ",".join(paths), "static-analyzer")
             text = element.content
         elif isinstance(element, Response):
             lib.controller.Controller.send_msg("Looking for API keys in response from %s" % ", ".join([str(r.path) for r in element.getRequests()]), "static-analyzer")
@@ -68,27 +71,26 @@ class Static_Analyzer (Module):
                     paths = paths[:-2]
                     lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at %s\n%s" % (name, paths, value), "static-analyzer")
 
-    def __findLinks(self, filename, script):
-        command = [shutil.which('linkfinder'), '-i', filename, '-o', 'cli']
+    def __findLinks(self, script):
+        command = [shutil.which('linkfinder'), '-i', script.filename, '-o', 'cli']
 
-        if script.path:
-            paths = [str(script.path)]
-            lib.controller.Controller.send_msg("Looking for links in script %s" % str(script.path), "static-analyzer")
-        else:
-            paths = []
-            for response in script.responses:
-                for r in response.getRequests():
-                    paths.append(str(r.path))
-            lib.controller.Controller.send_msg("Looking for links in script of response from %s" % ", ".join(paths), "static-analyzer")
+        script_locations = []
+        for p in script.paths:
+            script_locations.append(str(p))
+
+        for response in script.responses:
+            for request in response.getRequests():
+                script_locations.append(str(request.path))
+
+        lib.controller.Controller.send_msg("Looking for links in script in %s" % ", ".join(script_locations), "static-analyzer")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         line = process.stdout.readline().decode('utf-8', errors='ignore')
         while line:
             try:
-                for p in paths:
-                    discovered = urljoin(p, line.rstrip())
-                    domain = urlparse(discovered).netloc
+                for path in script_locations:
+                    discovered = urljoin(path, line.rstrip())
                     if self.crawler.isCrawlable(discovered):
                         lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "static-analyzer")
                         self.crawler.addToQueue(discovered)
@@ -97,24 +99,23 @@ class Static_Analyzer (Module):
             finally:
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
 
-    def __findVulns(self, filename, script):
-        command = [shutil.which('eslint'), '-c', config.ESLINT_CONFIG, filename]
+    def __findVulns(self, script):
+        command = [shutil.which('eslint'), '-c', config.ESLINT_CONFIG, script.filename]
 
-        if script.path:
-            paths = [str(script.path)]
-            lib.controller.Controller.send_msg("Looking for warnings in script %s" % str(script.path), "static-analyzer")
-        else:
-            paths = []
-            for response in script.responses:
-                for r in response.getRequests():
-                    paths.append(str(r.path))
-            lib.controller.Controller.send_msg("Looking for warnings in script of response from %s" % ", ".join(paths), "static-analyzer")
-        paths = ",".join(paths)
+        script_locations = []
+        for p in script.paths:
+            script_locations.append(str(p))
+
+        for response in script.responses:
+            for request in response.getRequests():
+                script_locations.append(str(request.path))
+
+        lib.controller.Controller.send_msg("Looking for warnings in script in %s" % ", ".join(script_locations), "static-analyzer")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
         if (result.stdout != '') and ("Parsing error: Unexpected token" not in result.stdout):
-            lib.controller.Controller.send_warn_msg("WARNING at script in %s\n%s" % (paths, result.stdout[:800]), "static-analyzer")
-            Vulnerability.insert('warning', result.stdout, paths)
+            lib.controller.Controller.send_warn_msg("WARNING at script in %s\n%s" % (", ".join(script_locations), result.stdout[:800]), "static-analyzer")
+            Vulnerability.insert('warning', result.stdout, ", ".join(script_locations))
         if result.stderr != '':
             lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
 
@@ -125,18 +126,11 @@ class Static_Analyzer (Module):
             try:
                 script = next(scripts)
                 if script and script.content:
-                    filename = config.SCRIPTS_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=10)) + '.js'
-                    temp_file = open(filename, 'w')
-                    temp_file.write(script.content)
-                    temp_file.close()
-
-                    self.__findLinks(filename, script)
-                    self.__findVulns(filename, script)
-
-                    os.remove(filename)
+                    self.__findLinks(script)
+                    self.__findVulns(script)
 
                     # Scripts embedded in html file are analyzed with the whole response body
-                    if script.path:
+                    if len(script.paths) > 0:
                         self.__searchKeys(script)
                 else:
                     response = next(responses)
