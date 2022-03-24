@@ -424,7 +424,7 @@ class Crawler (Module):
         for request in self.driver.iter_requests():
 
             # Scripts
-            if utils.isScript(request.url) and Domain.checkScope(urlparse(request.url).netloc) and request.response.status_code == 200:
+            if utils.isScript(request.url) and request.response.status_code == 200:
                 if self.__processScript(request):
                     lib.controller.Controller.send_msg('[SCRIPT] %s' % (request.url), "crawler")
 

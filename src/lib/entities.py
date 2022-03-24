@@ -386,6 +386,9 @@ class Path:
         if not parsedURL:
             return None
 
+        if not Domain.checkScope(parsedURL['domain']):
+            return None
+
         protocol = parsedURL['protocol']
 
         domain = Domain.get(parsedURL['domain'])
