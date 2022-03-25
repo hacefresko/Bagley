@@ -1088,9 +1088,9 @@ class Script:
         filename = config.SCRIPTS_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.js'
         while os.path.exists(filename):
             filename = config.SCRIPTS_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.js'
-        temp_file = open(filename, 'w')
-        temp_file.write(content)
-        temp_file.close()
+        script_file = open(filename, 'w')
+        script_file.write(content)
+        script_file.close()
 
         db = DB()
 

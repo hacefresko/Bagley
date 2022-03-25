@@ -33,6 +33,12 @@ HEADERS_BLACKLIST = ['date', 'cookie', 'set-cookie', 'content-length']
 # Absolute path to screenshot folder
 SCREENSHOT_FOLDER = '/tmp/screenshots/'
 
+# Absolute path to scripts folder
+SCRIPTS_FOLDER = '/tmp/scripts/'
+
+# Absolute path to rempotal files
+FILES_FOLDER = '/tmp/files/'
+
 # Absolute path to temportal files folder
 SCRIPTS_FOLDER = '/tmp/scripts/'
 

@@ -1,5 +1,5 @@
 from abc import abstractmethod
-import discord, logging, aiohttp
+import discord, logging, aiohttp, os, random, string
 import config, lib.utils
 
 # Create bot object
@@ -9,11 +9,27 @@ bot = discord.Client()
 async def send_msg(msg, channel):
     for c in bot.get_all_channels():
         if c.name == channel:
-            sent = 0
-            while sent < len(msg):
-                m = msg[sent:sent+1000]
-                sent += len(m)
-                await c.send("`" + m + "`")
+            if len(msg) < 5000:
+                sent = 0
+                while sent < len(msg):
+                    m = msg[sent:sent+1000]
+                    sent += len(m)
+                    await c.send("`" + m + "`")
+            else:
+                # Create file, send it and remove it
+                filename = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.txt'
+                while os.path.exists(filename):
+                    filename = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.txt'
+
+                temp_file = open(filename, 'w')
+                temp_file.write(msg)
+                temp_file.close()
+                
+                await c.send(file=discord.File(filename))
+
+                os.remove(filename)
+
+            break
 
 # Define commands
 class Command:
