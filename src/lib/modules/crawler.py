@@ -61,6 +61,21 @@ class Crawler (Module):
     def addToLocalStorage(self, url, d):
         self.localStorage[url] = d
 
+    def __updateLocalStorage(self, url):
+        parsed = urlparse(url)
+        location = parsed.scheme + '://' + parsed.netloc + '/'
+        if self.localStorage.get(location):
+            # Apply delay
+            if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
+                time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
+
+            self.driver.get(location)
+
+            self.t = datetime.datetime.now()
+
+            for k,v in self.localStorage.get(location).items():
+                self.driver.execute_script("window.localStorage.setItem(arguments[0], arguments[1]);", k, v)
+
     # Function to use any HTTP method, taken from https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
     def __request(self, path, method, data, headers):
         current_requests = len(self.driver.requests)
@@ -350,21 +365,7 @@ class Crawler (Module):
 
         lib.controller.Controller.send_msg('[%s] %s' % (method,parent_url), "crawler")
 
-        # Add local storage in case it has been deleted
-        # https://stackoverflow.com/questions/46361494/how-to-get-the-localstorage-with-python-and-selenium-webdriver
-        parsed = urlparse(parent_url)
-        location = parsed.scheme + '://' + parsed.netloc + '/'
-        if self.localStorage.get(location):
-            # Apply delay
-            if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
-                time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
-
-            self.driver.get(location)
-
-            self.t = datetime.datetime.now()
-
-            for k,v in self.localStorage.get(location).items():
-                self.driver.execute_script("window.localStorage.setItem(arguments[0], arguments[1]);", k, v)
+        self.__updateLocalStorage(parent_url)
 
         # Request resource
         try:
@@ -464,7 +465,7 @@ class Crawler (Module):
                             else:
                                 lib.controller.Controller.send_msg("[%d] Redirect to %s [OUT OF SCOPE]" % (code, redirect_to), "crawler")
 
-                    return
+                        return
 
                 # Send screenshot once we know if the request was redirected or not
                 self.__sendScreenshot(main_request.path)
