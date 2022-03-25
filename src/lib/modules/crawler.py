@@ -480,7 +480,7 @@ class Crawler (Module):
                 resp = self.__processResponse(request, req)
                 if resp:
                     # If dynamic request responded with HTML, send it to analize
-                    if (resp.body is not None) and (resp.getHeader('content-type').value == "text/html"):
+                    if (resp.body is not None) and (resp.getHeader('content-type') is not None) and (resp.getHeader('content-type').value == "text/html"):
                         resp_to_analyze.append({'url': request.url, 'response':resp})
 
         # Process all captured responses that are valid HTML
