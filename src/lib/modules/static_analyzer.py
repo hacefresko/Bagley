@@ -47,10 +47,15 @@ class Static_Analyzer (Module):
         }
 
         if isinstance(element, Script):
-            paths = []
+            script_locations = []
             for p in element.getPaths():
-                paths.append(str(p))
-            lib.controller.Controller.send_msg("Looking for API keys in script in %s" % ",".join(paths), "static-analyzer")
+                script_locations.append(str(p))
+
+            for response in element.getResponses():
+                for request in response.getRequests():
+                    script_locations.append(str(request.path))
+
+            lib.controller.Controller.send_msg("Looking for API keys in script %d in %s" % (element.id, ",".join(script_locations)), "static-analyzer")
             text = element.content
         elif isinstance(element, Response):
             lib.controller.Controller.send_msg("Looking for API keys in response from %s" % ", ".join([str(r.path) for r in element.getRequests()]), "static-analyzer")
@@ -61,8 +66,8 @@ class Static_Analyzer (Module):
         for name, pattern in patterns.items():
             for value in re.findall(pattern, text):
                 if isinstance(element, Script):
-                    lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at script %s\n%s" % (name, str(element.path), value), "static-analyzer")
-                    Vulnerability.insert('Key Leak', name + ":" + value, str(element.path))
+                    lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at script %d in %s\n%s" % (name, element.id, ",".join(script_locations), value), "static-analyzer")
+                    Vulnerability.insert('Key Leak', name + ":" + value, ",".join(script_locations))
 
                 elif isinstance(element, Response):
                     for r in element.getRequests():
@@ -82,7 +87,7 @@ class Static_Analyzer (Module):
             for request in response.getRequests():
                 script_locations.append(str(request.path))
 
-        lib.controller.Controller.send_msg("Looking for links in script in %s" % ", ".join(script_locations), "static-analyzer")
+        lib.controller.Controller.send_msg("Looking for links in script %d in %s" % (script.id, ", ".join(script_locations)), "static-analyzer")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -110,11 +115,11 @@ class Static_Analyzer (Module):
             for request in response.getRequests():
                 script_locations.append(str(request.path))
 
-        lib.controller.Controller.send_msg("Looking for warnings in script in %s" % ", ".join(script_locations), "static-analyzer")
+        lib.controller.Controller.send_msg("Looking for warnings in script %d in %s" % (script.id, ", ".join(script_locations)), "static-analyzer")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
         if (result.stdout != '') and ("Parsing error: Unexpected token" not in result.stdout):
-            lib.controller.Controller.send_warn_msg("WARNING at script in %s\n%s" % (", ".join(script_locations), result.stdout[:800]), "static-analyzer")
+            lib.controller.Controller.send_warn_msg("WARNING at script %d in %s\n%s" % (script.id, ", ".join(script_locations), result.stdout[:800]), "static-analyzer")
             Vulnerability.insert('warning', result.stdout, ", ".join(script_locations))
         if result.stderr != '':
             lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")

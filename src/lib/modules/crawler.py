@@ -273,6 +273,7 @@ class Crawler (Module):
                         s = Script.get(content) or Script.insert(content)
                         if s:
                             s.link(path)
+                            s.link(response)
 
             elif element.name == 'iframe':
                 path = element.get('src')
