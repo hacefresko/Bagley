@@ -498,12 +498,14 @@ class Crawler (Module):
             if len(self.queue) > 0:
                 url = self.queue.pop(0)
 
-                # Check if it's up before sending it to the crawler
+                # Check if it's up before crawling it
                 try:
                     requests.get(url, allow_redirects=False, verify=False)
                 except:
                     lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
                     continue
+
+                domain = Domain.get(urlparse(url).netloc)
             else:
                 domain = next(domains)
                 if not domain:
