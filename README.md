@@ -52,8 +52,6 @@ Each modules runs in a different thread
 
     *   Searches for links inside the scope with [linkfinder](https://github.com/GerbenJavado/LinkFinder)
 
-    *   Searches for common vulnerabilities by statically analyzing JS files with [ESlint](https://github.com/eslint/eslint) and some rules taken from [eslint-security-scanner-configs](https://github.com/Greenwolf/eslint-security-scanner-configs)
-
 *   Dynamic Analyzer: Performs lightweighted analysis among discovered assets, generating network traffic:
 
     *   Gets technologies used by the application with [Wappalyzer](https://github.com/AliasIO/wappalyzer)
@@ -81,7 +79,6 @@ Each modules runs in a different thread
 *   [Subjack](https://github.com/haccer/subjack)
 *   [Gau](https://github.com/lc/gau)
 *   [linkfinder](https://github.com/GerbenJavado/LinkFinder)
-*   [ESlint](https://github.com/eslint/eslint)
 
 ## Useful documentation
 

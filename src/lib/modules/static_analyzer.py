@@ -7,7 +7,7 @@ from lib.modules.module import Module
 
 class Static_Analyzer (Module):
     def __init__(self, stop, crawler):
-        super().__init__(['linkfinder', 'eslint'], stop)
+        super().__init__(['linkfinder'], stop)
         self.crawler = crawler
 
     def __searchKeys(self, element):
@@ -105,24 +105,7 @@ class Static_Analyzer (Module):
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
 
     def __findVulns(self, script):
-        command = [shutil.which('eslint'), '-c', config.ESLINT_CONFIG, script.filename]
-
-        script_locations = []
-        for p in script.getPaths():
-            script_locations.append(str(p))
-
-        for response in script.getResponses():
-            for request in response.getRequests():
-                script_locations.append(str(request.path))
-
-        lib.controller.Controller.send_msg("Looking for warnings in script %d in %s" % (script.id, ", ".join(script_locations)), "static-analyzer")
-
-        result = subprocess.run(command, capture_output=True, encoding='utf-8')
-        if (result.stdout != '') and ("Parsing error: Unexpected token" not in result.stdout):
-            lib.controller.Controller.send_warn_msg("WARNING at script %d in %s\n%s" % (script.id, ", ".join(script_locations), result.stdout[:800]), "static-analyzer")
-            Vulnerability.insert('warning', result.stdout, ", ".join(script_locations))
-        if result.stderr != '':
-            lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
+        pass
 
     def run(self):
         scripts = Script.yieldAll()

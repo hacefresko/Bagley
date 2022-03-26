@@ -1068,12 +1068,22 @@ class Script:
     def __hash(content):
         return hashlib.sha1(content.encode('utf-8')).hexdigest()
 
-    # Returns script by url and content or False if it does not exist   
+    # Returns script by content or None if it does not exist   
     @staticmethod 
     def get(content):
         db = DB()
 
         result = db.query_one('SELECT * FROM scripts WHERE hash = %s', (Script.__hash(content),))
+        if not result:
+            return None
+        return Script(result[0], result[1], result[2])
+
+    # Returns script by id or None if it does not exist   
+    @staticmethod 
+    def getById(script_id):
+        db = DB()
+
+        result = db.query_one('SELECT * FROM scripts WHERE id = %d', (script_id,))
         if not result:
             return None
         return Script(result[0], result[1], result[2])

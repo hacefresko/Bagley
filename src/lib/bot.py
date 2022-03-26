@@ -226,6 +226,37 @@ class QueryCommand(Command):
         except:
             await send_msg(lib.utils.getExceptionString(), "terminal")
 
+class GetScriptCommand(Command):
+    def __init__(self, controller):
+        super().__init__(controller, "getScript", "Print script", "getScript <script id>")
+
+    def parse(self, args):
+        if (len(args) != 2):
+            return False
+
+        try:
+            args[1] = int(args[1])
+            return True
+        except:
+            return False
+
+    async def run(self, args):
+        script = self.controller.getScript(args[1])
+
+        paths = "PATHS:\n"
+        for path in script.getPaths():
+            paths += "\t" + str(path)
+
+        responses = "RESPONSES:\n"
+        for response in script.getResponses():
+            for request in response.getRequests():
+                responses += "\t" + str(request.path)
+
+        await send_msg("SCRIPT %d" % script.id, "terminal")
+        await send_msg(paths, "terminal")
+        await send_msg(responses, "terminal")
+        await send_msg(script.content, "terminal")
+
 
 class CommandParser():
     def __init__(self, controller):
@@ -236,10 +267,11 @@ class CommandParser():
             AddCommand(controller), 
             GetDomainsCommand(controller), 
             GetPathsCommand(controller), 
+            GetScriptCommand(controller),
+            QueryCommand(controller),
             GetRPSCommand(controller), 
             SetRPSCommand(controller), 
-            GetActiveCommand(controller),
-            QueryCommand(controller)
+            GetActiveCommand(controller)
         ]
 
     async def parse(self, line):

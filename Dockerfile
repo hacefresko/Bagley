@@ -63,16 +63,15 @@ RUN mkdir /usr/lib/SecLists && mkdir /usr/lib/SecLists/Discovery && mkdir /usr/l
 RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/DNS/subdomains-top1million-5000.txt -O /usr/lib/SecLists/Discovery/DNS/subdomains-top1million-5000.txt
 RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt -O /usr/lib/SecLists/Discovery/Web-Content/common.txt
 
+# Install codeql
+RUN wget https://github.com/github/codeql-action/releases/latest/download/codeql-bundle-linux64.tar.gz && tar -xvzf codeql-bundle-linux64.tar.gz -C s/usr/lib/ && rm codeql-bundle-linux64.tar.gz && ln -s /usr/lib/codeql/codeql /usr/local/sbin/codeql
+
 # Create temporal directories
 RUN mkdir /tmp/screenshots /tmp/scripts /tmp/files/
 
 # Copy src files and set workdir
 COPY src/ /root/bagley
 WORKDIR /root/bagley
-
-# Install eslint + used plugins
-RUN npm install -g eslint
-RUN npm install --save-dev eslint-plugin-standard eslint-plugin-import eslint-plugin-node eslint-plugin-promise eslint-config-standard eslint-config-semistandard eslint-plugin-scanjs-rules eslint-plugin-no-unsanitized eslint-plugin-prototype-pollution-security-rules eslint-plugin-angularjs-security-rules eslint-plugin-react eslint-plugin-security eslint-plugin-no-wildcard-postmessage 
 
 # Install requirements
 RUN pip3 install -r  requirements.txt

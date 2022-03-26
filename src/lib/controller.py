@@ -134,7 +134,10 @@ class Controller:
             return None
         
         return d.getStructure()
-        
+
+    def getScript(self, id):
+        return Script.getById(id)
+
     # Method to communicate directly with db
 
     def query(self, query):
@@ -158,12 +161,6 @@ class Controller:
         logging.critical(msg)
         lib.bot.dispatch_msg(msg, channel)
         lib.bot.dispatch_msg(msg, "vulnerabilities")
-
-    @staticmethod
-    def send_warn_msg(msg, channel):
-        logging.warning(msg)
-        lib.bot.dispatch_msg(msg, channel)
-        lib.bot.dispatch_msg(msg, "warnings")
  
     @staticmethod
     def send_img(filename, channel):
