@@ -504,6 +504,8 @@ class Crawler (Module):
                     continue
 
                 domain = Domain.get(urlparse(url).netloc)
+                if (domain is None) and (Domain.checkScope(urlparse(url).netloc)):
+                    domain = Domain.insert(urlparse(url).netloc)
             else:
                 domain = next(domains)
                 if not domain:
