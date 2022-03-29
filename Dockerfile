@@ -64,7 +64,10 @@ RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discov
 RUN wget https://raw.githubusercontent.com/danielmiessler/SecLists/master/Discovery/Web-Content/common.txt -O /usr/lib/SecLists/Discovery/Web-Content/common.txt
 
 # Install codeql
-RUN wget https://github.com/github/codeql-action/releases/latest/download/codeql-bundle-linux64.tar.gz && tar -xvzf codeql-bundle-linux64.tar.gz -C s/usr/lib/ && rm codeql-bundle-linux64.tar.gz && ln -s /usr/lib/codeql/codeql /usr/local/sbin/codeql
+RUN wget https://github.com/github/codeql-action/releases/latest/download/codeql-bundle-linux64.tar.gz && tar -xvzf codeql-bundle-linux64.tar.gz -C /usr/lib/ && rm codeql-bundle-linux64.tar.gz && ln -s /usr/lib/codeql/codeql /usr/local/sbin/codeql
+
+# Install unwebpack_sourcemap
+RUN git clone https://github.com/rarecoil/unwebpack-sourcemap /usr/lib/unwebpack-sourcemap && pip3 install -r /usr/lib/unwebpack-sourcemap/requirements.txt && ln -s /usr/lib/unwebpack-sourcemap/unwebpack-sourcemap.py /usr/local/sbin/unwebpack-sourcemap
 
 # Create temporal directories
 RUN mkdir /tmp/screenshots /tmp/scripts /tmp/files/

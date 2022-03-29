@@ -1,5 +1,7 @@
-import time, re, random, string, shutil, subprocess, os
+import time, re, shutil, subprocess, requests, os, shutil
 from urllib.parse import urljoin
+
+from numpy import source
 
 from lib.entities import *
 import lib.controller
@@ -7,7 +9,7 @@ from lib.modules.module import Module
 
 class Static_Analyzer (Module):
     def __init__(self, stop, crawler):
-        super().__init__(['linkfinder'], stop)
+        super().__init__(['linkfinder', 'unwebpack_sourcemap', 'codeql'], stop)
         self.crawler = crawler
 
     def __searchKeys(self, element):
@@ -105,7 +107,62 @@ class Static_Analyzer (Module):
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
 
     def __findVulns(self, script):
-        pass
+
+        tmp_dir = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=10))
+        os.mkdir(tmp_dir)
+
+        # Check if there is a source map available
+        sourcemap_url = None
+        last_line = script.content.rstrip().split("\n")[-1]
+        regex = "\\/\\/#\s*sourceMappingURL=(.*)$"
+        matches = re.search(regex, last_line)
+        if matches:
+            sourcemap = matches.groups(0)[0].strip()
+            for path in script.getPaths():
+                sourcemap_url = urljoin(str(path), sourcemap)
+                if requests.get(sourcemap_url).ok:
+                    break
+        
+        if sourcemap_url is not None:
+
+            # Unpack bundle
+            script_dir = config.SCRIPTS_FOLDER + str(script.id) + '/'
+            os.mkdir(script_dir)
+            command = [shutil.which('unwebpack_sourcemap'), sourcemap_url, script_dir]
+            result = subprocess.run(command, capture_output=True, encoding='utf-8')
+            if result.returncode != 0:
+                lib.controller.Controller.send_error_msg(result.stderr, "static_analyzer")
+                shutil.rmtree(tmp_dir)
+                return
+
+            shutil.copytree(script_dir + 'src/', tmp_dir)
+
+        else:
+            shutil.copy(script.filename, tmp_dir)
+
+        # Create codeql database
+        codeql_db = config.FILES_FOLDER + 'codeql'
+        command = [shutil.which('codeql'), 'database', 'create', codeql_db, '--language=javascript', "--source-root="+tmp_dir]
+        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+        if result.returncode != 0:
+            lib.controller.Controller.send_error_msg(result.stderr, "static_analyzer")
+            shutil.rmtree(tmp_dir)
+            return
+
+        # Analyze codeql database
+        output_file = 'codeql_results.csv'
+        command = [shutil.which('codeql'), 'database', 'analyze', codeql_db, '--format=csv', '--output='+output_file, config.CODEQL_SUITE]
+        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+        if result.returncode != 0:
+            lib.controller.Controller.send_error_msg(result.stderr, "static_analyzer")
+            shutil.rmtree(tmp_dir)
+            return
+
+        fd = open(output_file)
+        output = fd.read()
+        fd.close()
+
+        shutil.rmtree(tmp_dir)
 
     def run(self):
         scripts = Script.yieldAll()

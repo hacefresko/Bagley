@@ -200,7 +200,7 @@ class Dynamic_Analyzer (Module):
                     executed = True
 
                 domain = next(domains)
-                if domain:
+                if (domain is not None) and (str(domain)[0] != '.'):
                     self.setActive()
                     self.__subdomainTakeover(domain)
                     executed = True

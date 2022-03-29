@@ -8,3 +8,5 @@ scope.txt
 .vscode
 screenshots/
 scripts/
+files/
+codeql/

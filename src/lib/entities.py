@@ -1093,16 +1093,15 @@ class Script:
     def insert(content):
         if Script.get(content):
             return None
+        
+        db = DB()
+        script_id = int(db.query_one("SELECT count(*) FROM scripts", ())[0]) + 1
 
         # Save script in scripts folder with random name (20 chars)
-        filename = config.SCRIPTS_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.js'
-        while os.path.exists(filename):
-            filename = config.SCRIPTS_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.js'
+        filename = config.SCRIPTS_FOLDER + str(script_id) + '.js'
         script_file = open(filename, 'w')
         script_file.write(content)
         script_file.close()
-
-        db = DB()
 
         script_hash = Script.__hash(content)
         script_id = db.exec_and_get_last_id('INSERT INTO scripts (hash, filename) VALUES (%s,%s)', (script_hash, filename))
