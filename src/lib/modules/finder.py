@@ -96,7 +96,7 @@ class Finder(Module):
                     self.crawler.addToQueue(url)
 
     def __fuzzSubDomain(self, domain, errcodes=[]):
-        command = [shutil.which('gobuster'), 'dns', '-q', '-t', '1', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', str(int(self.getDelay()*1000))+'ms', '-k']
+        command = [shutil.which('gobuster'), 'dns', '-q', '-t', '1', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', str(int(self.getDelay()*1000))+'ms']
         # Add errorcodes if specified
         if len(errcodes) != 0:
             command.append('-s')
