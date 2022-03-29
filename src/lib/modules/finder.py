@@ -11,7 +11,7 @@ class Finder(Module):
         super().__init__(["gobuster", "subfinder", "gau"], stop, rps, active_modules, lock)
         self.crawler = crawler
         self.analyzed = []
-        self.t = datetime.datetime.now()
+        self.updateDelay()
 
     def checkDependences(self):
         for f in [config.DIR_FUZZING, config.DOMAIN_FUZZING]:
@@ -84,12 +84,11 @@ class Finder(Module):
         
         for url in subprocess.run(command, capture_output=True, encoding='utf-8', input=str(domain)).stdout.splitlines():
             if self.crawler.isCrawlable(url):
-                if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
-                    time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
+                self.applyDelay()
 
                 ok = requests.get(url).ok
 
-                self.t = datetime.datetime.now()
+                self.updateDelay()
                 
                 if ok:
                     lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % url, "finder")

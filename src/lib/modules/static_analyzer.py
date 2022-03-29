@@ -108,7 +108,7 @@ class Static_Analyzer (Module):
 
     def __findVulns(self, script):
 
-        tmp_dir = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=10))
+        tmp_dir = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=10)) + '/'
         os.mkdir(tmp_dir)
 
         # Check if there is a source map available
@@ -120,10 +120,12 @@ class Static_Analyzer (Module):
             sourcemap = matches.groups(0)[0].strip()
             for path in script.getPaths():
                 sourcemap_url = urljoin(str(path), sourcemap)
-                if requests.get(sourcemap_url).ok:
+                if requests.get(sourcemap_url, verify=False).ok:
                     break
         
         if sourcemap_url is not None:
+
+            lib.controller.Controller.send_msg("Found source map for script %d" % script.id, "static-analyzer")
 
             # Unpack bundle
             script_dir = config.SCRIPTS_FOLDER + str(script.id) + '/'
@@ -131,21 +133,25 @@ class Static_Analyzer (Module):
             command = [shutil.which('unwebpack_sourcemap'), sourcemap_url, script_dir]
             result = subprocess.run(command, capture_output=True, encoding='utf-8')
             if result.returncode != 0:
-                lib.controller.Controller.send_error_msg(result.stderr, "static_analyzer")
+                lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
                 shutil.rmtree(tmp_dir)
                 return
 
-            shutil.copytree(script_dir + 'src/', tmp_dir)
+            lib.controller.Controller.send_msg("Succesfully unpacked script %d" % script.id, "static-analyzer")
+
+            shutil.copytree(script_dir, tmp_dir + str(script.id))
 
         else:
             shutil.copy(script.filename, tmp_dir)
+
+        lib.controller.Controller.send_msg("Analyzing script %d" % script.id, "static-analyzer")
 
         # Create codeql database
         codeql_db = config.FILES_FOLDER + 'codeql'
         command = [shutil.which('codeql'), 'database', 'create', codeql_db, '--language=javascript', "--source-root="+tmp_dir]
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
         if result.returncode != 0:
-            lib.controller.Controller.send_error_msg(result.stderr, "static_analyzer")
+            lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
             shutil.rmtree(tmp_dir)
             return
 
@@ -154,7 +160,7 @@ class Static_Analyzer (Module):
         command = [shutil.which('codeql'), 'database', 'analyze', codeql_db, '--format=csv', '--output='+output_file, config.CODEQL_SUITE]
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
         if result.returncode != 0:
-            lib.controller.Controller.send_error_msg(result.stderr, "static_analyzer")
+            lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
             shutil.rmtree(tmp_dir)
             return
 
@@ -162,6 +168,7 @@ class Static_Analyzer (Module):
         output = fd.read()
         fd.close()
 
+        shutil.rmtree(codeql_db)
         shutil.rmtree(tmp_dir)
 
     def run(self):

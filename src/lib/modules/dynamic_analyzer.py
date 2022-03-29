@@ -8,7 +8,7 @@ import lib.controller
 class Dynamic_Analyzer (Module):
     def __init__(self, stop, rps, active_modules, lock):
         super().__init__(["subjack", "wappalyzer"], stop, rps, active_modules, lock)
-        self.t = datetime.datetime.now()
+        self.updateDelay()
 
     def __lookupCVEs(self, tech):
         vulns = []
@@ -48,12 +48,11 @@ class Dynamic_Analyzer (Module):
 
         lib.controller.Controller.send_msg("Getting technologies used by %s" % str(path), "dynamic-analyzer")
 
-        if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
-            time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
+        self.applyDelay()
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
         
-        self.t = datetime.datetime.now()
+        self.updateDelay()
 
         try:
             for t in json.loads(result.stdout).get('technologies'):
@@ -76,12 +75,11 @@ class Dynamic_Analyzer (Module):
 
         lib.controller.Controller.send_msg("Testing subdomain takeover for domain %s" % str(domain), "dynamic-analyzer")
 
-        if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
-            time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
+        self.applyDelay()
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
-        self.t = datetime.datetime.now()
+        self.updateDelay()
 
         if result.stdout != '':
             Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
@@ -155,12 +153,11 @@ class Dynamic_Analyzer (Module):
             lib.controller.Controller.send_msg("Trying to bypass 403 in %s" % str(request.path), "dynamic-analyzer")
 
             for method in methods:
-                if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
-                    time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
+                self.applyDelay()
 
                 r = requests.request(method, str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
 
-                self.t = datetime.datetime.now()
+                self.updateDelay()
 
                 if r.status_code//100 == 2:
                     Vulnerability.insert('Broken Access Control', "Method: " + method, str(request.path))
@@ -170,15 +167,14 @@ class Dynamic_Analyzer (Module):
                 req_headers = headers
                 req_headers[k] = v
 
-                if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
-                    time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
+                self.applyDelay()
 
                 if request.method == 'GET':
                     r = requests.get(str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
                 elif request.method == 'POST':
                     r = requests.get(str(request.url), request.params, request.data, headers, cookies, verify=False)
                 
-                self.t = datetime.datetime.now()
+                self.updateDelay()
 
                 if r.status_code//100 == 2:
                     Vulnerability.insert('Broken Access Control', k+": "+v, str(request.path))

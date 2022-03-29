@@ -15,7 +15,7 @@ class Crawler (Module):
         super().__init__(["chromedriver"], stop, rps, active_modules, lock)
 
         # Init time for applying delay
-        self.t = datetime.datetime.now()
+        self.updateDelay()
 
         # Init queue for other modules to send urls to crawler
         self.queue = []
@@ -65,13 +65,12 @@ class Crawler (Module):
         parsed = urlparse(url)
         location = parsed.scheme + '://' + parsed.netloc + '/'
         if self.localStorage.get(location):
-            # Apply delay
-            if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
-                time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
+            
+            self.applyDelay()
 
             self.driver.get(location)
 
-            self.t = datetime.datetime.now()
+            self.updateDelay()
 
             for k,v in self.localStorage.get(location).items():
                 self.driver.execute_script("window.localStorage.setItem(arguments[0], arguments[1]);", k, v)
@@ -372,9 +371,7 @@ class Crawler (Module):
             # Delete all previous requests so they don't pollute the results
             del self.driver.requests
 
-            # Apply delay
-            if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
-                time.sleep(self.getDelay() - (datetime.datetime.now() - self.t).total_seconds())
+            self.applyDelay()
 
             if method == 'GET':
                 if headers:
@@ -401,7 +398,7 @@ class Crawler (Module):
                 lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
             return
 
-        self.t = datetime.datetime.now()
+        self.updateDelay()
 
         # Copy browser cookies to local copy
         n_cookies = 0

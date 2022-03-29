@@ -1,4 +1,4 @@
-import threading, shutil
+import threading, shutil, datetime, time
 
 class Module (threading.Thread):
     def __init__(self, dependences, stop, rps=None, active_modules=None, lock=None):
@@ -26,6 +26,15 @@ class Module (threading.Thread):
             return self.active_modules/self.rps
         else:
             return None
+
+    def applyDelay(self):
+        if (datetime.datetime.now() - self.t).total_seconds() < self.getDelay():
+            t = self.getDelay() - (datetime.datetime.now() - self.t).total_seconds()
+            if t > 0:
+                time.sleep(t)
+
+    def updateDelay(self):
+        self.t = datetime.datetime.now()
 
     def setInactive(self):
         if self.active is not None and self.active_modules is not None and self.lock is not None and self.active == True:

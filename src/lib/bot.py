@@ -1,5 +1,5 @@
 from abc import abstractmethod
-import discord, logging, aiohttp, os, random, string
+import discord, logging, aiohttp, os, random, string, zipfile
 import config, lib.utils
 
 # Create bot object
@@ -228,7 +228,7 @@ class QueryCommand(Command):
 
 class GetScriptCommand(Command):
     def __init__(self, controller):
-        super().__init__(controller, "getScript", "Print script", "getScript <script id>")
+        super().__init__(controller, "getScript", "Get script information", "getScript <script id>")
 
     def parse(self, args):
         if (len(args) != 2):
@@ -242,20 +242,33 @@ class GetScriptCommand(Command):
 
     async def run(self, args):
         script = self.controller.getScript(args[1])
+        await send_msg("SCRIPT %d" % script.id, "terminal")
 
         paths = "PATHS:\n"
         for path in script.getPaths():
             paths += "\t" + str(path)
+        await send_msg(paths, "terminal")
 
         responses = "RESPONSES:\n"
         for response in script.getResponses():
             for request in response.getRequests():
                 responses += "\t" + str(request.path)
-
-        await send_msg("SCRIPT %d" % script.id, "terminal")
-        await send_msg(paths, "terminal")
         await send_msg(responses, "terminal")
+
         await send_msg(script.content, "terminal")
+
+        # Compress unpacked script if exists
+        script_unpacked = config.SCRIPTS_FOLDER + str(script.id)
+        if os.path.isdir(script_unpacked):
+            zip_file_name = config.FILES_FOLDER + str(script.id)
+            zip_file = zipfile.ZipFile(zip_file_name, 'w')
+            for root, directories, files in os.walk(script_unpacked):
+                for filename in files:
+                    p = os.path.join(root, filename)
+                    zip_file.write(p)
+            
+            await self.controller.send(file=discord.File(zip_file_name))
+            os.remove(zip_file_name)
 
 
 class CommandParser():
