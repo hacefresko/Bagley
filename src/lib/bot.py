@@ -31,6 +31,13 @@ async def send_msg(msg, channel):
 
             break
 
+# Function to send files to a channel
+async def send_file(filename, channel):
+    for c in bot.get_all_channels():
+        if c.name == channel:
+            await c.send(file=discord.File(filename))
+            break
+
 # Define commands
 class Command:
     def __init__(self, controller, name, help_msg, usage_msg):
@@ -242,20 +249,32 @@ class GetScriptCommand(Command):
 
     async def run(self, args):
         script = self.controller.getScript(args[1])
-        await send_msg("SCRIPT %d" % script.id, "terminal")
+        if script is None:
+            await send_msg("Specified script was not found", "terminal")
 
-        paths = "PATHS:\n"
-        for path in script.getPaths():
-            paths += "\t" + str(path)
-        await send_msg(paths, "terminal")
+        msg = "SCRIPT %d\n" % script.id
 
-        responses = "RESPONSES:\n"
-        for response in script.getResponses():
-            for request in response.getRequests():
-                responses += "\t" + str(request.path)
-        await send_msg(responses, "terminal")
+        msg += "PATHS:\n"
+        paths = script.getPaths()
+        if len(paths) == 0:
+            msg += "[No urls found for this script]\n"
+        else:
+            for path in paths:
+                msg += "\t" + str(path) + "\n"
+        msg += "\n"
 
-        await send_msg(script.content, "terminal")
+        msg += "RESPONSES:\n"
+        responses = script.getResponses()
+        if len(responses) == 0:
+            msg += "\t[No responses use this script]\n"
+        else:
+            for response in responses:
+                for request in response.getRequests():
+                    msg += "\t" + str(request.path) + "\n"
+        msg += "\n"
+
+        await send_msg(msg, "terminal")
+        await send_file(script.filename, "terminal")
 
         # Compress unpacked script if exists
         script_unpacked = config.SCRIPTS_FOLDER + str(script.id)
@@ -266,8 +285,8 @@ class GetScriptCommand(Command):
                 for filename in files:
                     p = os.path.join(root, filename)
                     zip_file.write(p)
-            
-            await self.controller.send(file=discord.File(zip_file_name))
+
+            send_file(zip_file_name, "terminal")
             os.remove(zip_file_name)
 
 
@@ -345,8 +364,6 @@ def initBot(controller):
 
     @bot.event
     async def on_bagley_img(filename, channel):
-        for c in bot.get_all_channels():
-            if c.name == channel:
-                await c.send(file=discord.File(filename))
+        await send_file(filename, channel)
 
     bot.run(config.DISCORD_TOKEN)
