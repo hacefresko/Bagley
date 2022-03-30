@@ -251,13 +251,14 @@ class GetScriptCommand(Command):
         script = self.controller.getScript(args[1])
         if script is None:
             await send_msg("Specified script was not found", "terminal")
+            return
 
         msg = "SCRIPT %d\n" % script.id
 
         msg += "PATHS:\n"
         paths = script.getPaths()
         if len(paths) == 0:
-            msg += "[No urls found for this script]\n"
+            msg += "\t[No urls found for this script]\n"
         else:
             for path in paths:
                 msg += "\t" + str(path) + "\n"
@@ -286,7 +287,7 @@ class GetScriptCommand(Command):
                     p = os.path.join(root, filename)
                     zip_file.write(p)
 
-            send_file(zip_file_name, "terminal")
+            await send_file(zip_file_name, "terminal")
             os.remove(zip_file_name)
 
 

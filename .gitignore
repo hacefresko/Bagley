@@ -10,3 +10,5 @@ screenshots/
 scripts/
 files/
 codeql/
+node_modules
+package*

@@ -9,7 +9,7 @@ from lib.modules.module import Module
 
 class Static_Analyzer (Module):
     def __init__(self, stop, crawler):
-        super().__init__(['linkfinder', 'unwebpack_sourcemap', 'codeql'], stop)
+        super().__init__(['linkfinder', 'eslint', 'unwebpack_sourcemap', 'codeql'], stop)
         self.crawler = crawler
 
     def __searchKeys(self, element):
@@ -98,7 +98,7 @@ class Static_Analyzer (Module):
             try:
                 for path in script_locations:
                     discovered = urljoin(path, line.rstrip())
-                    if self.crawler.isCrawlable(discovered):
+                    if self.crawler.isQueueable(discovered):
                         lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "static-analyzer")
                         self.crawler.addToQueue(discovered)
             except:
@@ -106,7 +106,22 @@ class Static_Analyzer (Module):
             finally:
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
 
-    def __findVulns(self, script):
+    def __analyzeESlint(self, script):
+        command = [shutil.which('eslint'), '-c', config.ESLINT_CONFIG, script.filename]
+
+        lib.controller.Controller.send_msg("Analyzing script %d with ESlint" % (script.id), "static-analyzer")
+
+        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+        if (result.stdout != '') and ("Parsing error: Unexpected token" not in result.stdout):
+            return True
+        if result.stderr != '':
+            lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
+        
+        return False
+
+    def __analyzeCodeQL(self, script):
+
+        lib.controller.Controller.send_msg("Analyzing script %d with GraphQL" % script.id, "static-analyzer")
 
         tmp_dir = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=10)) + '/'
         os.mkdir(tmp_dir)
@@ -144,8 +159,6 @@ class Static_Analyzer (Module):
         else:
             shutil.copy(script.filename, tmp_dir)
 
-        lib.controller.Controller.send_msg("Analyzing script %d" % script.id, "static-analyzer")
-
         # Create codeql database
         codeql_db = config.FILES_FOLDER + 'codeql'
         command = [shutil.which('codeql'), 'database', 'create', codeql_db, '--language=javascript', "--source-root="+tmp_dir]
@@ -156,12 +169,13 @@ class Static_Analyzer (Module):
             return
 
         # Analyze codeql database
-        output_file = 'codeql_results.csv'
+        output_file = tmp_dir + 'codeql_results.csv'
         command = [shutil.which('codeql'), 'database', 'analyze', codeql_db, '--format=csv', '--output='+output_file, config.CODEQL_SUITE]
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
         if result.returncode != 0:
             lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
             shutil.rmtree(tmp_dir)
+            shutil.rmtree(codeql_db)
             return
 
         fd = open(output_file)
@@ -170,6 +184,10 @@ class Static_Analyzer (Module):
 
         shutil.rmtree(codeql_db)
         shutil.rmtree(tmp_dir)
+
+    def __findVulns(self, script):
+        if self.__analyzeESlint(script):
+            self.__analyzeCodeQL(script)
 
     def run(self):
         scripts = Script.yieldAll()

@@ -1,5 +1,5 @@
-import subprocess, json, shutil, time, socket, os, datetime, requests
-from urllib.parse import urljoin, urlparse
+import subprocess, json, shutil, time, socket, os, requests
+from urllib.parse import urljoin
 
 import config
 from lib.modules.module import Module
@@ -23,7 +23,7 @@ class Finder(Module):
     def __fuzzPaths(self, path, headers, cookies, errcodes=[]):
         url = str(path)
         # Crawl all urls on the database that has not been crawled
-        if self.crawler.isCrawlable(url):
+        if self.crawler.isQueueable(url):
             self.crawler.addToQueue(url)
 
         command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-t', '1', '-w', config.DIR_FUZZING, '-u', url, '--delay', str(int(self.getDelay()*1000))+'ms', '--random-agent', '-r']
@@ -57,7 +57,7 @@ class Finder(Module):
             try:
                 code = int(line.split('(')[1].split(')')[0].split(':')[1].strip())
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
-                if (code != 404) and (code != 400) and self.crawler.isCrawlable(discovered):
+                if (code != 404) and (code != 400) and self.crawler.isQueueable(discovered):
                         lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
                         self.crawler.addToQueue(discovered)
             except:
@@ -83,7 +83,7 @@ class Finder(Module):
         lib.controller.Controller.send_msg("Finding paths for domain %s" % str(domain), "finder")
         
         for url in subprocess.run(command, capture_output=True, encoding='utf-8', input=str(domain)).stdout.splitlines():
-            if self.crawler.isCrawlable(url):
+            if self.crawler.isQueueable(url):
                 self.applyDelay()
 
                 ok = requests.get(url).ok

@@ -54,6 +54,12 @@ class Crawler (Module):
         
         super().checkDependences()
 
+    def isQueueable(self, url):
+        if Path.parseURL(url) or (url in self.queue):
+            return False
+
+        return True
+
     def addToQueue(self, url):
         self.queue.append(url)
 
@@ -166,18 +172,26 @@ class Crawler (Module):
 
         return resp
 
-    def __processScript(self, request):
+    def __processScript(self, request, main_response):
         if not request.response:
-            return
+            return False
 
         path = Path.insert(request.url)
         if not path:
-            return
+            return False
 
         content = decode(request.response.body, request.response.headers.get('Content-Encoding', 'identity')).decode('utf-8', errors='ignore')
         s = Script.get(content) or Script.insert(content)
-        if s:
-            s.link(path)
+        if not s:
+            return False
+        
+        s.link(path)
+        
+        if main_response is not None:
+            s.link(main_response)
+
+        return True
+
 
     # Check if requests can be crawled based on the scope, the type of resource to be requested and if the request has been already made
     def isCrawlable(self, url, method='GET', content_type=None, data=None):
@@ -424,7 +438,7 @@ class Crawler (Module):
 
             # Scripts
             if (utils.isScript(request.url)) and (request.response is not None) and (request.response.status_code == 200):
-                if self.__processScript(request):
+                if self.__processScript(request, main_response):
                     lib.controller.Controller.send_msg('[SCRIPT] %s' % (request.url), "crawler")
 
             # Main request
