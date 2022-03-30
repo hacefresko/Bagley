@@ -1,8 +1,6 @@
 import time, re, shutil, subprocess, requests, os, shutil
 from urllib.parse import urljoin
 
-from numpy import source
-
 from lib.entities import *
 import lib.controller
 from lib.modules.module import Module
