@@ -106,8 +106,6 @@ class Static_Analyzer (Module):
 
     def __analyzeCodeQL(self, script):
 
-        lib.controller.Controller.send_msg("Analyzing script %d" % script.id, "static-analyzer")
-
         tmp_dir = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=10)) + '/'
         os.mkdir(tmp_dir)
 
@@ -146,28 +144,32 @@ class Static_Analyzer (Module):
 
         # Create codeql database
         codeql_db = config.FILES_FOLDER + 'codeql'
-        command = [shutil.which('codeql'), 'database', 'create', codeql_db, '--language=javascript', "--source-root="+tmp_dir]
+        command = [shutil.which('codeql'), 'database', 'create', codeql_db, '--overwrite', '--language=javascript', "--source-root="+tmp_dir]
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
         if result.returncode != 0:
             lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
             shutil.rmtree(tmp_dir)
             return
+
+        lib.controller.Controller.send_msg("Analyzing script %d" % script.id, "static-analyzer")
 
         # Analyze codeql database
         output_file = tmp_dir + 'codeql_results.csv'
-        command = [shutil.which('codeql'), 'database', 'analyze', codeql_db, '--format=csv', '--output='+output_file, config.CODEQL_SUITE]
+        cache_dir = tmp_dir + 'cache'
+        command = [shutil.which('codeql'), 'database', 'analyze', codeql_db, config.CODEQL_SUITE, '--format=csv', '--output='+output_file, '--compilation-cache='+cache_dir]
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
-        if result.returncode != 0:
+        if (result.returncode != 0) or os.path.isfile(output_file):
             lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
             shutil.rmtree(tmp_dir)
-            shutil.rmtree(codeql_db)
             return
 
+        # Read results
         fd = open(output_file)
         output = fd.read()
         fd.close()
 
-        shutil.rmtree(codeql_db)
+        lib.controller.Controller.send_msg("Analysis results\n\n %s" % output, "static-analyzer")
+
         shutil.rmtree(tmp_dir)
 
     def run(self):
