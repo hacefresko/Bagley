@@ -109,6 +109,17 @@ class Static_Analyzer (Module):
         tmp_dir = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=10)) + '/'
         os.mkdir(tmp_dir)
 
+        script_locations = []
+        for p in script.getPaths():
+            script_locations.append(str(p))
+
+        for response in script.getResponses():
+            for request in response.getRequests():
+                script_locations.append(str(request.path))
+        script_locations_str = ", ".join(script_locations)
+
+        lib.controller.Controller.send_msg("Analyzing script %d in %s" % (script.id, script_locations_str), "static-analyzer")
+
         # Check if there is a source map available
         sourcemap_url = None
         last_line = script.content.rstrip().split("\n")[-1]
@@ -123,19 +134,19 @@ class Static_Analyzer (Module):
         
         if sourcemap_url is not None:
 
-            lib.controller.Controller.send_msg("Found source map for script %d" % script.id, "static-analyzer")
+            lib.controller.Controller.send_msg("Found source map for script %d in %s" % (script.id, script_locations_str), "static-analyzer")
 
             # Unpack bundle
             script_dir = config.SCRIPTS_FOLDER + str(script.id) + '/'
             os.mkdir(script_dir)
-            command = [shutil.which('unwebpack_sourcemap'), sourcemap_url, script_dir]
+            command = [shutil.which('unwebpack_sourcemap'), '--disable-ssl-verification', sourcemap_url, script_dir]
             result = subprocess.run(command, capture_output=True, encoding='utf-8')
             if result.returncode != 0:
                 lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
                 shutil.rmtree(tmp_dir)
                 return
 
-            lib.controller.Controller.send_msg("Succesfully unpacked script %d" % script.id, "static-analyzer")
+            lib.controller.Controller.send_msg("Succesfully unpacked script %d in %s" % (script.id, script_locations_str), "static-analyzer")
 
             shutil.copytree(script_dir, tmp_dir + str(script.id))
 
@@ -151,24 +162,22 @@ class Static_Analyzer (Module):
             shutil.rmtree(tmp_dir)
             return
 
-        lib.controller.Controller.send_msg("Analyzing script %d" % script.id, "static-analyzer")
-
         # Analyze codeql database
         output_file = tmp_dir + 'codeql_results.csv'
         cache_dir = tmp_dir + 'cache'
         command = [shutil.which('codeql'), 'database', 'analyze', codeql_db, config.CODEQL_SUITE, '--format=csv', '--output='+output_file, '--compilation-cache='+cache_dir]
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
-        if (result.returncode != 0) or os.path.isfile(output_file):
-            lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
+        if (result.returncode != 0) or (not os.path.isfile(output_file)):
+            lib.controller.Controller.send_error_msg("AN ERROR OCURRED:\n\n" + result.stderr, "static-analyzer")
             shutil.rmtree(tmp_dir)
             return
 
         # Read results
         fd = open(output_file)
-        output = fd.read()
+        for line in fd.readlines():
+            lib.controller.Controller.send_vuln_msg("VULN FOUND at script %d in %s:\n\n%s" % (script.id, script_locations_str, line), "static-analyzer")
+            #Vulnerability.insert('JS Vulnerability', "")
         fd.close()
-
-        lib.controller.Controller.send_msg("Analysis results\n\n %s" % output, "static-analyzer")
 
         shutil.rmtree(tmp_dir)
 
