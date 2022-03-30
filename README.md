@@ -86,3 +86,4 @@ Each modules runs in a different thread
 *   [Selenium](https://selenium-python.readthedocs.io/)
 *   [Selenium Wire](https://github.com/wkeeling/selenium-wire)
 *   [Discord API](https://discordpy.readthedocs.io/en/latest/api.html)
+*   [CodeQL docs](https://codeql.github.com/docs/)
