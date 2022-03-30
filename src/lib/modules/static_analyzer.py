@@ -104,22 +104,9 @@ class Static_Analyzer (Module):
             finally:
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
 
-    def __analyzeESlint(self, script):
-        command = [shutil.which('eslint'), '-c', config.ESLINT_CONFIG, script.filename]
-
-        lib.controller.Controller.send_msg("Analyzing script %d with ESlint" % (script.id), "static-analyzer")
-
-        result = subprocess.run(command, capture_output=True, encoding='utf-8')
-        if (result.stdout != '') and ("Parsing error: Unexpected token" not in result.stdout):
-            return True
-        if result.stderr != '':
-            lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
-        
-        return False
-
     def __analyzeCodeQL(self, script):
 
-        lib.controller.Controller.send_msg("Analyzing script %d with GraphQL" % script.id, "static-analyzer")
+        lib.controller.Controller.send_msg("Analyzing script %d" % script.id, "static-analyzer")
 
         tmp_dir = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=10)) + '/'
         os.mkdir(tmp_dir)
@@ -183,10 +170,6 @@ class Static_Analyzer (Module):
         shutil.rmtree(codeql_db)
         shutil.rmtree(tmp_dir)
 
-    def __findVulns(self, script):
-        if self.__analyzeESlint(script):
-            self.__analyzeCodeQL(script)
-
     def run(self):
         scripts = Script.yieldAll()
         responses = Response.yieldAll()
@@ -195,7 +178,7 @@ class Static_Analyzer (Module):
                 script = next(scripts)
                 if script and script.content:
                     self.__findLinks(script)
-                    self.__findVulns(script)
+                    self.__analyzeCodeQL(script)
 
                     # Scripts embedded in html file are analyzed with the whole response body
                     if len(script.getPaths()) > 0:
