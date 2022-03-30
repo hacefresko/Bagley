@@ -45,8 +45,5 @@ DIR_FUZZING = '/usr/lib/SecLists/Discovery/Web-Content/common.txt'
 # Domain fuzzing wordlist
 DOMAIN_FUZZING = '/usr/lib/SecLists/Discovery/DNS/subdomains-top1million-5000.txt'
 
-# ESlint config file
-ESLINT_CONFIG = '/home/hacefresko/Security/Software/Bagley/src/lib/modules/config/eslintrc.js' 
-
 # Suite for codeql
 CODEQL_SUITE = '/home/hacefresko/Security/Software/Bagley/src/lib/modules/config/bagley_codeql.qls'
