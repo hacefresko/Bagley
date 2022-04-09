@@ -164,7 +164,7 @@ class Static_Analyzer (Module):
 
         # Analyze codeql database
         output_file = tmp_dir + 'codeql_results.csv'
-        cache_dir = tmp_dir + 'cache'
+        cache_dir = config.FILES_FOLDER + 'codeql_cache'
         command = [shutil.which('codeql'), 'database', 'analyze', codeql_db, config.CODEQL_SUITE, '--format=csv', '--output='+output_file, '--compilation-cache='+cache_dir]
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
         if (result.returncode != 0) or (not os.path.isfile(output_file)):
@@ -176,7 +176,7 @@ class Static_Analyzer (Module):
         fd = open(output_file)
         for line in fd.readlines():
             lib.controller.Controller.send_vuln_msg("VULN FOUND at script %d in %s:\n\n%s" % (script.id, script_locations_str, line), "static-analyzer")
-            #Vulnerability.insert('JS Vulnerability', "")
+            Vulnerability.insert('JS Vulnerability', line, "script %d in %s" % script.id, script_locations_str)
         fd.close()
 
         shutil.rmtree(tmp_dir)

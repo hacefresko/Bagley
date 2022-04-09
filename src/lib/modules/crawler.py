@@ -54,8 +54,18 @@ class Crawler (Module):
         
         super().checkDependences()
 
+    # Check if requests can be crawled based on the scope, the type of resource to be requested and if the request has been already made
+    def isCrawlable(self, url, method='GET', content_type=None, data=None):
+        domain = urlparse(url).netloc
+
+        if Domain.checkScope(domain) and Path.checkExtension(url) and not Request.check(url, method, content_type, data, self.cookies):
+            return True
+
+        return False
+
+    # Check if url can be queued based on if url already exists on db or on queue and if it's in scope
     def isQueueable(self, url):
-        if Path.parseURL(url) or (url in self.queue):
+        if Path.parseURL(url) or (url in self.queue) or (not Domain.checkScope(urlparse(url).netloc)):
             return False
 
         return True
@@ -67,6 +77,7 @@ class Crawler (Module):
     def addToLocalStorage(self, url, d):
         self.localStorage[url] = d
 
+    # Updates localstorage for url with the key/values stored, so the localstorage remains although a logout button is pressed
     def __updateLocalStorage(self, url):
         parsed = urlparse(url)
         location = parsed.scheme + '://' + parsed.netloc + '/'
@@ -191,16 +202,6 @@ class Crawler (Module):
             s.link(main_response)
 
         return True
-
-
-    # Check if requests can be crawled based on the scope, the type of resource to be requested and if the request has been already made
-    def isCrawlable(self, url, method='GET', content_type=None, data=None):
-        domain = urlparse(url).netloc
-
-        if Domain.checkScope(domain) and Path.checkExtension(url) and not Request.check(url, method, content_type, data, self.cookies):
-            return True
-
-        return False
 
     # Traverse the HTML looking for paths to crawl
     def __parseHTML(self, parent_url, response, headers):
@@ -520,6 +521,8 @@ class Crawler (Module):
                 domain = Domain.get(urlparse(url).netloc)
                 if (domain is None) and (Domain.checkScope(urlparse(url).netloc)):
                     domain = Domain.insert(urlparse(url).netloc)
+                    if not domain:
+                        continue
             else:
                 domain = next(domains)
                 if not domain:
