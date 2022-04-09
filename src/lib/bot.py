@@ -280,7 +280,7 @@ class GetScriptCommand(Command):
         # Compress unpacked script if exists
         script_unpacked = config.SCRIPTS_FOLDER + str(script.id)
         if os.path.isdir(script_unpacked):
-            zip_file_name = config.FILES_FOLDER + str(script.id)
+            zip_file_name = config.FILES_FOLDER + str(script.id) + '.zip'
             zip_file = zipfile.ZipFile(zip_file_name, 'w')
             for root, directories, files in os.walk(script_unpacked):
                 for filename in files:

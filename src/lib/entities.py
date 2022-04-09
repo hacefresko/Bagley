@@ -196,10 +196,6 @@ class Domain:
 
         return Domain(db.exec_and_get_last_id('INSERT INTO domains (name) VALUES (%s)', (domain_name,)), domain_name)
 
-    # Links cookie or header (element) to domain
-    def add(self, element):
-        element.link(self)
-
     # Inserts an out of scope domain if not already inserted neither in scope nor out
     @staticmethod
     def insertOutOfScope(domain):
@@ -1007,7 +1003,7 @@ class Cookie:
                 return True
         return False
 
-    # Links the cookie to the specified target. If target is not a request nor a response, returns False
+    # Links the cookie to the specified target. If target is not a request nor a respone nor a domain, returns False
     def link(self, target):
         db = DB()
 

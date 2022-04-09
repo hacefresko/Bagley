@@ -474,7 +474,7 @@ class Crawler (Module):
                             if self.isCrawlable(redirect_to, method, data=data):
                                 lib.controller.Controller.send_msg("[%d] Redirect to %s" % (code, redirect_to), "crawler")
                                 self.__crawl(redirect_to, method, data, headers)
-                            else:
+                            elif not Domain.checkScope(urlparse(redirect_to).netloc):
                                 lib.controller.Controller.send_msg("[%d] Redirect to %s [OUT OF SCOPE]" % (code, redirect_to), "crawler")
 
                         return

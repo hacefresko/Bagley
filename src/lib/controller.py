@@ -87,7 +87,7 @@ class Controller:
                     for k,v in opts.get('headers').items():
                         header = Header.insert(k,v, False)
                         if header:
-                            d.add(header)
+                            header.link(d)
                             return_str += "\nAdded header %s" % str(header)
 
                 # Get and insert cookies
@@ -95,7 +95,7 @@ class Controller:
                     for c in opts.get('cookies'):
                         cookie = Cookie.insert(c)
                         if cookie:
-                            if self.modules.get("crawler").addCookie(cookie):
+                            if cookie.link(d):
                                 return_str += "\nAdded cookie %s" % str(cookie)
                             else:
                                 return_str += "\nCouldn't add cookie %s" % str(cookie)
