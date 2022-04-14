@@ -3,7 +3,7 @@ services:
   mariadb:
     image: mariadb
     environment:
-      - MARIADB_ROOT_PASSWORD=xwpogivnoqipwm,elvwp4ebqw`rv,
+      - MARIADB_ROOT_PASSWORD=xwpogivnoqipwmelvwp4ebqwrv
       - MARIADB_DATABASE=bagley
       - MARIADB_USER=bagley
       - MARIADB_PASSWORD=vgytufqiyoguwpifbnweie
