@@ -317,15 +317,18 @@ class CommandParser():
                 help_msg += c.name.ljust(12) + c.help_msg + "\n"
             await send_msg(help_msg, "terminal")
         else:
-            for c in self.commands:
-                if args[0] == c.name.lower():
-                    if c.parse(args):
-                        await c.run(args)
-                    else:
-                        await send_msg(c.usage_msg, "terminal")
-                    return
-            
-            await send_msg('Cannot understand "%s"' % line, "terminal")
+            try:
+                for c in self.commands:
+                    if args[0] == c.name.lower():
+                        if c.parse(args):
+                            await c.run(args)
+                        else:
+                            await send_msg(c.usage_msg, "terminal")
+                        return
+                
+                await send_msg('Cannot understand "%s"' % line, "terminal")
+            except:
+                await send_msg(lib.utils.getExceptionString(), "terminal")
                 
 # Define dispatchers for custom events
 def dispatch_msg(message, channel):
