@@ -133,6 +133,19 @@ queue           URLs to start crawling from. Domain must be in scope.
         
         await send_msg(s, "terminal")
 
+class RmCommand(Command):
+    def __init__(self, controller):
+        super().__init__(controller, "rm", "Removes a domain", "Usage: rm <domain/group of subdomains> [options]")
+
+    def parse(self, args):
+        if len(args) != 2:
+            return False
+
+        return True
+
+    async def run(self, args):
+        await send_msg(self.controller.removeDomain(args[1]), "terminal")
+
 class GetDomainsCommand(Command):
     def __init__(self, controller):
         super().__init__(controller, "getDomains", "Print all domains", "getDomains does not accept arguments")

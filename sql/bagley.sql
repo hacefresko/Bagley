@@ -36,8 +36,8 @@ CREATE TABLE paths (
     element TEXT, 
     parent INT, 
     domain INT NOT NULL,
-    FOREIGN KEY (domain) REFERENCES domains(id), 
-    FOREIGN KEY (parent) REFERENCES paths(id)
+    FOREIGN KEY (domain) REFERENCES domains(id) ON DELETE CASCADE, 
+    FOREIGN KEY (parent) REFERENCES paths(id) ON DELETE CASCADE
 );
 
 CREATE TABLE responses (
@@ -54,8 +54,8 @@ CREATE TABLE requests (
     method TEXT NOT NULL,
     data TEXT,
     response INT,
-    FOREIGN KEY (path) REFERENCES paths(id),
-    FOREIGN KEY (response) REFERENCES responses(id)
+    FOREIGN KEY (path) REFERENCES paths(id) ON DELETE CASCADE,
+    FOREIGN KEY (response) REFERENCES responses(id) ON DELETE CASCADE
 );
 
 CREATE TABLE headers (
@@ -88,61 +88,61 @@ CREATE TABLE scripts (
 CREATE TABLE domain_headers (
     domain INT NOT NULL,
     header INT NOT NULL,
-    FOREIGN KEY (domain) REFERENCES domains(id),
-    FOREIGN KEY (header) REFERENCES headers(id)
+    FOREIGN KEY (domain) REFERENCES domains(id) ON DELETE CASCADE,
+    FOREIGN KEY (header) REFERENCES headers(id) ON DELETE CASCADE
 );
 
 -- Cookies sent in all request made to that domain
 CREATE TABLE domain_cookies (
     domain INT NOT NULL,
     cookie INT NOT NULL,
-    FOREIGN KEY (domain) REFERENCES domains(id),
-    FOREIGN KEY (cookie) REFERENCES cookies(id)
+    FOREIGN KEY (domain) REFERENCES domains(id) ON DELETE CASCADE,
+    FOREIGN KEY (cookie) REFERENCES cookies(id) ON DELETE CASCADE
 );
 
 
 CREATE TABLE request_headers (
     request INT NOT NULL,
     header INT NOT NULL,
-    FOREIGN KEY (request) REFERENCES requests(id),
-    FOREIGN KEY (header) REFERENCES headers(id)
+    FOREIGN KEY (request) REFERENCES requests(id) ON DELETE CASCADE,
+    FOREIGN KEY (header) REFERENCES headers(id) ON DELETE CASCADE
 );
 
 CREATE TABLE request_cookies (
     request INT NOT NULL,
     cookie INT NOT NULL,
-    FOREIGN KEY (request) REFERENCES requests(id),
-    FOREIGN KEY (cookie) REFERENCES cookies(id)
+    FOREIGN KEY (request) REFERENCES requests(id) ON DELETE CASCADE,
+    FOREIGN KEY (cookie) REFERENCES cookies(id) ON DELETE CASCADE
 );
 
 
 CREATE TABLE response_headers (
     response INT NOT NULL,
     header INT NOT NULL,
-    FOREIGN KEY (response) REFERENCES responses(id),
-    FOREIGN KEY (header) REFERENCES headers(id)
+    FOREIGN KEY (response) REFERENCES responses(id) ON DELETE CASCADE,
+    FOREIGN KEY (header) REFERENCES headers(id) ON DELETE CASCADE
 );
 
 -- Cookies sent by response in Set-Cookie headers
 CREATE TABLE response_cookies (
     response INT NOT NULL,
     cookie INT NOT NULL,
-    FOREIGN KEY (response) REFERENCES responses(id),
-    FOREIGN KEY (cookie) REFERENCES cookies(id)
+    FOREIGN KEY (response) REFERENCES responses(id) ON DELETE CASCADE,
+    FOREIGN KEY (cookie) REFERENCES cookies(id) ON DELETE CASCADE
 );
 
 CREATE TABLE response_scripts (
     response INT NOT NULL,
     script INT NOT NULL,
-    FOREIGN KEY (response) REFERENCES responses(id),
-    FOREIGN KEY (script) REFERENCES scripts(id)
+    FOREIGN KEY (response) REFERENCES responses(id) ON DELETE CASCADE,
+    FOREIGN KEY (script) REFERENCES scripts(id) ON DELETE CASCADE
 );
 
 CREATE TABLE script_paths (
     script INT NOT NULL,
     path INT NOT NULL,
-    FOREIGN KEY (script) REFERENCES scripts(id),
-    FOREIGN KEY (path) REFERENCES paths(id)
+    FOREIGN KEY (script) REFERENCES scripts(id) ON DELETE CASCADE,
+    FOREIGN KEY (path) REFERENCES paths(id) ON DELETE CASCADE
 );
 
 CREATE TABLE vulnerabilities (
@@ -163,12 +163,12 @@ CREATE TABLE technologies (
 CREATE TABLE path_technologies (
     path INT NOT NULL,
     tech INT NOT NULL,
-    FOREIGN KEY (path) REFERENCES paths(id),
-    FOREIGN KEY (tech) REFERENCES technologies(id)
+    FOREIGN KEY (path) REFERENCES paths(id) ON DELETE CASCADE,
+    FOREIGN KEY (tech) REFERENCES technologies(id) ON DELETE CASCADE
 );
 
 CREATE TABLE cves (
     id VARCHAR(50) PRIMARY KEY,
     tech INT NOT NULL,
-    FOREIGN KEY (tech) REFERENCES technologies(id)
+    FOREIGN KEY (tech) REFERENCES technologies(id) ON DELETE CASCADE
 );

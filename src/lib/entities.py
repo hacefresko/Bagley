@@ -1,4 +1,4 @@
-import hashlib, pathlib, iptools, random, string, os
+import hashlib, pathlib, iptools
 from urllib.parse import urlparse, urlunparse
 
 import config, lib.utils as utils
@@ -195,6 +195,25 @@ class Domain:
             return None
 
         return Domain(db.exec_and_get_last_id('INSERT INTO domains (name) VALUES (%s)', (domain_name,)), domain_name)
+
+    # Removes domain. If domain is a subdomain, remove all subdomains too. Returns True if succesful else False
+    @staticmethod
+    def remove(domain_name):
+        if not Domain.check(domain_name):
+            return False
+
+        db = DB()
+
+        try:
+            db.exec('DELETE FROM domains WHERE name = %s', domain_name)
+            
+            if domain_name[0] == '.':
+                db.exec('DELETE FROM domains WHERE name LIKE %s', '%' + domain_name)
+
+        except:
+            return False
+
+        return True
 
     # Inserts an out of scope domain if not already inserted neither in scope nor out
     @staticmethod
