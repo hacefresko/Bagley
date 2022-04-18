@@ -9,9 +9,8 @@ services:
       - MARIADB_PASSWORD=vgytufqiyoguwpifbnweie
     volumes:
       - ./sql/bagley.sql:/docker-entrypoint-initdb.d/bagley.sql
-    network_mode: "host"
-    expose: 
-      - 3306
+    ports:
+      - 3306:3306
 
   bagley:
     build: .
