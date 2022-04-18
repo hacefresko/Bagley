@@ -1,4 +1,4 @@
-import time, re, shutil, subprocess, requests, os, shutil
+import time, re, shutil, subprocess, requests, os, shutil, random, string
 from urllib.parse import urljoin
 
 from lib.entities import *
