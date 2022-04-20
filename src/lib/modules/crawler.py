@@ -449,10 +449,12 @@ class Crawler (Module):
                 # It's easier to only take into account those which get directly accepted by only taking cookies from requests
                 main_request = self.__processRequest(request)
                 if not main_request:
+                    lib.controller.Controller.send_msg("[ERROR] Couldn't process request for %s" % (request.url), "crawler")
                     return
 
                 main_response = self.__processResponse(request, main_request)
                 if not main_response:
+                    lib.controller.Controller.send_msg("[ERROR] Didn't get response for %s" % (request.url), "crawler")
                     return
 
                 # Follow redirect if 3xx response is received
