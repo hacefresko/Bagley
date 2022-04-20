@@ -205,12 +205,12 @@ class Domain:
         db = DB()
 
         try:
-            db.exec('DELETE FROM domains WHERE name = %s', domain_name)
+            db.exec('DELETE FROM domains WHERE name = %s', (domain_name,))
             
             if domain_name[0] == '.':
-                db.exec('DELETE FROM domains WHERE name LIKE %s', '%' + domain_name)
+                db.exec('DELETE FROM domains WHERE name LIKE %s', ('%' + domain_name,))
 
-        except:
+        except Exception as e:
             return False
 
         return True
