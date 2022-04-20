@@ -1,4 +1,4 @@
-import time, requests, datetime, random, string, os, re
+import time, requests, random, string, os, re
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from seleniumwire import webdriver
@@ -19,9 +19,6 @@ class Crawler (Module):
 
         # Init queue for other modules to send urls to crawler
         self.queue = []
-
-        # Cookies inside the scope that the browser has stored
-        self.cookies = []
 
         # Initial local storage to be maintained along the crawl
         self.localStorage = {}
@@ -58,7 +55,7 @@ class Crawler (Module):
     def isCrawlable(self, url, method='GET', content_type=None, data=None):
         domain = urlparse(url).netloc
 
-        if Domain.checkScope(domain) and Path.checkExtension(url) and not Request.check(url, method, content_type, data, self.cookies):
+        if Domain.checkScope(domain) and Path.checkExtension(url) and not Request.check(url, method, content_type, data):
             return True
 
         return False
@@ -122,21 +119,24 @@ class Crawler (Module):
     # If an error occur, returns None
     # request is a request selenium-wire object
     def __processRequest(self, request):
-        url = request.url
-        if not Path.insert(url):
-            return None
 
+        # Get cookies from cookies header to link them to the request
+        # If is not already in the database, take all its parameters from the selenium driver
         request_cookies = []
         if request.headers.get('cookie'):
             for cookie in request.headers.get('cookie').split('; '):
                 cookie_name = cookie.split('=')[0]
-                c = Cookie.get(cookie_name, url)
-                if c and c.value == cookie.split('=')[1]:
+                cookie_value = cookie.split('=')[1]
+                c = Cookie.get(cookie_name, cookie_value, request.url)
+                if c:
                     request_cookies.append(c)
                 else:
-                    for dc in self.cookies:
-                        if dc.name == cookie_name:
-                            request_cookies.append(dc)
+                    for browser_cookie in self.driver.get_cookies():
+                        # Get the cookie matching name and value and whose domain and path matches the url
+                        if  (browser_cookie["name"] == cookie_name) and (browser_cookie["value"] == cookie_value) and Cookie.checkPath(browser_cookie, request.url):
+                            c = Cookie.insert(browser_cookie)
+                            if c:
+                                request_cookies.append(c)
                         
             del request.headers['cookie']
 
@@ -146,7 +146,7 @@ class Crawler (Module):
             if h:
                 request_headers.append(h)
 
-        return Request.insert(url, request.method, request_headers, request_cookies, request.body.decode('utf-8', errors='ignore'))
+        return Request.insert(request.url, request.method, request_headers, request_cookies, request.body.decode('utf-8', errors='ignore'))
 
     # Inserts in the database the response if url belongs to the scope
     # request is a request selenium-wire object
@@ -162,7 +162,7 @@ class Crawler (Module):
         response_cookies = []
         if response.headers.get_all('set-cookie'):
             for raw_cookie in response.headers.get_all('set-cookie'):
-                c = Cookie.insertRaw(request.url, raw_cookie)
+                c = Cookie.insertRaw(raw_cookie, request.url)
                 if c:
                     response_cookies.append(c)
 
