@@ -126,17 +126,18 @@ class Crawler (Module):
         if request.headers.get('cookie'):
             for cookie in request.headers.get('cookie').split('; '):
                 cookie_name = cookie.split('=')[0]
-                cookie_value = cookie.split('=')[1]
+                cookie_value = "=".join(cookie.split('=')[1:])
                 c = Cookie.get(cookie_name, cookie_value, request.url)
                 if c:
                     request_cookies.append(c)
                 else:
                     for browser_cookie in self.driver.get_cookies():
                         # Get the cookie matching name and value and whose domain and path matches the url
-                        if  (browser_cookie["name"] == cookie_name) and (browser_cookie["value"] == cookie_value) and Cookie.checkPath(browser_cookie, request.url):
+                        if (browser_cookie["name"] == cookie_name) and (browser_cookie["value"] == cookie_value) and Cookie.checkPath(browser_cookie, request.url):
                             c = Cookie.insert(browser_cookie)
                             if c:
                                 request_cookies.append(c)
+                                break
                         
             del request.headers['cookie']
 
@@ -414,19 +415,6 @@ class Crawler (Module):
             return
 
         self.updateDelay()
-
-        # Copy browser cookies to local copy
-        n_cookies = 0
-        self.cookies = []
-        while n_cookies != len(self.driver.get_cookies()):
-            n_cookies = len(self.driver.get_cookies())
-            for cookie in self.driver.get_cookies():
-                c = Cookie.get(cookie['name'])
-                if not c or c.value != cookie.get('value'):
-                    c = Cookie.insert(cookie)
-                if c and c not in self.cookies:
-                    self.cookies.append(c)
-            time.sleep(0.5)
 
         # List of responses to analyze
         resp_to_analyze = []

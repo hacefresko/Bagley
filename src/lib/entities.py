@@ -544,8 +544,8 @@ class Request:
         else:
             query += ' AND data is Null'
 
-        requests = db.query_all(query, tuple(query_params))
-        if len(requests) > 0:
+        request = db.query_one(query, tuple(query_params))
+        if request:
             return True
 
         return False
@@ -560,7 +560,7 @@ class Request:
     
     # Returns request if exists else None
     @staticmethod
-    def get(url, method, content_type=None, cookies=None, data=None):
+    def get(url, method, content_type=None, data=None):
         path = Path.parseURL(url)
         if not path:
             return None
@@ -584,21 +584,10 @@ class Request:
         else:
             query += ' AND data is Null '
 
-        requests = db.query_all(query, tuple(query_params))
-
-        req_cookies = []
-        for cookie in cookies:
-            if cookie.check(path):
-                req_cookies.append(cookie)
-
-        for request in requests:
-            valid = True
-            for c in req_cookies:
-                if not db.query_one('SELECT * FROM cookies JOIN request_cookies ON id=cookie WHERE request = %d AND name = %s', (request[0], c.name)):
-                    valid = False
-                    break
-            if valid:
-                return Request(request[0], request[1], request[2], request[3], request[4], request[5])
+        request = db.query_one(query, tuple(query_params))
+        if request:
+            return Request(request[0], request[1], request[2], request[3], request[4], request[5])
+        
         return None
 
     # Inserts request and links headers and cookies. If request is already inserted or there are too many requests 
@@ -619,7 +608,7 @@ class Request:
         params = Request.__parseParams(urlparse(url).query)
         data = Request.__parseData(content_type, data) if method == 'POST' else None
 
-        if Request.check(url, method, content_type, data, cookies):
+        if Request.check(url, method, content_type, data):
             return None
 
         db = DB()
@@ -629,11 +618,11 @@ class Request:
             h.link(request)
 
         for cookie in cookies:
-            if cookie.check(path):
+            if cookie.check(url):
                 cookie.link(request)
 
         # Gets again the request in order to update headers, cookies and data from databse
-        return Request.get(url, method, content_type, cookies, data)
+        return Request.get(url, method, content_type, data)
 
     # Yields requests or None if there are no requests. It continues infinetly until program stops
     @staticmethod
@@ -885,24 +874,21 @@ class Cookie:
         return self.name + '=' + self.value
 
     def getDict(self):
-        result = {}
+        return {
+            'name': self.name,
+            'value': self.value if self.value else '',
+            'domain': self.domain,
+            'path': self.path,
+            'expires': self.expires,
+            'max-age': self.maxage,
+            'httponly': self.httponly,
+            'secure': self.secure,
+            'samesite': self.samesite
+        }
 
-        result['name'] = self.name
-        result['value'] = self.value if self.value else ''
-        if self.path != '/':
-            result['path'] = self.path
-        if self.expires != 'session':
-            result['expires'] = self.expires
-        if self.maxage != 'session':
-            result['max-age'] = self.maxage
-        if self.httponly:
-            result['httponly'] = True
-        if self.secure:
-            result['secure'] = True
-        if self.samesite != "lax":
-            result['samesite'] = self.samesite
-
-        return result
+    # Check if cookie matches url (just an object function wrapper for checkPath)
+    def check(self, url):
+        return Cookie.checkPath(self.getDict(), url)
 
     # Inserts cookie as a dictionary. If already inserted, returns None.
     @staticmethod
@@ -953,15 +939,11 @@ class Cookie:
             return False
 
         # Check path
-        url = path.protocol + '://' + str(path.domain) + cookie_dictionary.get("path")
+        cookie_url = path.protocol + '://' + str(path.domain)
         if cookie_dictionary.get("path") != '/':
-            url += cookie_dictionary.get("path")[1:]
-        cookie_path = Path.insert(url)
+            cookie_url += cookie_dictionary.get("path")[1:]
+        cookie_path = Path.insert(cookie_url)
         if (not cookie_path) or (not cookie_path.checkParent(path)):
-            return False
-        
-        # Check secure
-        if (path.protocol == 'https') and (not cookie_dictionary.get("secure")):
             return False
 
         return True
@@ -1015,7 +997,7 @@ class Cookie:
             
             if url is None:
                 return cookie
-            elif url and Cookie.checkPath(cookie.getDict(), url):
+            elif url and cookie.check(url):
                 return cookie
 
         return None
