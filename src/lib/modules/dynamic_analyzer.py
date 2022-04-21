@@ -172,7 +172,7 @@ class Dynamic_Analyzer (Module):
                 if request.method == 'GET':
                     r = requests.get(str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
                 elif request.method == 'POST':
-                    r = requests.get(str(request.url), request.params, request.data, headers, cookies, verify=False)
+                    r = requests.get(str(request.path), request.params, request.data, headers, cookies, verify=False)
                 
                 self.updateDelay()
 
