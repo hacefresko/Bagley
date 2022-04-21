@@ -104,6 +104,8 @@ class Static_Analyzer (Module):
             finally:
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
 
+        lib.controller.Controller.send_msg(process.stderr.readlines().decode('utf-8', errors='ignore'), "static-analyzer")
+
     def __analyzeCodeQL(self, script):
 
         tmp_dir = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=10)) + '/'
