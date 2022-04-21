@@ -104,7 +104,7 @@ class Static_Analyzer (Module):
             finally:
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
 
-        lib.controller.Controller.send_msg(process.stderr.readlines().decode('utf-8', errors='ignore'), "static-analyzer")
+        lib.controller.Controller.send_msg(process.stderr.read().decode('utf-8', errors='ignore'), "static-analyzer")
 
     def __analyzeCodeQL(self, script):
 

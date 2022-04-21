@@ -373,7 +373,6 @@ class Crawler (Module):
         if self.stop.is_set():
             return
 
-        # Always inserts path into database since __crawl should only be called if the path hasn't been crawled yet
         path = Path.insert(parent_url)
         if not path:
             return
