@@ -70,6 +70,16 @@ class Crawler (Module):
     def addToQueue(self, url):
         self.queue.append(url)
 
+    def removeDomainFromQueue(self, domain):
+        newQueue = []
+
+        for url in self.queue:
+            d = urlparse(url).netloc
+            if ((domain[0] == '.') and (not Domain.compare(domain, d))) or ((domain[0] != '.') and (d != domain)):
+                newQueue.append(url)
+
+        self.queue = newQueue
+
     # https://stackoverflow.com/questions/46361494/how-to-get-the-localstorage-with-python-and-selenium-webdriver
     def addToLocalStorage(self, url, d):
         self.localStorage[url] = d

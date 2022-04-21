@@ -127,6 +127,7 @@ class Controller:
 
     def removeDomain(self, domain):
         if Domain.remove(domain):
+            self.modules.get("crawler").removeDomainFromQueue(domain)
             return "Removed %s" % domain
         else:
             return "%s couldn't be removed" % domain        
