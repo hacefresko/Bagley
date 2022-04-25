@@ -288,6 +288,8 @@ class Crawler (Module):
                     self.__crawl(url, method, data, req_headers)
 
             elif element.name == 'script':
+                if (element.get('type')) and (element.get('type') != "application/javascript") and (element.get('type') != "application/ecmascript"):
+                    continue
                 src = element.get('src')
                 if src is None:
                     if element.string is None:
