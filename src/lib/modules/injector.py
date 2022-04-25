@@ -164,7 +164,7 @@ class Injector (Module):
                     self.setInactive()
                     time.sleep(5)
                     continue
-                if not request.response or request.id in tested or request.response.code != 200:
+                if not request.response or request.id in tested or request.response.code == 404 or request.response.code == 500 or (request.response.code // 100 == 3):
                     self.setInactive()
                     continue
                 
