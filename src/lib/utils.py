@@ -51,8 +51,8 @@ def substitutePOSTData(content_type, data, match, newValue):
     if not data:
         return None
     
-    if content_type is not None:
-        if 'multipart/form-data' in content_type:
+    # If content type is multipart/form-data, parse it. Else, try with JSON and if exception, try with URL encoded
+    if (content_type is not None) and ('multipart/form-data' in content_type):
             # If data has already been parsed so boundary has changed
             if '--'+boundary_substitute in data:
                 boundary = '--'+boundary_substitute
@@ -79,10 +79,6 @@ def substitutePOSTData(content_type, data, match, newValue):
             new_data += '--'
 
             return new_data
-        elif 'application/json' in content_type:
-            return json.dumps(replaceJSON(json.loads(data), match, newValue))
-        elif 'application/x-www-form-urlencoded' in content_type:
-            return replaceURLencoded(data, match, newValue)
 
     try:
         return json.dumps(replaceJSON(json.loads(data, strict=False), match, newValue)).replace('"%"', '%') # If  match is %, then it must match all values in db, not only strings, so quotes must be removed
