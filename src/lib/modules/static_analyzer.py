@@ -1,4 +1,4 @@
-import time, re, shutil, subprocess, requests, os, shutil, random, string
+import time, rure, shutil, subprocess, requests, os, shutil, random, string
 from urllib.parse import urljoin
 
 from lib.entities import *
@@ -20,10 +20,10 @@ class Static_Analyzer (Module):
             "Slack Webhook": "https://hooks.slack.com/services/T[a-zA-Z0-9_]{8}/B[a-zA-Z0-9_]{8}/[a-zA-Z0-9_]{24}",
             "MailChimp API Key": "[0-9a-f]{32}-us[0-9]{1,2}",
             "Facebook Access Token": "EAACEdEose0cBA[0-9A-Za-z]+",
-            "Facebook Secret Key": "(?i)(facebook|fb)(.{0,20})?(?-i)['\\\"][0-9a-f]{32}['\\\"]",
-            "Facebook Client ID": "(?i)(facebook|fb)(.{0,20})?['\\\"][0-9]{13,17}['\\\"]",
-            "Twitter Secret Key": "(?i)twitter(.{0,20})?['\\\"][0-9a-z]{35,44}['\\\"]",
-            "Twitter Client ID": "(?i)twitter(.{0,20})?['\\\"][0-9a-z]{18,25}['\\\"]",
+            "Facebook Secret Key": "(?i)(facebook|fb)(.{0,20})?(?-i)['\"][0-9a-f]{32}['\"]",
+            "Facebook Client ID": "(?i)(facebook|fb)(.{0,20})?['\"][0-9]{13,17}['\"]",
+            "Twitter Secret Key": "(?i)twitter(.{0,20})?['\"][0-9a-z]{35,44}['\"]",
+            "Twitter Client ID": "(?i)twitter(.{0,20})?['\"][0-9a-z]{18,25}['\"]",
             "Github Personal Access Token": "ghp_[0-9a-zA-Z]{36}",
             "Github OAuth Access Token": "gho_[0-9a-zA-Z]{36}",
             "Github App Token": "(ghu|ghs)_[0-9a-zA-Z]{36}",
@@ -44,7 +44,7 @@ class Static_Analyzer (Module):
             "NuGet API Key": "oy2[a-z0-9]{43}",
             "SendGrid Token": "SG\\.[0-9A-Za-z\\-_]{22}\\.[0-9A-Za-z-_]{43}",
             "AWS Access Key": "(A3T[A-Z0-9]|AKIA|AGPA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}",
-            "AWS Secret Key": "(?i)aws(.{0,20})?(?-i)['\\\"][0-9a-zA-Z/+]{40}['\\\"]",
+            "AWS Secret Key": "(?i)aws(.{0,20})?(?-i)['\"][0-9a-zA-Z/+]{40}['\"]",
             "Google Cloud Platfor API Key": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
             "Zoho Webhook Token": "https://creator\\.zoho\\.com/api/[A-Za-z0-9/\\-_\\.]+\\?authtoken=[A-Za-z0-9]+",
             "Zapier Webhook": "https://(?:www.)?hooks\\.zapier\\.com/hooks/catch/[A-Za-z0-9]+/[A-Za-z0-9]+/",
@@ -80,25 +80,24 @@ class Static_Analyzer (Module):
                 for request in response.getRequests():
                     script_locations.append(str(request.path))
 
-            lib.controller.Controller.send_msg("Looking for API keys in script %d in %s" % (element.id, ",".join(script_locations)), "static-analyzer")
+            paths = ",".join(script_locations)
+
+            lib.controller.Controller.send_msg("Looking for API keys in script %d in %s" % (element.id, paths), "static-analyzer")
             text = element.content
         elif isinstance(element, Response):
-            lib.controller.Controller.send_msg("Looking for API keys in response from %s" % ", ".join([str(r.path) for r in element.getRequests()]), "static-analyzer")
+            paths = ", ".join([str(r.path) for r in element.getRequests()])
+            lib.controller.Controller.send_msg("Looking for API keys in response from %s" % paths, "static-analyzer")
             text = element.body
         else:
             return
 
         for name, pattern in patterns.items():
-            for value in re.findall(pattern, text):
+            for value in rure.findall(pattern, text):
                 if isinstance(element, Script):
-                    lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at script %d in %s\n%s" % (name, element.id, ",".join(script_locations), value), "static-analyzer")
-                    Vulnerability.insert('Key Leak', name + ":" + value, ",".join(script_locations))
+                    lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at script %d in %s\n%s" % (name, element.id, paths, value), "static-analyzer")
+                    Vulnerability.insert('Key Leak', name + ":" + value, paths)
 
                 elif isinstance(element, Response):
-                    for r in element.getRequests():
-                        paths += str(r.path) + ', '
-                        Vulnerability.insert('Key Leak', name + ":" + value, str(r.path))
-                    paths = paths[:-2]
                     lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at %s\n%s" % (name, paths, value), "static-analyzer")
 
     def __findLinks(self, script):
