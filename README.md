@@ -48,9 +48,11 @@ Each modules runs in a different thread
 
 *   Static Analyzer: Performs local analysis among obtained data, without generating network traffic:
 
-    *   Searches for API keys with a pattern list mainly obtained from [SecretFinder](https://github.com/m4ll0k/SecretFinder)
+    *   Searches for API keys with a pattern list mainly obtained from [dora](https://github.com/sdushantha/dora)
 
     *   Searches for links inside the scope with [linkfinder](https://github.com/GerbenJavado/LinkFinder)
+
+    *   Looks for vulnerabilities with static analysis with [CodeQL](https://codeql.github.com/)
 
 *   Dynamic Analyzer: Performs lightweighted analysis among discovered assets, generating network traffic:
 
@@ -79,6 +81,7 @@ Each modules runs in a different thread
 *   [Subjack](https://github.com/haccer/subjack)
 *   [Gau](https://github.com/lc/gau)
 *   [linkfinder](https://github.com/GerbenJavado/LinkFinder)
+*   [CodeQL](https://codeql.github.com/)
 
 ## Useful documentation
 
