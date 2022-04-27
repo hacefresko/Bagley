@@ -108,14 +108,14 @@ class Domain:
     # Yields domains or None if there are no requests. It continues infinetly until program stops
     @staticmethod
     def yieldAll():
-        id = 1
+        id = 0
         db = DB()
         while True:
-            domain = db.query_one('SELECT * FROM domains WHERE id = %d', (id,))
+            domain = db.query_one('SELECT * FROM domains WHERE id > %d LIMIT 1', (id,))
             if not domain:
                 yield None
                 continue
-            id += 1
+            id = domain[0]
             yield Domain(domain[0], domain[1])
 
     # Returns True if both domains are equal or if one belongs to a range of subdomains of other, else False
