@@ -92,7 +92,9 @@ class Static_Analyzer (Module):
             return
 
         for name, pattern in patterns.items():
-            for value in rure.findall(pattern, text):
+            result = rure.search(pattern, text)
+            if result is not None:
+                value = result.group()
                 if isinstance(element, Script):
                     lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at script %d in %s\n%s" % (name, element.id, paths, value), "static-analyzer")
                     Vulnerability.insert('Key Leak', name + ":" + value, paths)
