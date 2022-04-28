@@ -182,5 +182,5 @@ CREATE TABLE yield_counters (
     requests INT,
     responses INT,
     scripts INT
-)
+);
 INSERT INTO counters VALUES (0,0,0,0,0);
