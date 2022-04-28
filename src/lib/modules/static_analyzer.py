@@ -1,4 +1,4 @@
-import time, re, rure, shutil, subprocess, requests, os, shutil, random, string
+import time, re, rure, shutil, subprocess, requests, os, shutil, random, string, jsbeautifier
 from urllib.parse import urljoin
 
 from lib.entities import *
@@ -159,10 +159,9 @@ class Static_Analyzer (Module):
                     break
         
         if sourcemap_url is not None:
-
+            # Unpack webpack bundle
             lib.controller.Controller.send_msg("Found source map for script %d in %s" % (script.id, script_locations_str), "static-analyzer")
 
-            # Unpack bundle
             script_dir = config.SCRIPTS_FOLDER + str(script.id) + '/'
             os.mkdir(script_dir)
             command = [shutil.which('unwebpack_sourcemap'), '--disable-ssl-verification', sourcemap_url, script_dir]
@@ -177,6 +176,8 @@ class Static_Analyzer (Module):
             shutil.copytree(script_dir, tmp_dir + str(script.id))
 
         else:
+            # Just beautify
+            jsbeautifier.beautify_file(script.filename)
             shutil.copy(script.filename, tmp_dir)
 
         # Create codeql database
