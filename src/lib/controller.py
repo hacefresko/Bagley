@@ -85,7 +85,7 @@ class Controller:
                 # Get and insert headers
                 if opts.get('headers'):
                     for k,v in opts.get('headers').items():
-                        header = Header.insert(k,v, False)
+                        header = Header.get(k,v) or Header.insert(k,v, False)
                         if header:
                             header.link(d)
                             return_str += "\nAdded header %s" % str(header)
