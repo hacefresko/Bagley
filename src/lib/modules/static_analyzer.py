@@ -1,4 +1,4 @@
-import time, rure, shutil, subprocess, requests, os, shutil, random, string
+import time, re, rure, shutil, subprocess, requests, os, shutil, random, string
 from urllib.parse import urljoin
 
 from lib.entities import *
@@ -39,13 +39,12 @@ class Static_Analyzer (Module):
             "Amazon MWS Auth Token": "amzn\\.mws\\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
             "Picatic API Key": "sk_[live|test]_[0-9a-z]{32}",
             "Google OAuth Access Key": "ya29\\.[0-9A-Za-z\\-_]+",
-            "Google OAuth ID": "[0-9(+-[0-9A-Za-z_]{32}.apps.googleusercontent.com",
             "StackHawk API Key": "hawk\\.[0-9A-Za-z\\-_]{20}\\.[0-9A-Za-z\\-_]{20}",
             "NuGet API Key": "oy2[a-z0-9]{43}",
             "SendGrid Token": "SG\\.[0-9A-Za-z\\-_]{22}\\.[0-9A-Za-z-_]{43}",
             "AWS Access Key": "(A3T[A-Z0-9]|AKIA|AGPA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}",
             "AWS Secret Key": "(?i)aws(.{0,20})?(?-i)['\"][0-9a-zA-Z/+]{40}['\"]",
-            "Google Cloud Platfor API Key": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+            "Google Cloud Platform API Key": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
             "Zoho Webhook Token": "https://creator\\.zoho\\.com/api/[A-Za-z0-9/\\-_\\.]+\\?authtoken=[A-Za-z0-9]+",
             "Zapier Webhook": "https://(?:www.)?hooks\\.zapier\\.com/hooks/catch/[A-Za-z0-9]+/[A-Za-z0-9]+/",
             "New Relic Admin API Key": "NRAA-[a-f0-9]{27}",
