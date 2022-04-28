@@ -183,4 +183,4 @@ CREATE TABLE yield_counters (
     responses INT,
     scripts INT
 );
-INSERT INTO counters VALUES (0,0,0,0,0);
+INSERT INTO yield_counters VALUES (0,0,0,0,0);
