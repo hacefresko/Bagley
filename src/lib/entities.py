@@ -108,7 +108,7 @@ class Domain:
     # Yields domains or None if there are no requests. It continues infinetly until program stops
     @staticmethod
     def yieldAll():
-        id = 0
+        id = db.query_one('SELECT domains FROM yield_counters')[0]
         db = DB()
         while True:
             domain = db.query_one('SELECT * FROM domains WHERE id > %d LIMIT 1', (id,))
@@ -116,6 +116,7 @@ class Domain:
                 yield None
                 continue
             id = domain[0]
+            db.exec('UPDATE yield_counters SET domains = %d', (id,))
             yield Domain(domain[0], domain[1])
 
     # Returns True if both domains are equal or if one belongs to a range of subdomains of other, else False
@@ -352,7 +353,7 @@ class Path:
     # Yields paths
     @staticmethod
     def yieldAll():
-        id = 0
+        id = db.query_one('SELECT paths FROM yield_counters')[0]
         db = DB()
         while True:
             path = db.query_one('SELECT * FROM paths WHERE id > %d LIMIT 1', (id,))
@@ -360,6 +361,7 @@ class Path:
                 yield None
                 continue
             id = path[0]
+            db.exec('UPDATE yield_counters SET paths = %d', (id,))
             yield Path(path[0], path[1], path[2], path[3], path[4])
 
     # Yields paths corresponding to directories or False if there are no requests. It continues infinetly until program stops
@@ -631,14 +633,15 @@ class Request:
     # Yields requests or None if there are no requests. It continues infinetly until program stops
     @staticmethod
     def yieldAll():
-        id = 1
+        id = db.query_one('SELECT requests FROM yield_counters')[0]
         db = DB()
         while True:
-            request = db.query_one('SELECT * FROM requests WHERE id = %d', (id,))
+            request = db.query_one('SELECT * FROM requests WHERE id > %d LIMIT 1', (id,))
             if not request:
                 yield None
                 continue
-            id += 1
+            id = request[0]
+            db.exec('UPDATE yield_counters SET requests = %d', (id,))
             yield Request(request[0], request[1], request[2], request[3], request[4], request[5])
 
     # Returns a list of requests whose params or data keys are the same as the request the function was called on
@@ -790,14 +793,15 @@ class Response:
     # Yields response or None if there are no responses. It continues infinetly until program stops
     @staticmethod
     def yieldAll():
-        id = 1
+        id = db.query_one('SELECT responses FROM yield_counters')[0]
         db = DB()
         while True:
-            response = db.query_one('SELECT * FROM responses WHERE id = %d', (id,))
+            response = db.query_one('SELECT * FROM responses WHERE id > %d LIMIT 1', (id,))
             if not response:
                 yield None
                 continue
-            id += 1
+            id = response[0]
+            db.exec('UPDATE yield_counters SET responses = %d', (id,))
             yield Response(response[0], response[1], response[2], response[3])
 
 class Header:
@@ -1125,14 +1129,15 @@ class Script:
     # Yields scripts or None if there are no scripts. It continues infinetly until program stops
     @staticmethod
     def yieldAll():
-        id = 1
+        id = db.query_one('SELECT scripts FROM yield_counters')[0]
         db = DB()
         while True:
-            script = db.query_one('SELECT * FROM scripts WHERE id = %d', (id,))
+            script = db.query_one('SELECT * FROM scripts WHERE id > %d LIMIT 1', (id,))
             if not script:
                 yield None
                 continue
-            id += 1
+            id = script[0]
+            db.exec('UPDATE yield_counters SET scripts = %d', (id,))
             yield Script(script[0], script[1], script[2])
 
 class Vulnerability:

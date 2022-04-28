@@ -172,3 +172,15 @@ CREATE TABLE cves (
     tech INT NOT NULL,
     FOREIGN KEY (tech) REFERENCES technologies(id) ON DELETE CASCADE
 );
+
+
+DROP TABLE IF EXISTS yield_counters;
+
+CREATE TABLE yield_counters (
+    domains INT,
+    paths INT,
+    requests INT,
+    responses INT,
+    scripts INT
+)
+INSERT INTO counters VALUES (0,0,0,0,0);
