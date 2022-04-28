@@ -164,6 +164,7 @@ class Domain:
         # If domain is an IP
         if iptools.ipv4.validate_ip(domain.split(':')[0]) and db.query_one('SELECT name FROM domains WHERE name LIKE %s', (domain,)):
             return True
+
         # If it is a domain name
         else:
             # Check if any domain fits in the group of subdomains
@@ -189,9 +190,12 @@ class Domain:
 
     # Inserts domain. If already inserted, returns None
     @staticmethod
-    def insert(domain_name):
+    def insert(domain_name, check=False):
         db = DB()
         if Domain.get(domain_name):
+            return None
+
+        if check and not Domain.checkScope(domain_name):
             return None
 
         return Domain(db.exec_and_get_last_id('INSERT INTO domains (name) VALUES (%s)', (domain_name,)), domain_name)

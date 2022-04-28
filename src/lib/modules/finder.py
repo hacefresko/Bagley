@@ -111,7 +111,7 @@ class Finder(Module):
                 discovered = line.split('Found: ')[1].rstrip()
                 if Domain.checkScope(discovered) and not Domain.get(discovered):
                     lib.controller.Controller.send_msg("DOMAIN FOUND: Inserted %s to database" % discovered, "finder")
-                    Domain.insert(discovered)
+                    Domain.insert(discovered, check=True)
             except:
                 pass
             finally:
@@ -146,7 +146,7 @@ class Finder(Module):
                     socket.gethostbyname(d)
                     if Domain.checkScope(d) and not Domain.get(discovered):
                         lib.controller.Controller.send_msg("DOMAIN FOUND: Inserted %s to database" % d, "finder")
-                        Domain.insert(d)
+                        Domain.insert(d, check=True)
                 except:
                     continue
         
