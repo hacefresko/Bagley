@@ -109,7 +109,7 @@ class Domain:
     @staticmethod
     def yieldAll():
         db = DB()
-        id = db.query_one('SELECT domains FROM yield_counters')
+        id = db.query_one('SELECT domains FROM yield_counters', ())
         while True:
             domain = db.query_one('SELECT * FROM domains WHERE id > %d LIMIT 1', (id,))
             if not domain:
@@ -354,7 +354,7 @@ class Path:
     @staticmethod
     def yieldAll():
         db = DB()
-        id = db.query_one('SELECT paths FROM yield_counters')
+        id = db.query_one('SELECT paths FROM yield_counters', ())
         while True:
             path = db.query_one('SELECT * FROM paths WHERE id > %d LIMIT 1', (id,))
             if not path:
@@ -634,7 +634,7 @@ class Request:
     @staticmethod
     def yieldAll():
         db = DB()
-        id = db.query_one('SELECT requests FROM yield_counters')
+        id = db.query_one('SELECT requests FROM yield_counters', ())
         while True:
             request = db.query_one('SELECT * FROM requests WHERE id > %d LIMIT 1', (id,))
             if not request:
@@ -794,7 +794,7 @@ class Response:
     @staticmethod
     def yieldAll():
         db = DB()
-        id = db.query_one('SELECT responses FROM yield_counters')
+        id = db.query_one('SELECT responses FROM yield_counters', ())
         while True:
             response = db.query_one('SELECT * FROM responses WHERE id > %d LIMIT 1', (id,))
             if not response:
@@ -1130,7 +1130,7 @@ class Script:
     @staticmethod
     def yieldAll():
         db = DB()
-        id = db.query_one('SELECT scripts FROM yield_counters')
+        id = db.query_one('SELECT scripts FROM yield_counters', ())
         while True:
             script = db.query_one('SELECT * FROM scripts WHERE id > %d LIMIT 1', (id,))
             if not script:
