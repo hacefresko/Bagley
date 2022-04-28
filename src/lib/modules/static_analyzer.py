@@ -66,8 +66,7 @@ class Static_Analyzer (Module):
             "Dynatrace Token": "dt0[a-zA-Z]{1}[0-9]{2}\\.[A-Z0-9]{24}\\.[A-Z0-9]{64}",
             "Twilio API Key": "(?i)twilio(.{0,20})?SK[0-9a-f]{32}",
             "MongoDB Cloud Connection String": "mongodb\\+srv://(.*)",
-            "Riot Games Developer API Key": "RGAPI-[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}",
-            "SerpAPI": "[a-f0-9]{64}"
+            "Riot Games Developer API Key": "RGAPI-[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
         }
 
         if isinstance(element, Script):
