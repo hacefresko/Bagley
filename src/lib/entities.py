@@ -108,8 +108,8 @@ class Domain:
     # Yields domains or None if there are no requests. It continues infinetly until program stops
     @staticmethod
     def yieldAll():
-        id = db.query_one('SELECT domains FROM yield_counters')[0]
         db = DB()
+        id = db.query_one('SELECT domains FROM yield_counters')[0]
         while True:
             domain = db.query_one('SELECT * FROM domains WHERE id > %d LIMIT 1', (id,))
             if not domain:
@@ -353,8 +353,8 @@ class Path:
     # Yields paths
     @staticmethod
     def yieldAll():
-        id = db.query_one('SELECT paths FROM yield_counters')[0]
         db = DB()
+        id = db.query_one('SELECT paths FROM yield_counters')[0]
         while True:
             path = db.query_one('SELECT * FROM paths WHERE id > %d LIMIT 1', (id,))
             if not path:
@@ -633,8 +633,8 @@ class Request:
     # Yields requests or None if there are no requests. It continues infinetly until program stops
     @staticmethod
     def yieldAll():
-        id = db.query_one('SELECT requests FROM yield_counters')[0]
         db = DB()
+        id = db.query_one('SELECT requests FROM yield_counters')[0]
         while True:
             request = db.query_one('SELECT * FROM requests WHERE id > %d LIMIT 1', (id,))
             if not request:
@@ -793,8 +793,8 @@ class Response:
     # Yields response or None if there are no responses. It continues infinetly until program stops
     @staticmethod
     def yieldAll():
-        id = db.query_one('SELECT responses FROM yield_counters')[0]
         db = DB()
+        id = db.query_one('SELECT responses FROM yield_counters')[0]
         while True:
             response = db.query_one('SELECT * FROM responses WHERE id > %d LIMIT 1', (id,))
             if not response:
@@ -1129,8 +1129,8 @@ class Script:
     # Yields scripts or None if there are no scripts. It continues infinetly until program stops
     @staticmethod
     def yieldAll():
-        id = db.query_one('SELECT scripts FROM yield_counters')[0]
         db = DB()
+        id = db.query_one('SELECT scripts FROM yield_counters')[0]
         while True:
             script = db.query_one('SELECT * FROM scripts WHERE id > %d LIMIT 1', (id,))
             if not script:
