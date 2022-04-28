@@ -13,7 +13,7 @@ class Static_Analyzer (Module):
     def _searchKeys(self, element):
         # Taken from https://github.com/sdushantha/dora/blob/main/dora/db/data.json
         patterns = {
-            "Google API Key": "AIza[0-9A-Za-z-_]{35}",
+            #"Google API Key": "AIza[0-9A-Za-z-_]{35}",
             "Mailgun Private Key": "key-[0-9a-zA-Z]{32}",
             "Heroku API key": "[h|H][e|E][r|R][o|O][k|K][u|U].{0,30}[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}",
             "Slack API token": "(xox[p|b|o|a]-[0-9]{12}-[0-9]{12}-[0-9]{12}-[a-z0-9]{32})",
