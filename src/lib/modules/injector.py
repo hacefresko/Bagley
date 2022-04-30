@@ -175,7 +175,7 @@ class Injector (Module):
                     response = request.response
                     if response:
                         content_type = response.getHeader('content-type')
-                        if content_type and ('text/html' in str(content_type)):
+                        if (content_type is not None) and ('text/html' in str(content_type)):
                             self.__xss(request)
                     #self.__ssti(request)
                     self.__sqli(request)

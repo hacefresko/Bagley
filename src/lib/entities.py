@@ -830,7 +830,7 @@ class Header:
     def get(key, value):
         key, value = Header.__parseHeader(key, value)
         db = DB()
-        result = db.query_one('SELECT * FROM headers WHERE header_key = %s AND value = %s', (key, value))
+        result = db.query_one('SELECT * FROM headers WHERE key = %s AND value = %s', (key, value))
         if not result:
             return None
         
@@ -843,7 +843,7 @@ class Header:
         if Header.get(key, value):
             return None
         db = DB()
-        header = Header(db.exec_and_get_last_id('INSERT INTO headers (header_key, value) VALUES (%s,%s)', (key, value)), key, value)
+        header = Header(db.exec_and_get_last_id('INSERT INTO headers (key, value) VALUES (%s,%s)', (key, value)), key, value)
         return header
 
     # Links the header to the specified target. If target is not a request nor a response, returns False

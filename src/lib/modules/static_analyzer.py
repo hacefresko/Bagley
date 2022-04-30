@@ -177,16 +177,16 @@ class Static_Analyzer (Module):
 
         lib.controller.Controller.send_msg("Analyzing script %d in %s" % (script.id, script_locations_str), "static-analyzer")
 
-        # Create codeql database
-        codeql_db = config.FILES_FOLDER + 'codeql'
-        command = [shutil.which('codeql'), 'database', 'create', codeql_db, '--overwrite', '--language=javascript', "--source-root="+tmp_dir]
-        result = subprocess.run(command, capture_output=True, encoding='utf-8')
-        if result.returncode != 0:
-            lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
-            shutil.rmtree(tmp_dir)
-            return
-
         try:
+            # Create codeql database
+            codeql_db = config.FILES_FOLDER + 'codeql'
+            command = [shutil.which('codeql'), 'database', 'create', codeql_db, '--overwrite', '--language=javascript', "--source-root="+tmp_dir]
+            result = subprocess.run(command, capture_output=True, encoding='utf-8')
+            if result.returncode != 0:
+                lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
+                shutil.rmtree(tmp_dir)
+                return
+
             # Analyze codeql database
             output_file = tmp_dir + 'codeql_results.csv'
             cache_dir = config.FILES_FOLDER + 'codeql_cache'
