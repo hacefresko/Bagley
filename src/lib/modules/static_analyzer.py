@@ -170,6 +170,11 @@ class Static_Analyzer (Module):
 
             lib.controller.Controller.send_msg("Succesfully unpacked script %d in %s" % (script.id, script_locations_str), "static-analyzer")
 
+            # CodeQL ignore node_modules directory by default and, if that's the only directory in the CodeQL database, it will prodcue an error
+            contents = os.listdir(script_dir)
+            if (len(contents) == 1) and ('node_modules' in contents):
+                return
+
             shutil.copytree(script_dir, tmp_dir + str(script.id))
 
         else:
