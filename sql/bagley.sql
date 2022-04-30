@@ -60,7 +60,7 @@ CREATE TABLE requests (
 
 CREATE TABLE headers (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    key TEXT NOT NULL,
+    name TEXT NOT NULL,
     value TEXT
 );
 
