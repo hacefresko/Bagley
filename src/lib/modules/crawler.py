@@ -80,6 +80,23 @@ class Crawler (Module):
 
         self.queue = newQueue
 
+    # Update initial cookies in case some of them have dissapeared because of a logout or something else
+    def __updateCookies(self, url):
+        domain = Path.parseURL(url).domain
+        if domain.cookies:
+            for cookie in domain.cookies:
+                browser_cookie = self.driver.get_cookie(cookie.name)
+
+                # If cookie is not in the browser, try inerting it again
+                if (browser_cookie is None) or (browser_cookie["value"] != cookie.value) or not Cookie.checkPath(browser_cookie, url):
+                    lib.controller.Controller.send_msg("Updating cookie %s" % str(cookie), "crawler")
+                    try:
+                        self.driver.get(url)
+                        self.driver.add_cookie(cookie.getDict())
+                        del self.driver.requests
+                    except Exception as e:
+                        lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
+
     # https://stackoverflow.com/questions/46361494/how-to-get-the-localstorage-with-python-and-selenium-webdriver
     def addToLocalStorage(self, url, d):
         self.localStorage[url] = d
@@ -141,13 +158,12 @@ class Crawler (Module):
                 if c:
                     request_cookies.append(c)
                 else:
-                    for browser_cookie in self.driver.get_cookies():
-                        # Get the cookie matching name and value and whose domain and path matches the url
-                        if (browser_cookie["name"] == cookie_name) and (browser_cookie["value"] == cookie_value) and Cookie.checkPath(browser_cookie, request.url):
-                            c = Cookie.insert(browser_cookie)
-                            if c:
-                                request_cookies.append(c)
-                                break
+                    browser_cookie = self.driver.get_cookie(cookie_name)
+                    if (browser_cookie is not None) and (browser_cookie["value"] == cookie_value) and Cookie.checkPath(browser_cookie, request.url):
+                        c = Cookie.insert(browser_cookie)
+                        if c:
+                            request_cookies.append(c)
+                            break
                         
             del request.headers['cookie']
 
@@ -391,6 +407,7 @@ class Crawler (Module):
 
         lib.controller.Controller.send_msg('[%s] %s' % (method,parent_url), "crawler")
 
+        self.__updateCookies(parent_url)
         self.__updateLocalStorage(parent_url)
 
         # Request resource
@@ -577,7 +594,7 @@ class Crawler (Module):
                 headers_string += "\n"
                 lib.controller.Controller.send_msg(headers_string, "crawler")
 
-            # Add cookie headers
+            # Add cookies
             if domain.cookies:
                 valid = []
                 for cookie in domain.cookies:
