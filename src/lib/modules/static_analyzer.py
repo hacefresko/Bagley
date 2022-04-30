@@ -177,34 +177,29 @@ class Static_Analyzer (Module):
 
         lib.controller.Controller.send_msg("Analyzing script %d in %s" % (script.id, script_locations_str), "static-analyzer")
 
-        try:
-            # Create codeql database
-            codeql_db = config.FILES_FOLDER + 'codeql'
-            command = [shutil.which('codeql'), 'database', 'create', codeql_db, '--overwrite', '--language=javascript', "--source-root="+tmp_dir]
-            result = subprocess.run(command, capture_output=True, encoding='utf-8')
-            if result.returncode != 0:
-                lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
-                shutil.rmtree(tmp_dir)
-                return
+        # Create codeql database
+        codeql_db = config.FILES_FOLDER + 'codeql'
+        command = [shutil.which('codeql'), 'database', 'create', codeql_db, '--overwrite', '--language=javascript', "--source-root="+tmp_dir]
+        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+        if result.returncode != 0:
+            shutil.rmtree(tmp_dir)
+            return
 
-            # Analyze codeql database
-            output_file = tmp_dir + 'codeql_results.csv'
-            cache_dir = config.FILES_FOLDER + 'codeql_cache'
-            command = [shutil.which('codeql'), 'database', 'analyze', codeql_db, config.CODEQL_SUITE, '--format=csv', '--output='+output_file, '--compilation-cache='+cache_dir]
-            result = subprocess.run(command, capture_output=True, encoding='utf-8')
-            if (result.returncode != 0) or (not os.path.isfile(output_file)):
-                lib.controller.Controller.send_error_msg("AN ERROR OCURRED:\n\n" + result.stderr, "static-analyzer")
-                shutil.rmtree(tmp_dir)
-                return
+        # Analyze codeql database
+        output_file = tmp_dir + 'codeql_results.csv'
+        cache_dir = config.FILES_FOLDER + 'codeql_cache'
+        command = [shutil.which('codeql'), 'database', 'analyze', codeql_db, config.CODEQL_SUITE, '--format=csv', '--output='+output_file, '--compilation-cache='+cache_dir]
+        result = subprocess.run(command, capture_output=True, encoding='utf-8')
+        if (result.returncode != 0) or (not os.path.isfile(output_file)):
+            shutil.rmtree(tmp_dir)
+            return
 
-            # Read results
-            fd = open(output_file)
-            for line in fd.readlines():
-                lib.controller.Controller.send_vuln_msg("VULN FOUND at script %d in %s:\n\n%s" % (script.id, script_locations_str, line), "static-analyzer")
-                Vulnerability.insert('JS Vulnerability', line, "script %d in %s" % (script.id, script_locations_str))
-            fd.close()
-        except:
-            lib.controller.Controller.send_msg("Could not analyze script %d" % (script.id), "static-analyzer")
+        # Read results
+        fd = open(output_file)
+        for line in fd.readlines():
+            lib.controller.Controller.send_vuln_msg("VULN FOUND at script %d in %s:\n\n%s" % (script.id, script_locations_str, line), "static-analyzer")
+            Vulnerability.insert('JS Vulnerability', line, "script %d in %s" % (script.id, script_locations_str))
+        fd.close()
 
         shutil.rmtree(tmp_dir)
 
