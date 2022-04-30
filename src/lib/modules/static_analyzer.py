@@ -21,7 +21,7 @@ class Static_Analyzer (Module):
             "MailChimp API Key": "[0-9a-f]{32}-us[0-9]{1,2}",
             "Facebook Access Token": "EAACEdEose0cBA[0-9A-Za-z]+",
             "Facebook Secret Key": "(?i)(facebook|fb)(.{1,20})?(?-i)['\"][0-9a-f]{32}['\"]",
-            "Twitter Secret Key": "(?i)twitter(.{0,20})?['\"][0-9a-z]{35,44}['\"]",
+            "Twitter Secret Key": "(?i)twitter(.{1,20})?['\"][0-9a-z]{35,44}['\"]",
             "Github Personal Access Token": "ghp_[0-9a-zA-Z]{36}",
             "Github OAuth Access Token": "gho_[0-9a-zA-Z]{36}",
             "Github App Token": "(ghu|ghs)_[0-9a-zA-Z]{36}",
