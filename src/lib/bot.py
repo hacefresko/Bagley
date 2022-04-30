@@ -1,5 +1,5 @@
 from abc import abstractmethod
-import discord, logging, aiohttp, os, random, string, zipfile
+import discord, logging, aiohttp, os, random, string, shutil
 import config, lib.utils
 
 # Create bot object
@@ -293,14 +293,18 @@ class GetScriptCommand(Command):
         # Compress unpacked script if exists
         script_unpacked = config.SCRIPTS_FOLDER + str(script.id)
         if os.path.isdir(script_unpacked):
-            zip_file_name = config.FILES_FOLDER + str(script.id) + '.zip'
-            zip_file = zipfile.ZipFile(zip_file_name, 'w')
-            for root, directories, files in os.walk(script_unpacked):
-                for filename in files:
-                    p = os.path.join(root, filename)
-                    zip_file.write(p)
 
+            # This function has very confusing params, http://www.seanbehan.com/how-to-use-python-shutil-make_archive-to-zip-up-a-directory-recursively-including-the-root-folder/ for more info
+            shutil.make_archive(str(script.id), "zip", config.SCRIPTS_FOLDER, str(script.id))
+
+            # Move zip file to temporary files directory
+            zip_file_name = config.FILES_FOLDER + str(script.id) + '.zip'
+            shutil.move(str(script.id) + '.zip', zip_file_name)
+            
+            # Send file
             await send_file(zip_file_name, "terminal")
+
+            # Delete file
             os.remove(zip_file_name)
 
 
