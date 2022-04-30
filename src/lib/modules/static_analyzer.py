@@ -20,7 +20,7 @@ class Static_Analyzer (Module):
             "Slack Webhook": "https://hooks.slack.com/services/T[a-zA-Z0-9_]{8}/B[a-zA-Z0-9_]{8}/[a-zA-Z0-9_]{24}",
             "MailChimp API Key": "[0-9a-f]{32}-us[0-9]{1,2}",
             "Facebook Access Token": "EAACEdEose0cBA[0-9A-Za-z]+",
-            "Facebook Secret Key": "(?i)(facebook|fb)(.{0,20})?(?-i)['\"][0-9a-f]{32}['\"]",
+            "Facebook Secret Key": "(?i)(facebook|fb)(.{1,20})?(?-i)['\"][0-9a-f]{32}['\"]",
             "Twitter Secret Key": "(?i)twitter(.{0,20})?['\"][0-9a-z]{35,44}['\"]",
             "Github Personal Access Token": "ghp_[0-9a-zA-Z]{36}",
             "Github OAuth Access Token": "gho_[0-9a-zA-Z]{36}",
@@ -91,8 +91,8 @@ class Static_Analyzer (Module):
             if result is not None:
                 value = result.group()
                 if isinstance(element, Script):
-                    lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at script %d in %s\n%s" % (name, element.id, paths, value), "static-analyzer")
-                    Vulnerability.insert('Key Leak', name + ":" + value, paths)
+                    lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at script %d in %s\n\n%s" % (name, element.id, paths, value), "static-analyzer")
+                    Vulnerability.insert('Key Leak', name + ": " + value, paths)
 
                 elif isinstance(element, Response):
                     lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at %s\n%s" % (name, paths, value), "static-analyzer")
@@ -141,8 +141,6 @@ class Static_Analyzer (Module):
                 script_locations.append(str(request.path))
         script_locations_str = ", ".join(script_locations)
 
-        lib.controller.Controller.send_msg("Analyzing script %d in %s" % (script.id, script_locations_str), "static-analyzer")
-
         # Check if there is a source map available
         sourcemap_url = None
         last_line = script.content.rstrip().split("\n")[-1]
@@ -170,17 +168,14 @@ class Static_Analyzer (Module):
 
             lib.controller.Controller.send_msg("Succesfully unpacked script %d in %s" % (script.id, script_locations_str), "static-analyzer")
 
-            # CodeQL ignore node_modules directory by default and, if that's the only directory in the CodeQL database, it will prodcue an error
-            contents = os.listdir(script_dir)
-            if (len(contents) == 1) and ('node_modules' in contents):
-                return
-
             shutil.copytree(script_dir, tmp_dir + str(script.id))
 
         else:
             # Just beautify
             jsbeautifier.beautify_file(script.filename)
             shutil.copy(script.filename, tmp_dir)
+
+        lib.controller.Controller.send_msg("Analyzing script %d in %s" % (script.id, script_locations_str), "static-analyzer")
 
         # Create codeql database
         codeql_db = config.FILES_FOLDER + 'codeql'
@@ -191,22 +186,25 @@ class Static_Analyzer (Module):
             shutil.rmtree(tmp_dir)
             return
 
-        # Analyze codeql database
-        output_file = tmp_dir + 'codeql_results.csv'
-        cache_dir = config.FILES_FOLDER + 'codeql_cache'
-        command = [shutil.which('codeql'), 'database', 'analyze', codeql_db, config.CODEQL_SUITE, '--format=csv', '--output='+output_file, '--compilation-cache='+cache_dir]
-        result = subprocess.run(command, capture_output=True, encoding='utf-8')
-        if (result.returncode != 0) or (not os.path.isfile(output_file)):
-            lib.controller.Controller.send_error_msg("AN ERROR OCURRED:\n\n" + result.stderr, "static-analyzer")
-            shutil.rmtree(tmp_dir)
-            return
+        try:
+            # Analyze codeql database
+            output_file = tmp_dir + 'codeql_results.csv'
+            cache_dir = config.FILES_FOLDER + 'codeql_cache'
+            command = [shutil.which('codeql'), 'database', 'analyze', codeql_db, config.CODEQL_SUITE, '--format=csv', '--output='+output_file, '--compilation-cache='+cache_dir]
+            result = subprocess.run(command, capture_output=True, encoding='utf-8')
+            if (result.returncode != 0) or (not os.path.isfile(output_file)):
+                lib.controller.Controller.send_error_msg("AN ERROR OCURRED:\n\n" + result.stderr, "static-analyzer")
+                shutil.rmtree(tmp_dir)
+                return
 
-        # Read results
-        fd = open(output_file)
-        for line in fd.readlines():
-            lib.controller.Controller.send_vuln_msg("VULN FOUND at script %d in %s:\n\n%s" % (script.id, script_locations_str, line), "static-analyzer")
-            Vulnerability.insert('JS Vulnerability', line, "script %d in %s" % (script.id, script_locations_str))
-        fd.close()
+            # Read results
+            fd = open(output_file)
+            for line in fd.readlines():
+                lib.controller.Controller.send_vuln_msg("VULN FOUND at script %d in %s:\n\n%s" % (script.id, script_locations_str, line), "static-analyzer")
+                Vulnerability.insert('JS Vulnerability', line, "script %d in %s" % (script.id, script_locations_str))
+            fd.close()
+        except:
+            lib.controller.Controller.send_msg("Could not analyze script %d" % (script.id), "static-analyzer")
 
         shutil.rmtree(tmp_dir)
 

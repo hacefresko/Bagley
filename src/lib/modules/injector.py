@@ -33,7 +33,7 @@ class Injector (Module):
             cookies_string = cookies_string[:-2]
             command.append(cookies_string)
         
-        lib.controller.Controller.send_msg("Testing SQL injection in %s [%s]" % (url, request.method), "injector")
+        lib.controller.Controller.send_msg("Testing SQL injection in %s\n\n%s" % (url, str(request)), "injector")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
