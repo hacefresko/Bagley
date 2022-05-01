@@ -172,7 +172,11 @@ class Static_Analyzer (Module):
 
         else:
             # Just beautify
-            jsbeautifier.beautify_file(script.filename)
+            result = jsbeautifier.beautify_file(script.filename)
+            f = open(script.filename, "w")
+            f.write(result)
+            f.close()
+            
             shutil.copy(script.filename, tmp_dir)
 
         lib.controller.Controller.send_msg("Analyzing script %d in %s" % (script.id, script_locations_str), "static-analyzer")
