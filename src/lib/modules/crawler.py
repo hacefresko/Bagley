@@ -1,3 +1,4 @@
+from threading import current_thread
 import time, requests, random, string, os, re
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
@@ -87,15 +88,22 @@ class Crawler (Module):
             for cookie in domain.cookies:
                 browser_cookie = self.driver.get_cookie(cookie.name)
 
-                # If cookie is not in the browser, try inerting it again
+                # If cookie is not in the browser, try adding it again
                 if (browser_cookie is None) or (browser_cookie["value"] != cookie.value) or not Cookie.checkPath(browser_cookie, url):
-                    lib.controller.Controller.send_msg("Updating cookie %s" % (str(cookie)), "crawler")
-                    try:
+                    lib.controller.Controller.send_msg("Updating cookie %s" % cookie.value, "crawler")
+                    
+                    # Check if current domain corresponds to the one in the cookie to get get it or not
+                    if not Domain.checkScope(domain, str(cookie.domain)):
                         self.driver.get(url)
+                    
+                    try:
                         self.driver.add_cookie(cookie.getDict())
-                        del self.driver.requests
                     except:
                         lib.controller.Controller.send_msg("Cannot add cookie %s (cookie_domain: %s, current domain: %s)" % (str(cookie), str(domain), urlparse(url).netloc), "crawler")
+
+                     # Remove requests origined from getting domain
+                    if not Domain.checkScope(domain, str(cookie.domain)):
+                        del self.driver.requests
 
     # https://stackoverflow.com/questions/46361494/how-to-get-the-localstorage-with-python-and-selenium-webdriver
     def addToLocalStorage(self, url, d):
