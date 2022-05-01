@@ -89,7 +89,7 @@ class Crawler (Module):
 
                 # If cookie is not in the browser, try inerting it again
                 if (browser_cookie is None) or (browser_cookie["value"] != cookie.value) or not Cookie.checkPath(browser_cookie, url):
-                    lib.controller.Controller.send_msg("Updating cookie %s" % str(cookie), "crawler")
+                    lib.controller.Controller.send_msg("Updating cookie %s - [%s]" % (str(cookie), str(domain)), "crawler")
                     try:
                         self.driver.get(url)
                         self.driver.add_cookie(cookie.getDict())
