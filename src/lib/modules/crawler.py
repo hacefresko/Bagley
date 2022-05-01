@@ -89,13 +89,13 @@ class Crawler (Module):
 
                 # If cookie is not in the browser, try inerting it again
                 if (browser_cookie is None) or (browser_cookie["value"] != cookie.value) or not Cookie.checkPath(browser_cookie, url):
-                    lib.controller.Controller.send_msg("Updating cookie %s - [%s]" % (str(cookie), str(domain)), "crawler")
+                    lib.controller.Controller.send_msg("Updating cookie %s" % (str(cookie)), "crawler")
                     try:
                         self.driver.get(url)
                         self.driver.add_cookie(cookie.getDict())
                         del self.driver.requests
-                    except Exception as e:
-                        lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
+                    except:
+                        lib.controller.Controller.send_msg("Cannot add cookie %s (cookie_domain: %s, current domain: %s)" % (str(cookie), str(domain), urlparse(url).netloc), "crawler")
 
     # https://stackoverflow.com/questions/46361494/how-to-get-the-localstorage-with-python-and-selenium-webdriver
     def addToLocalStorage(self, url, d):
@@ -585,32 +585,6 @@ class Crawler (Module):
             self.setActive()
 
             lib.controller.Controller.send_msg("Started crawling %s" % url, "crawler")
-            
-            # Add domain headers
-            if domain.headers:
-                headers_string = "Headers used:\n"
-                for header in domain.headers:
-                    headers_string += str(header) + "\n"
-                headers_string += "\n"
-                lib.controller.Controller.send_msg(headers_string, "crawler")
-
-            # Add cookies
-            if domain.cookies:
-                valid = []
-                for cookie in domain.cookies:
-                    try:
-                        self.driver.get(url)
-                        self.driver.add_cookie(cookie.getDict())
-                        valid.append(cookie)
-                        del self.driver.requests
-                    except Exception as e:
-                        lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
-                
-                cookies_string = "Cookies used:\n"
-                for cookie in valid:
-                    cookies_string += str(cookie) + "\n"
-                cookies_string += "\n"
-                lib.controller.Controller.send_msg(cookies_string, "crawler")
             
             self.__crawl(url, 'GET', headers=domain.headers)
 
