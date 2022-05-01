@@ -63,7 +63,7 @@ class Crawler (Module):
 
     # Check if url can be queued based on if url already exists on db or on queue and if it's in scope
     def isQueueable(self, url):
-        if Path.parseURL(url) or (url in self.queue) or (not Domain.checkScope(urlparse(url).netloc)):
+        if Path.parseURL(url) or (url in self.queue) or (not Domain.checkScope(urlparse(url).netloc))  and Path.checkExtension(url):
             return False
 
         return True
@@ -90,8 +90,7 @@ class Crawler (Module):
 
                 # If cookie is not in the browser, try adding it again
                 if (browser_cookie is None) or (browser_cookie["value"] != cookie.value) or not Cookie.checkPath(browser_cookie, url):
-                    lib.controller.Controller.send_msg("Updating cookie %s" % cookie.value, "crawler")
-                    
+                   
                     current_domain = urlparse(self.driver.current_url).netloc
 
                     # Check if current domain corresponds to the one in the cookie to get get it or not
