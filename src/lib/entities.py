@@ -948,7 +948,7 @@ class Cookie:
 
         # Check path
         cookie_url = path.protocol + '://' + str(path.domain)
-        if (cookie_dictionary.get("path") is not Nont) and (cookie_dictionary.get("path") != '/'):
+        if (cookie_dictionary.get("path") is not None) and (cookie_dictionary.get("path") != '/'):
             cookie_url += cookie_dictionary.get("path")[1:]
         cookie_path = Path.insert(cookie_url)
         if (not cookie_path) or (not cookie_path.checkParent(path)):
