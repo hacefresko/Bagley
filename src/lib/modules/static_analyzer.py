@@ -6,9 +6,10 @@ import lib.controller
 from lib.modules.module import Module
 
 class Static_Analyzer (Module):
-    def __init__(self, stop, crawler):
-        super().__init__(['linkfinder', 'unwebpack_sourcemap', 'codeql'], stop)
+    def __init__(self, stop, rps, active_modules, lock, crawler):
+        super().__init__(['linkfinder', 'unwebpack_sourcemap', 'codeql'], stop, rps, active_modules, lock)
         self.crawler = crawler
+        self.updateDelay()
 
     def _searchKeys(self, element):
         # Taken from https://github.com/sdushantha/dora/blob/main/dora/db/data.json
@@ -96,18 +97,15 @@ class Static_Analyzer (Module):
                 elif isinstance(element, Response):
                     lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at %s\n%s" % (name, paths, value), "static-analyzer")
 
-    def __findLinks(self, script):
+    def __findPaths(self, script):
         command = [shutil.which('linkfinder'), '-i', script.filename, '-o', 'cli']
 
         script_locations = []
-        for p in script.getPaths():
-            script_locations.append(str(p))
-
         for response in script.getResponses():
             for request in response.getRequests():
                 script_locations.append(str(request.path))
 
-        lib.controller.Controller.send_msg("Looking for links in script %d in %s" % (script.id, ", ".join(script_locations)), "static-analyzer")
+        lib.controller.Controller.send_msg("Looking for paths in script %d" % (script.id), "static-analyzer")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -117,8 +115,12 @@ class Static_Analyzer (Module):
                 for path in script_locations:
                     discovered = urljoin(path, line.rstrip())
                     if self.crawler.isQueueable(discovered):
-                        lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "static-analyzer")
-                        self.crawler.addToQueue(discovered)
+                        self.applyDelay()
+                        code = requests.get(discovered).code
+                        self.updateDelay()
+                        if (code != 404) and (code != 400) and (code != 500):
+                            lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "static-analyzer")
+                            self.crawler.addToQueue(discovered)
             except:
                 pass
             finally:
@@ -149,7 +151,10 @@ class Static_Analyzer (Module):
             sourcemap = matches.groups(0)[0].strip()
             for path in script.getPaths():
                 sourcemap_url = urljoin(str(path), sourcemap)
-                if requests.get(sourcemap_url, verify=False).ok:
+                self.applyDelay()
+                ok = requests.get(sourcemap_url, verify=False).ok
+                self.updateDelay()   
+                if ok:
                     break
         
         if sourcemap_url is not None:
@@ -213,7 +218,7 @@ class Static_Analyzer (Module):
             try:
                 script = next(scripts)
                 if script and script.content:
-                    self.__findLinks(script)
+                    self.__findPaths(script)
                     self.__analyzeCodeQL(script)
 
                     # Scripts embedded in html file are analyzed with the whole response body

@@ -10,7 +10,6 @@ class Finder(Module):
     def __init__(self, stop, rps, active_modules, lock, crawler):
         super().__init__(["gobuster", "subfinder", "gau"], stop, rps, active_modules, lock)
         self.crawler = crawler
-        self.analyzed = []
         self.updateDelay()
 
     def checkDependences(self):
@@ -57,7 +56,7 @@ class Finder(Module):
             try:
                 code = int(line.split('(')[1].split(')')[0].split(':')[1].strip())
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
-                if (code != 404) and (code != 400) and self.crawler.isQueueable(discovered):
+                if (code != 404) and (code != 400) and (code != 500) and self.crawler.isQueueable(discovered):
                         lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
                         self.crawler.addToQueue(discovered)
             except:
@@ -86,11 +85,11 @@ class Finder(Module):
             if self.crawler.isQueueable(url):
                 self.applyDelay()
 
-                ok = requests.get(url).ok
+                code = requests.get(url).code
 
                 self.updateDelay()
                 
-                if ok:
+                if (code != 404) and (code != 400) and (code != 500):
                     lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % url, "finder")
                     self.crawler.addToQueue(url)
 
