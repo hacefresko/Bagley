@@ -27,7 +27,6 @@ class Static_Analyzer (Module):
             "Github App Token": "(ghu|ghs)_[0-9a-zA-Z]{36}",
             "Github Refresh Token": "ghr_[0-9a-zA-Z]{76}",
             "LinkedIn Secret Key": "(?i)linkedin(.{0,20})?[0-9a-z]{16}",
-            "GitHub Access Token": "[a-zA-Z0-9_-]*:[a-zA-Z0-9_-]+@github\\.com*",
             "Stripe Restricted API Token": "rk_live_[0-9a-zA-Z]{24}",
             "Stripe Standard API Token": "sk_live_[0-9a-zA-Z]{24}",
             "Square Access Token": "sqOatp-[0-9A-Za-z\\-_]{22}",
