@@ -116,7 +116,7 @@ class Static_Analyzer (Module):
                     discovered = urljoin(path, line.rstrip())
                     if self.crawler.isQueueable(discovered):
                         self.applyDelay()
-                        code = requests.get(discovered).code
+                        code = requests.get(discovered).status_code
                         self.updateDelay()
                         if (code != 404) and (code != 400) and (code != 500):
                             lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "static-analyzer")
