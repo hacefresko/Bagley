@@ -85,7 +85,7 @@ class Finder(Module):
             if self.crawler.isQueueable(url):
                 self.applyDelay()
 
-                code = requests.get(url).status_code
+                code = requests.get(url, verify=False, allow_redirects=False).status_code
 
                 self.updateDelay()
                 
