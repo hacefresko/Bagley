@@ -63,7 +63,7 @@ class Crawler (Module):
 
     # Check if url can be queued based on if url already exists on db or on queue and if it's in scope
     def isQueueable(self, url):
-        if Path.parseURL(url) or (url in self.queue) or (not Domain.checkScope(urlparse(url).netloc))  and Path.checkExtension(url):
+        if Path.parseURL(url) or (url in self.queue) or (not Domain.checkScope(urlparse(url).netloc)) or (not Path.checkExtension(url)):
             return False
 
         return True
