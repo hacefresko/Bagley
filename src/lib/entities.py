@@ -5,9 +5,10 @@ import config, lib.utils as utils
 from .database import DB
 
 class Domain:
-    def __init__(self, id, name):
+    def __init__(self, id, name, excluded=""):
         self.id = id
         self.name = name
+        self.excluded = excluded.split(";")
         self.headers = self.__getHeaders()
         self.cookies = self.__getCookies()
 
@@ -86,7 +87,7 @@ class Domain:
         domain = db.query_one('SELECT * FROM domains WHERE id = %d', (id,))
         if not domain:
             return None
-        return Domain(domain[0], domain[1])
+        return Domain(domain[0], domain[1], domain[2])
 
     # Returns domain identified by the domain name or None if it does not exist
     @staticmethod
@@ -95,14 +96,14 @@ class Domain:
         domain = db.query_one('SELECT * FROM domains WHERE name = %s', (domain_name,))
         if not domain:
             return None
-        return Domain(domain[0], domain[1])
+        return Domain(domain[0], domain[1], domain[2])
 
     @staticmethod
     def getAll():
         result = []
         db = DB()
         for d in db.query_all('SELECT * FROM domains', ()):
-            result.append(Domain(d[0], d[1]))
+            result.append(Domain(d[0], d[1]), d[2])
         return result
 
     # Yields domains or None if there are no requests. It continues infinetly until program stops
@@ -117,7 +118,7 @@ class Domain:
                 continue
             id = domain[0]
             db.exec('UPDATE yield_counters SET domains = %d', (id,))
-            yield Domain(domain[0], domain[1])
+            yield Domain(domain[0], domain[1], domain[2])
 
     # Returns True if both domains are equal or if one belongs to a range of subdomains of other, else False
     @staticmethod
@@ -154,9 +155,9 @@ class Domain:
 
         for i in range(len(dot_interspersed_parts)):
             check = ''.join(dot_interspersed_parts[i:])
-            result = db.query_all('SELECT name FROM domains WHERE name LIKE %s', (check,))
+            result = db.query_all('SELECT * FROM domains WHERE name LIKE %s', (check,))
             for domain in result:
-                parents.append(Domain(domain[0], domain[1]))
+                parents.append(Domain(domain[0], domain[1], domain[2]))
 
         return parents
 
@@ -164,7 +165,7 @@ class Domain:
     @staticmethod
     def check(domain):
         db = DB()
-        return True if (db.query_one('SELECT name FROM domains WHERE name LIKE %s', (domain,)) or db.query_one('SELECT name FROM out_of_scope WHERE name LIKE %s', (domain,))) else False
+        return True if (db.query_one('SELECT * FROM domains WHERE name LIKE %s', (domain,)) or db.query_one('SELECT * FROM out_of_scope WHERE name LIKE %s', (domain,))) else False
 
     # Returns True if domain is inside the scope, else False. strict parameter indicates if port must be checked or not.
     # i.e if strict = False, then 127.0.0.1 == 127.0.0.1:5000
@@ -182,15 +183,15 @@ class Domain:
         db = DB()
 
         # Check if domain is out of scope
-        if db.query_one('SELECT name FROM out_of_scope WHERE name LIKE %s', (domain,)):
+        if db.query_one('SELECT * FROM out_of_scope WHERE name LIKE %s', (domain,)):
             return False
 
         # If domain is an IP
-        if iptools.ipv4.validate_ip(domain.split(':')[0]) and db.query_one('SELECT name FROM domains WHERE name LIKE %s', (domain,)):
+        if iptools.ipv4.validate_ip(domain.split(':')[0]) and db.query_one('SELECT * FROM domains WHERE name LIKE %s', (domain,)):
             return True
 
         # Check if any domain fits in the group of subdomains
-        if domain[0] == '.' and db.query_one('SELECT name FROM domains WHERE name LIKE %s', ("%"+domain,)):
+        if domain[0] == '.' and db.query_one('SELECT * FROM domains WHERE name LIKE %s', ("%"+domain,)):
             return True
 
         # Construct array with starting and interspersed dots i.e example.com => ['.','example','.','com']
@@ -205,12 +206,19 @@ class Domain:
 
         for i in range(len(dot_interspersed_parts)):
             check = ''.join(dot_interspersed_parts[i:])
-            if db.query_one('SELECT name FROM out_of_scope WHERE name LIKE %s', (check,)):
+            if db.query_one('SELECT * FROM out_of_scope WHERE name LIKE %s', (check,)):
                 return False
-            if db.query_one('SELECT name FROM domains WHERE name LIKE %s', (check,)):
+            if db.query_one('SELECT * FROM domains WHERE name LIKE %s', (check,)):
                 return True
 
         return False
+
+    # Inserts array of excluded submodules to domain (removes everything that was before)
+    def addExcludedSubmodules(self, excluded_submodules):
+        excluded_submodules = ";".join(excluded_submodules)
+
+        db = DB()
+        db.exec('UPDATE domains SET excluded_submodules = %s WHERE id = %d', (excluded_submodules, self.id))
 
     # Inserts domain. If already inserted, returns None. Also links headers and cookies of parents
     @staticmethod
@@ -226,7 +234,11 @@ class Domain:
 
         headers = []
         cookies = []
+        excluded = []
         for parent in domain.getParents():
+            for exc in parent.excluded:
+                if exc not in excluded:
+                    excluded.append(exc)
             for header in parent.headers:
                 if header not in headers:
                     header.link(domain)
@@ -238,6 +250,7 @@ class Domain:
 
         domain.headers = headers
         domain.cookies = cookies
+        domain.addExcludedSubmodules(excluded)
 
         return domain
 

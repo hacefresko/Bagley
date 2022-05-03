@@ -113,18 +113,26 @@ class AddCommand(Command):
         if args[1] == 'help':
             s = self.usage_msg + "\n" + """Options (in JSON format):
 
-excluded        List of domains which are out of scope.
-                Only available if a group of subdomains was specified
-                {"excluded": "example.com"}
-headers         Headers that will be added to every request.
-                {"headers": {"key": "value"}}
-cookies         Cookies that will be added to the browser and other requests.
-                Fields <name>, <value> and <domain> are mandatory.
-                {"cookies": [{"name": "lel", "value": 1337, "domain": "example.com"}]}
-localStorage    Key/value pairs to be added to the local storage of the specified location
-                {"localStorage": {"items": {"lel":1337}, "url": "https://www.example.com/"}]}
-queue           URLs to start crawling from. Domain must be in scope.
-                {"queue": "http://example.com/example"}"""
+excluded            List of domains which are out of scope.
+                    Only available if a group of subdomains was specified
+                    {"excluded": "example.com"}
+
+headers             Headers that will be added to every request.
+                    {"headers": {"key": "value"}}
+
+cookies             Cookies that will be added to the browser and other requests.
+                    Fields <name>, <value> and <domain> are mandatory.
+                    {"cookies": [{"name": "lel", "value": 1337, "domain": "example.com"}]}
+
+localStorage        Key/value pairs to be added to the local storage of the specified location
+                    {"localStorage": {"items": {"lel":1337}, "url": "https://www.example.com/"}]}
+
+queue               URLs to start crawling from. Domain must be in scope.
+                    {"queue": "http://example.com/example"}
+
+excluded_submodules Submodules that won't be executed with the added domains. Available
+                    submodules: %s.
+                    {"excluded_submodules": ["sqlmap", "pathFinder"]}""" % ", ".join(self.controller.getSubModules())
 
         elif len(args) == 2:
             s = self.controller.addDomain(args[1])

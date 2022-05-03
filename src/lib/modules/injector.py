@@ -6,7 +6,7 @@ import lib.controller
 
 class Injector (Module):
     def __init__(self, stop, rps, active_modules, lock):
-        super().__init__(["sqlmap", "dalfox", "crlfuzz", "tplmap"], stop, rps, active_modules, lock)
+        super().__init__(["sqlmap", "dalfox", "crlfuzz", "tplmap"], stop, rps, active_modules, lock, ["sqlmap", "dalfox"])
 
     def __sqli(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')

@@ -66,6 +66,13 @@ class Controller:
     def addToQueue(self, url):
         self.modules.get("crawler").addToQueue(url)
 
+    def getSubModules(self):
+        submodules = []
+        for m in self.modules.values():
+            for subm in m.submodules:
+                submodules.append(subm)
+        return submodules
+
     # Methods to communicate with entities
 
     def addDomain(self, domain, options=None):
@@ -119,6 +126,19 @@ class Controller:
                     for q in opts.get("queue"):
                         self.addToQueue(q)
                         return_str += "\nAdded %s to queue" % str(q)
+
+                # Add excluded submodules
+                if opts.get("excluded_submodules"):
+                    submodules = self.getSubModules()
+                    valid = True
+                    for m in opts.get("excluded_submodules"):
+                        if m not in submodules:
+                            return_str += "\nSubmodule %s does not exist" % m
+                            valid = False
+
+                    if valid:
+                        d.addExcludedSubmodules(opts.get("excluded_submodules"))
+
 
         except Exception as e:
             return_str += "\nCouldn't parse options"

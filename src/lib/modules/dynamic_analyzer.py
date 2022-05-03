@@ -7,7 +7,7 @@ import lib.controller
 
 class Dynamic_Analyzer (Module):
     def __init__(self, stop, rps, active_modules, lock):
-        super().__init__(["subjack", "wappalyzer"], stop, rps, active_modules, lock)
+        super().__init__(["subjack", "wappalyzer"], stop, rps, active_modules, lock, ["CVE", "subdomainTakeover", "bypass403"])
         self.updateDelay()
 
     def __lookupCVEs(self, tech):

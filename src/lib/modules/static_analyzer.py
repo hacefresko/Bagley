@@ -7,7 +7,7 @@ from lib.modules.module import Module
 
 class Static_Analyzer (Module):
     def __init__(self, stop, rps, active_modules, lock, crawler):
-        super().__init__(['linkfinder', 'unwebpack_sourcemap', 'codeql'], stop, rps, active_modules, lock)
+        super().__init__(['linkfinder', 'unwebpack_sourcemap', 'codeql'], stop, rps, active_modules, lock, ["searchKeys", "linkfinder", "codeql"])
         self.crawler = crawler
         self.updateDelay()
 

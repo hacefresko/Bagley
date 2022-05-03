@@ -8,7 +8,7 @@ import lib.controller
 
 class Finder(Module):
     def __init__(self, stop, rps, active_modules, lock, crawler):
-        super().__init__(["gobuster", "subfinder", "gau"], stop, rps, active_modules, lock)
+        super().__init__(["gobuster", "subfinder", "gau"], stop, rps, active_modules, lock, ["fuzzPaths", "findPaths", "fuzzSubdomains", "findSubdomains"])
         self.crawler = crawler
         self.updateDelay()
 
@@ -93,7 +93,7 @@ class Finder(Module):
                     lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % url, "finder")
                     self.crawler.addToQueue(url)
 
-    def __fuzzSubDomain(self, domain, errcodes=[]):
+    def __fuzzSubDomains(self, domain, errcodes=[]):
         command = [shutil.which('gobuster'), 'dns', '-q', '-t', '1', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', str(int(self.getDelay()*1000))+'ms']
         # Add errorcodes if specified
         if len(errcodes) != 0:
@@ -126,7 +126,7 @@ class Finder(Module):
                     # Repeat the execution with errorcodes
                     errcode = error.split('=>')[1].split('(')[0].strip()
                     errcodes.append(errcode)
-                    self.__fuzzSubDomain(str(domain), errcodes)
+                    self.__fuzzSubDomains(str(domain), errcodes)
                 except:
                     return
 
@@ -159,7 +159,7 @@ class Finder(Module):
                     self.setActive()
                     if domain.name[0] == '.':
                         self.__findSubDomains(domain)
-                        self.__fuzzSubDomain(domain)
+                        self.__fuzzSubDomains(domain)
                     else:
                         self.__findPaths(domain)
 

@@ -1,7 +1,7 @@
 import threading, shutil, datetime, time
 
 class Module (threading.Thread):
-    def __init__(self, dependences, stop, rps=None, active_modules=None, lock=None):
+    def __init__(self, dependences, stop, rps=None, active_modules=None, lock=None, submodules=[]):
         super().__init__()
         self.dependences = dependences
         self.stop = stop
@@ -9,6 +9,7 @@ class Module (threading.Thread):
         self.active = None
         self.active_modules = None
         self.lock = None
+        self.submodules = submodules
         if rps is not None and active_modules is not None and lock is not None:
             self.rps = rps
             self.active = False

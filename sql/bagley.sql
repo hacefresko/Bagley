@@ -22,7 +22,8 @@ DROP TABLE IF EXISTS cves;
 
 CREATE TABLE domains (
     id INT PRIMARY KEY AUTO_INCREMENT, 
-    name TEXT
+    name TEXT,
+    excluded_submodules TEXT
 );
 
 CREATE TABLE out_of_scope (
