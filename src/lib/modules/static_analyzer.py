@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 from lib.entities import *
 import lib.controller
 from lib.modules.module import Module
+import lib.utils as utils
 
 class Static_Analyzer (Module):
     def __init__(self, stop, rps, active_modules, lock, crawler):

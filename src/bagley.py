@@ -48,4 +48,4 @@ logging.info(title)
 controller = lib.controller.Controller()
 
 # Init bot
-lib.bot.initBot(controller)
+lib.bot.initBot(controller, config.DISCORD_TOKEN)

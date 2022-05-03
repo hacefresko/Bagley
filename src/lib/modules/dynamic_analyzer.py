@@ -1,9 +1,9 @@
-import datetime, subprocess, shutil, requests, time, json
+import subprocess, shutil, requests, time, json
 
-import config
+import config, lib.controller
 from lib.entities import *
 from lib.modules.module import Module
-import lib.controller
+import lib.utils as utils
 
 class Dynamic_Analyzer (Module):
     def __init__(self, stop, rps, active_modules, lock):

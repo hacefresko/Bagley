@@ -1,7 +1,7 @@
-import hashlib, pathlib, iptools
+import hashlib, pathlib, iptools, json
 from urllib.parse import urlparse, urlunparse
 
-import config, lib.utils as utils
+import config
 from .database import DB
 
 class Domain:
@@ -537,7 +537,7 @@ class Request:
             return None
         new_params = params
         for word in config.PARAMS_BLACKLIST:
-            new_params = utils.replaceURLencoded(new_params, word, word)
+            new_params = replaceURLencoded(new_params, word, word)
         return new_params
 
     # Tries to parse data substituting all keys containing terms in blacklist by those terms. Returns None if data does not exist
@@ -547,7 +547,7 @@ class Request:
             return None
         new_data = data
         for word in config.PARAMS_BLACKLIST:
-            new_data = utils.substitutePOSTData(content_type, new_data, word, word)
+            new_data = substitutePOSTData(content_type, new_data, word, word)
         return new_data
 
     # Returns specified header if request has it, else None
@@ -579,10 +579,10 @@ class Request:
 
             if params:
                 query += ' AND params LIKE %s'
-                query_params.append(utils.replaceURLencoded(params, None, '%'))
+                query_params.append(replaceURLencoded(params, None, '%'))
             if data:
                 query += ' AND data LIKE %s'
-                query_params.append(utils.substitutePOSTData(content_type, data, None, '%'))
+                query_params.append(substitutePOSTData(content_type, data, None, '%'))
             result = db.query_all(query, tuple(query_params))
 
             if len(result) >= 5:
@@ -707,10 +707,10 @@ class Request:
         query_params = [self.path.id, self.method]
         if self.params:
             query += ' AND params LIKE %s'
-            query_params.append(utils.replaceURLencoded(self.params, None, '%'))
+            query_params.append(replaceURLencoded(self.params, None, '%'))
         if self.data:
             query += ' AND data LIKE %s'
-            query_params.append(utils.substitutePOSTData(self.getHeader('content-type').value if self.getHeader('content-type') else None, self.data, None, '%'))
+            query_params.append(substitutePOSTData(self.getHeader('content-type').value if self.getHeader('content-type') else None, self.data, None, '%'))
 
         db = DB()
         result = db.query_all(query, tuple(query_params))
@@ -1284,3 +1284,79 @@ class CVE:
         db = DB()
         cve = CVE(db.exec_and_get_last_id('INSERT INTO cves (id, tech) VALUES (%s, %d)', (id, tech.id)), tech.id)
         return cve
+
+
+# Util functions
+
+def replaceURLencoded(data, match, newValue):
+    if not data:
+        return None
+    new_data = ''
+    for p in data.split('&'):
+        if len(p.split('=')) == 1:
+            return data
+        elif match is None or match.lower() in p.split('=')[0].lower():
+            new_data += p.split('=')[0]
+            new_data += '=' + newValue + '&'
+        else:
+            new_data += p + '&'
+    return new_data[:-1]
+
+def replaceJSON(data, match, newValue):
+    if isinstance(data, dict):
+        for k,v in data.items():
+            if isinstance(v, dict):
+                data.update({k:replaceJSON(v, match, newValue)})
+            else:
+                if match is None or match.lower() in k.lower():
+                    data.update({k:newValue})
+    elif isinstance(data, list):
+        for e in data:
+            replaceJSON(e, match, newValue)
+
+    return data
+
+# Substitutes all values whose keys match with match parameter for newValue. If match is None, it will substitute all values.
+# It uses content_type header to know what type of POST data is, so it can be more precise
+# For multipart/form-data, it also substitutes the boundary since its value is usually random/partially random
+# If an exception occurs, a copy of the original data is returned
+# https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
+def substitutePOSTData(content_type, data, match, newValue):
+    boundary_substitute = 'BOUNDARY'
+
+    if not data:
+        return None
+    
+    # If content type is multipart/form-data, parse it. Else, try with JSON and if exception, try with URL encoded
+    if (content_type is not None) and ('multipart/form-data' in content_type):
+            # If data has already been parsed so boundary has changed
+            if '--'+boundary_substitute in data:
+                boundary = '--'+boundary_substitute
+            else:
+                boundary = '--' + content_type.split('; ')[1].split('=')[1]
+
+            new_data = '--'+boundary_substitute
+            for fragment in data.split(boundary)[1:-1]:
+                name = fragment.split('\r\n')[1].split('; ')[1].split('=')[1].strip('"')
+                content = fragment.split('\r\n')[3]
+
+                try:
+                    new_content = json.dumps(replaceJSON(json.loads(content), match, newValue))
+                except:
+                    new_content = replaceURLencoded(content, match, newValue)
+                
+                if not new_content:
+                    if match.lower() in name.lower() or match is None:
+                        new_content = newValue
+                    else:
+                        new_content = content
+                
+                new_data += fragment.split('name="')[0] + 'name="' + name + '"; ' + "; ".join(fragment.split('\r\n')[1].split('; ')[2:]) + '\r\n\r\n' + new_content + '\r\n--'+boundary_substitute
+            new_data += '--'
+
+            return new_data
+
+    try:
+        return json.dumps(replaceJSON(json.loads(data, strict=False), match, newValue)).replace('"%"', '%') # If  match is %, then it must match all values in db, not only strings, so quotes must be removed
+    except Exception as e:
+        return  replaceURLencoded(data, match, newValue)

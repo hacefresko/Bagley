@@ -6,10 +6,10 @@ from seleniumwire import webdriver
 from seleniumwire.utils import decode
 from selenium.webdriver.chrome.options import Options
 
-import config
+import config, lib.controller
 from lib.entities import *
 from lib.modules.module import Module
-import lib.controller
+import lib.utils as utils
 
 class Crawler (Module):
     def __init__(self, stop, rps, active_modules, lock):
@@ -80,6 +80,9 @@ class Crawler (Module):
                 newQueue.append(url)
 
         self.queue = newQueue
+
+    def __isScript(url):
+        return pathlib.Path(url.split('?')[0]).suffix.lower() == '.js'
 
     # Update initial cookies in case some of them have dissapeared because of a logout or something else
     def __updateCookies(self, url):
@@ -463,7 +466,7 @@ class Crawler (Module):
         for request in self.driver.iter_requests():
 
             # Scripts
-            if (utils.isScript(request.url)) and (request.response is not None) and (request.response.status_code == 200):
+            if (self.__isScript(request.url)) and (request.response is not None) and (request.response.status_code == 200):
                 if self.__processScript(request, main_response):
                     lib.controller.Controller.send_msg('[SCRIPT] %s' % (request.url), "crawler")
 

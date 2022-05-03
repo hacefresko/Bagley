@@ -1,10 +1,10 @@
 import subprocess, json, shutil, time, socket, os, requests
 from urllib.parse import urljoin
 
-import config
+import config, lib.controller
 from lib.modules.module import Module
 from lib.entities import *
-import lib.controller
+import lib.utils as utils
 
 class Finder(Module):
     def __init__(self, stop, rps, active_modules, lock, crawler):

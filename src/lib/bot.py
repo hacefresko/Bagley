@@ -364,7 +364,7 @@ def dispatch_img(filename, channel):
     bot.dispatch("bagley_img", filename, channel)
 
 # Define event handlers and init bot
-def initBot(controller):
+def initBot(controller, token):
     cp = CommandParser(controller)
 
     @bot.event
@@ -396,4 +396,4 @@ def initBot(controller):
     async def on_bagley_img(filename, channel):
         await send_file(filename, channel)
 
-    bot.run(config.DISCORD_TOKEN)
+    bot.run(token)
