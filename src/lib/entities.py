@@ -137,6 +137,29 @@ class Domain:
         else:
             return False
 
+    # Get parents of domain
+    def getParents(self):
+        parents = []
+        
+        db = DB()
+
+        # Construct array with starting and interspersed dots i.e example.com => ['.','example','.','com']
+        parts = self.name.split('.')
+        dot_interspersed_parts = (['.']*(2*len(parts)-1))
+        dot_interspersed_parts[::2] = parts
+        if dot_interspersed_parts[0] == '':
+            dot_interspersed_parts = dot_interspersed_parts[1:]
+        elif dot_interspersed_parts[0] != '.':
+            dot_interspersed_parts.insert(0, '.')
+
+        for i in range(len(dot_interspersed_parts)):
+            check = ''.join(dot_interspersed_parts[i:])
+            result = db.query_all('SELECT name FROM domains WHERE name LIKE %s', (check,))
+            for domain in result:
+                parents.append(Domain(domain[0], domain[1]))
+
+        return parents
+
     # Returns True if domain exists in database (either inside or outside the scope)
     @staticmethod
     def check(domain):
@@ -166,13 +189,12 @@ class Domain:
         if iptools.ipv4.validate_ip(domain.split(':')[0]) and db.query_one('SELECT name FROM domains WHERE name LIKE %s', (domain,)):
             return True
 
-        # If it is a domain name
-        else:
-            # Check if any domain fits in the group of subdomains
-            if domain[0] == '.' and db.query_one('SELECT name FROM domains WHERE name LIKE %s', ("%"+domain,)):
-                return True
+        # Check if any domain fits in the group of subdomains
+        if domain[0] == '.' and db.query_one('SELECT name FROM domains WHERE name LIKE %s', ("%"+domain,)):
+            return True
 
         # Construct array with starting and interspersed dots i.e example.com => ['.','example','.','com']
+        # In order to check if there is a parent or if any part is out of scope
         parts = domain.split('.')
         dot_interspersed_parts = (['.']*(2*len(parts)-1))
         dot_interspersed_parts[::2] = parts
@@ -181,15 +203,16 @@ class Domain:
         elif dot_interspersed_parts[0] != '.':
             dot_interspersed_parts.insert(0, '.')
 
-            for i in range(len(dot_interspersed_parts)):
-                check = ''.join(dot_interspersed_parts[i:])
-                if db.query_one('SELECT name FROM out_of_scope WHERE name LIKE %s', (check,)):
-                    return False
-                if db.query_one('SELECT name FROM domains WHERE name LIKE %s', (check,)):
-                    return True
+        for i in range(len(dot_interspersed_parts)):
+            check = ''.join(dot_interspersed_parts[i:])
+            if db.query_one('SELECT name FROM out_of_scope WHERE name LIKE %s', (check,)):
+                return False
+            if db.query_one('SELECT name FROM domains WHERE name LIKE %s', (check,)):
+                return True
+
         return False
 
-    # Inserts domain. If already inserted, returns None
+    # Inserts domain. If already inserted, returns None. Also links headers and cookies of parents
     @staticmethod
     def insert(domain_name, check=False):
         db = DB()
@@ -199,7 +222,24 @@ class Domain:
         if check and not Domain.checkScope(domain_name):
             return None
 
-        return Domain(db.exec_and_get_last_id('INSERT INTO domains (name) VALUES (%s)', (domain_name,)), domain_name)
+        domain = Domain(db.exec_and_get_last_id('INSERT INTO domains (name) VALUES (%s)', (domain_name,)), domain_name)
+
+        headers = []
+        cookies = []
+        for parent in domain.getParents():
+            for header in parent.headers:
+                if header not in headers:
+                    header.link(domain)
+                    headers.append(header)
+            for cookie in parent.cookies:
+                if cookie not in cookies:
+                    cookie.link(domain)
+                    cookies.append(cookie)
+
+        domain.headers = headers
+        domain.cookies = cookies
+
+        return domain
 
     # Removes domain. If domain is a subdomain, remove all subdomains too. Returns True if succesful else False
     @staticmethod
