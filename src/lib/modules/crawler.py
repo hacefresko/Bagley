@@ -12,8 +12,8 @@ from lib.modules.module import Module
 import lib.utils as utils
 
 class Crawler (Module):
-    def __init__(self, stop, rps, active_modules, lock):
-        super().__init__(["chromedriver"], stop, rps, active_modules, lock)
+    def __init__(self, controller, stop, rps, active_modules, lock):
+        super().__init__(["chromedriver"], controller, stop, rps, active_modules, lock)
 
         # Init time for applying delay
         self.updateDelay()
@@ -103,7 +103,7 @@ class Crawler (Module):
                     try:
                         self.driver.add_cookie(cookie.getDict())
                     except:
-                        lib.controller.Controller.send_msg("Cannot add cookie %s (cookie_domain: %s, current domain: %s)" % (str(cookie), cookie.domain, str(domain)), "crawler")
+                        self.send_msg("Cannot add cookie %s (cookie_domain: %s, current domain: %s)" % (str(cookie), cookie.domain, str(domain)), "crawler")
 
                      # Remove requests origined from getting domain
                     if str(domain) != current_domain:
@@ -336,7 +336,7 @@ class Crawler (Module):
                     try:
                         content = requests.get(src, verify=False).text
                     except:
-                        lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
+                        self.send_error_msg(utils.getExceptionString(), "crawler")
                         continue
 
                     if content:
@@ -404,7 +404,7 @@ class Crawler (Module):
         if not self.driver.save_screenshot(filename):
             return False
 
-        lib.controller.Controller.send_img(filename, "crawler")
+        self.send_file(filename, "crawler")
         return True
 
     # Main method of crawler
@@ -417,7 +417,7 @@ class Crawler (Module):
         if not path:
             return
 
-        lib.controller.Controller.send_msg('[%s] %s' % (method,parent_url), "crawler")
+        self.send_msg('[%s] %s' % (method,parent_url), "crawler")
 
         self.__updateCookies(parent_url)
         self.__updateLocalStorage(parent_url)
@@ -449,9 +449,9 @@ class Crawler (Module):
                 self.__request(parent_url, method, data, headers)
         except Exception as e:
             if "timeout: Timed out receiving message from renderer" in e.msg:
-                lib.controller.Controller.send_msg("Timeout exception requesting %s" % parent_url, "crawler")
+                self.send_msg("Timeout exception requesting %s" % parent_url, "crawler")
             else:
-                lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
+                self.send_error_msg(utils.getExceptionString(), "crawler")
             return
 
         self.updateDelay()
@@ -468,7 +468,7 @@ class Crawler (Module):
             # Scripts
             if (self.__isScript(request.url)) and (request.response is not None) and (request.response.status_code == 200):
                 if self.__processScript(request, main_response):
-                    lib.controller.Controller.send_msg('[SCRIPT] %s' % (request.url), "crawler")
+                    self.send_msg('[SCRIPT] %s' % (request.url), "crawler")
 
             # Main request
             elif request.url == parent_url and main_request is None and main_response is None:
@@ -477,23 +477,23 @@ class Crawler (Module):
                 # It's easier to only take into account those which get directly accepted by only taking cookies from requests
                 main_request = self.__processRequest(request)
                 if not main_request:
-                    lib.controller.Controller.send_msg("[ERROR] Couldn't process request for %s" % (request.url), "crawler")
+                    self.send_msg("[ERROR] Couldn't process request for %s" % (request.url), "crawler")
                     return
 
                 main_response = self.__processResponse(request, main_request)
                 if not main_response:
-                    lib.controller.Controller.send_msg("[ERROR] Didn't get response for %s" % (request.url), "crawler")
+                    self.send_msg("[ERROR] Didn't get response for %s" % (request.url), "crawler")
                     return
 
                 # Follow redirect if 3xx response is received
                 code = main_response.code
                 if code//100 == 3:
                     if code == 304:
-                        lib.controller.Controller.send_msg("304 received: Chached response", "crawler")
+                        self.send_msg("304 received: Chached response", "crawler")
                     else:
                         redirect_to = main_response.getHeader('location').value
                         if not redirect_to:
-                            lib.controller.Controller.send_error_msg("Received %d but location header is not present" % code, "crawler")
+                            self.send_error_msg("Received %d but location header is not present" % code, "crawler")
                         else:
                             redirect_to = urljoin(parent_url, redirect_to)
 
@@ -502,10 +502,10 @@ class Crawler (Module):
                                 data = None
 
                             if self.isCrawlable(redirect_to, method, data=data):
-                                lib.controller.Controller.send_msg("[%d] Redirect to %s" % (code, redirect_to), "crawler")
+                                self.send_msg("[%d] Redirect to %s" % (code, redirect_to), "crawler")
                                 self.__crawl(redirect_to, method, data, headers)
                             elif not Domain.checkScope(urlparse(redirect_to).netloc):
-                                lib.controller.Controller.send_msg("[%d] Redirect to %s [OUT OF SCOPE]" % (code, redirect_to), "crawler")
+                                self.send_msg("[%d] Redirect to %s [OUT OF SCOPE]" % (code, redirect_to), "crawler")
 
                         return
 
@@ -516,7 +516,7 @@ class Crawler (Module):
 
             # Dynamic requests
             elif self.isCrawlable(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')):
-                lib.controller.Controller.send_msg('[%s][DYNAMIC] %s' % (request.method, request.url), "crawler")
+                self.send_msg('[%s][DYNAMIC] %s' % (request.method, request.url), "crawler")
                 
                 req = self.__processRequest(request)
                 resp = self.__processResponse(request, req)
@@ -545,7 +545,7 @@ class Crawler (Module):
                 try:
                     requests.get(url, allow_redirects=False, verify=False)
                 except:
-                    lib.controller.Controller.send_error_msg(utils.getExceptionString(), "crawler")
+                    self.send_error_msg(utils.getExceptionString(), "crawler")
                     continue
 
                 domain = Domain.get(urlparse(url).netloc)
@@ -586,7 +586,7 @@ class Crawler (Module):
                 elif https_request is not None:
                     url = https_request.url
                 else:
-                    lib.controller.Controller.send_msg('Cannot request %s' % domain_name, "crawler")
+                    self.send_msg('Cannot request %s' % domain_name, "crawler")
                     continue
 
             # If url already in database, skip
@@ -596,8 +596,8 @@ class Crawler (Module):
             # Mark module as active
             self.setActive()
 
-            lib.controller.Controller.send_msg("Started crawling %s" % url, "crawler")
+            self.send_msg("Started crawling %s" % url, "crawler")
             
             self.__crawl(url, 'GET', headers=domain.headers)
 
-            lib.controller.Controller.send_msg('Finished crawling %s' % url, "crawler")
+            self.send_msg('Finished crawling %s' % url, "crawler")

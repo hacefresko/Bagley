@@ -6,8 +6,8 @@ import lib.controller
 import lib.utils as utils
 
 class Injector (Module):
-    def __init__(self, stop, rps, active_modules, lock):
-        super().__init__(["sqlmap", "dalfox", "crlfuzz", "tplmap"], stop, rps, active_modules, lock, ["sqlmap", "dalfox"])
+    def __init__(self, controller, stop, rps, active_modules, lock):
+        super().__init__(["sqlmap", "dalfox", "crlfuzz", "tplmap"], controller, stop, rps, active_modules, lock, ["sqlmap", "dalfox"])
 
     def __sqli(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')
@@ -34,18 +34,18 @@ class Injector (Module):
             cookies_string = cookies_string[:-2]
             command.append(cookies_string)
         
-        lib.controller.Controller.send_msg("Testing SQL injection in %s\n\n%s" % (url, str(request)), "injector")
+        self.send_msg("Testing SQL injection in %s\n\n%s" % (url, str(request)), "injector")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "---" in result.stdout:
             Vulnerability.insert('SQLi', result.stdout, str(request.path))
-            lib.controller.Controller.send_vuln_msg("SQL INJECTION: Found in %s!\n%s\n%s" % (url, result.stdout, " ".join(command)), "injector")
+            self.send_vuln_msg("SQL INJECTION: Found in %s!\n%s\n%s" % (url, result.stdout, " ".join(command)), "injector")
         elif "[WARNING] false positive or unexploitable injection point detected" in result.stdout:
             Vulnerability.insert('pSQLi', result.stdout, str(request.path), command)
-            lib.controller.Controller.send_vuln_msg("SQL INJECTION: Possible SQL injection in %s! But sqlmap couldn't exploit it\n\n%s\n%s" % (url, result.stdout, " ".join(command)), "injector")
+            self.send_vuln_msg("SQL INJECTION: Possible SQL injection in %s! But sqlmap couldn't exploit it\n\n%s\n%s" % (url, result.stdout, " ".join(command)), "injector")
         if result.stderr != '':
-            lib.controller.Controller.send_error_msg(result.stderr, "injector")
+            self.send_error_msg(result.stderr, "injector")
 
 
     def __xss(self, request):
@@ -75,15 +75,15 @@ class Injector (Module):
             cookies_string = cookies_string[:-2]
             command.append(cookies_string)
         
-        lib.controller.Controller.send_msg("Testing XSS in %s [%s]" % (url, request.method), "injector")
+        self.send_msg("Testing XSS in %s [%s]" % (url, request.method), "injector")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "[POC]" in result.stdout:
             Vulnerability.insert('XSS', result.stdout, str(request.path), command)
-            lib.controller.Controller.send_vuln_msg("XSS: %s\n%s\n" % (url, result.stdout), "injector")
+            self.send_vuln_msg("XSS: %s\n%s\n" % (url, result.stdout), "injector")
         if result.stderr != '':
-            lib.controller.Controller.send_error_msg(result.stderr, "injector")
+            self.send_error_msg(result.stderr, "injector")
 
     def __crlf(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')
@@ -111,15 +111,15 @@ class Injector (Module):
             cookies_string = cookies_string[:-2]
             command.append(cookies_string)
         
-        lib.controller.Controller.send_msg("Testing CRLF injection in %s [%s]" % (url, request.method), "injector")
+        self.send_msg("Testing CRLF injection in %s [%s]" % (url, request.method), "injector")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "[VLN]" in result.stdout:
             Vulnerability.insert('CRLFi', result.stdout, str(request.path), command)
-            lib.controller.Controller.send_vuln_msg("CRLF INJECTION: %s\n%s\n" % (url, result.stdout), "injector")
+            self.send_vuln_msg("CRLF INJECTION: %s\n%s\n" % (url, result.stdout), "injector")
         if result.stderr != '':
-            lib.controller.Controller.send_error_msg(result.stderr, "injector")
+            self.send_error_msg(result.stderr, "injector")
 
     def __ssti(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')
@@ -145,15 +145,15 @@ class Injector (Module):
                 command.append('-c')
                 command.append(str(cookie))
         
-        lib.controller.Controller.send_msg("Testing SSTI in %s [%s]" % (url, request.method), "injector")
+        self.send_msg("Testing SSTI in %s [%s]" % (url, request.method), "injector")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "Tplmap identified the following injection point" in result.stdout:
             Vulnerability.insert('SSTI', result.stdout, str(request.path), " ".join(command))
-            lib.controller.Controller.send_vuln_msg("SSTI: %s\n%s\n" % (url, result.stdout), "injector")
+            self.send_vuln_msg("SSTI: %s\n%s\n" % (url, result.stdout), "injector")
         if result.stderr != '':
-            lib.controller.Controller.send_error_msg(result.stderr, "injector")
+            self.send_error_msg(result.stderr, "injector")
             
     def run(self):
         tested = []
@@ -170,7 +170,6 @@ class Injector (Module):
                     continue
                 
                 self.setActive()
-                #self.__crlf(request)
 
                 if request.params or request.data:
                     response = request.response
@@ -178,11 +177,10 @@ class Injector (Module):
                         content_type = response.getHeader('content-type')
                         if (content_type is not None) and ('text/html' in str(content_type)):
                             self.__xss(request)
-                    #self.__ssti(request)
                     self.__sqli(request)
 
                 # Add request with same keys in POST/GET data to tested list
                 tested = [*[request.id for request in request.getSameKeysRequests()], *tested]
             except:
-                lib.controller.Controller.send_error_msg(utils.getExceptionString(), "injector")
+                self.send_error_msg(utils.getExceptionString(), "injector")
 

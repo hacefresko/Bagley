@@ -78,11 +78,11 @@ class Static_Analyzer (Module):
 
             paths = ",".join(script_locations)
 
-            lib.controller.Controller.send_msg("Looking for API keys in script %d in %s" % (element.id, paths), "static-analyzer")
+            self.send_msg("Looking for API keys in script %d in %s" % (element.id, paths), "static-analyzer")
             text = element.content
         elif isinstance(element, Response):
             paths = ", ".join([str(r.path) for r in element.getRequests()])
-            lib.controller.Controller.send_msg("Looking for API keys in response from %s" % paths, "static-analyzer")
+            self.send_msg("Looking for API keys in response from %s" % paths, "static-analyzer")
             text = element.body
         else:
             return
@@ -92,11 +92,11 @@ class Static_Analyzer (Module):
             if result is not None:
                 value = result.group()
                 if isinstance(element, Script):
-                    lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at script %d in %s\n\n%s" % (name, element.id, paths, value), "static-analyzer")
+                    self.send_vuln_msg("KEYS FOUND: %s at script %d in %s\n\n%s" % (name, element.id, paths, value), "static-analyzer")
                     Vulnerability.insert('Key Leak', name + ": " + value, paths)
 
                 elif isinstance(element, Response):
-                    lib.controller.Controller.send_vuln_msg("KEYS FOUND: %s at %s\n%s" % (name, paths, value), "static-analyzer")
+                    self.send_vuln_msg("KEYS FOUND: %s at %s\n%s" % (name, paths, value), "static-analyzer")
 
     def __findPaths(self, script):
         command = [shutil.which('linkfinder'), '-i', script.filename, '-o', 'cli']
@@ -106,7 +106,7 @@ class Static_Analyzer (Module):
             for request in response.getRequests():
                 script_locations.append(str(request.path))
 
-        lib.controller.Controller.send_msg("Looking for paths in script %d" % (script.id), "static-analyzer")
+        self.send_msg("Looking for paths in script %d" % (script.id), "static-analyzer")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -120,14 +120,14 @@ class Static_Analyzer (Module):
                         code = requests.get(discovered, verify=False, allow_redirects=False).status_code
                         self.updateDelay()
                         if (code != 404) and (code != 400) and (code != 500):
-                            lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "static-analyzer")
+                            self.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "static-analyzer")
                             self.crawler.addToQueue(discovered)
             except:
                 pass
             finally:
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
 
-        lib.controller.Controller.send_msg(process.stderr.read().decode('utf-8', errors='ignore'), "static-analyzer")
+        self.send_msg(process.stderr.read().decode('utf-8', errors='ignore'), "static-analyzer")
 
     def __analyzeCodeQL(self, script):
 
@@ -160,18 +160,18 @@ class Static_Analyzer (Module):
         
         if sourcemap_url is not None:
             # Unpack webpack bundle
-            lib.controller.Controller.send_msg("Found source map for script %d in %s" % (script.id, script_locations_str), "static-analyzer")
+            self.send_msg("Found source map for script %d in %s" % (script.id, script_locations_str), "static-analyzer")
 
             script_dir = config.SCRIPTS_FOLDER + str(script.id) + '/'
             os.mkdir(script_dir)
             command = [shutil.which('unwebpack_sourcemap'), '--disable-ssl-verification', sourcemap_url, script_dir]
             result = subprocess.run(command, capture_output=True, encoding='utf-8')
             if result.returncode != 0:
-                lib.controller.Controller.send_error_msg(result.stderr, "static-analyzer")
+                self.send_error_msg(result.stderr, "static-analyzer")
                 shutil.rmtree(tmp_dir)
                 return
 
-            lib.controller.Controller.send_msg("Succesfully unpacked script %d in %s" % (script.id, script_locations_str), "static-analyzer")
+            self.send_msg("Succesfully unpacked script %d in %s" % (script.id, script_locations_str), "static-analyzer")
 
             shutil.copytree(script_dir, tmp_dir + str(script.id))
 
@@ -184,7 +184,7 @@ class Static_Analyzer (Module):
             
             shutil.copy(script.filename, tmp_dir)
 
-        lib.controller.Controller.send_msg("Analyzing script %d in %s" % (script.id, script_locations_str), "static-analyzer")
+        self.send_msg("Analyzing script %d in %s" % (script.id, script_locations_str), "static-analyzer")
 
         # Create codeql database
         codeql_db = config.FILES_FOLDER + 'codeql'
@@ -206,7 +206,7 @@ class Static_Analyzer (Module):
         # Read results
         fd = open(output_file)
         for line in fd.readlines():
-            lib.controller.Controller.send_vuln_msg("VULN FOUND at script %d in %s:\n\n%s" % (script.id, script_locations_str, line), "static-analyzer")
+            self.send_vuln_msg("VULN FOUND at script %d in %s:\n\n%s" % (script.id, script_locations_str, line), "static-analyzer")
             Vulnerability.insert('JS Vulnerability', line, "script %d in %s" % (script.id, script_locations_str))
         fd.close()
 
@@ -233,4 +233,4 @@ class Static_Analyzer (Module):
                         time.sleep(5)
                         continue
             except:
-                lib.controller.Controller.send_error_msg(utils.getExceptionString(), "static-analyzer")
+                self.send_error_msg(utils.getExceptionString(), "static-analyzer")

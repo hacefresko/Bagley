@@ -1,9 +1,10 @@
 import threading, shutil, datetime, time
 
 class Module (threading.Thread):
-    def __init__(self, dependences, stop, rps=None, active_modules=None, lock=None, submodules=[]):
+    def __init__(self, dependences, controller, stop, rps=None, active_modules=None, lock=None, submodules=[]):
         super().__init__()
         self.dependences = dependences
+        self.controller = controller
         self.stop = stop
         self.rps = None
         self.active = None
@@ -50,3 +51,16 @@ class Module (threading.Thread):
             self.lock.acquire()
             self.active_modules += 1
             self.lock.release()
+
+    def send_msg(self, msg, channel):
+        self.controller.send_msg(msg, channel)
+
+    def send_error_msg(self, msg, channel):
+        self.controller.send_error_msg(msg, channel)
+
+    def send_vuln_msg(self, msg, channel):
+        self.controller.send_vuln_msg(msg, channel)
+
+    def send_img(self, filename, channel):
+        self.controller.send_img(filename, channel)
+    

@@ -7,8 +7,8 @@ from lib.entities import *
 import lib.utils as utils
 
 class Finder(Module):
-    def __init__(self, stop, rps, active_modules, lock, crawler):
-        super().__init__(["gobuster", "subfinder", "gau"], stop, rps, active_modules, lock, ["fuzzPaths", "findPaths", "fuzzSubdomains", "findSubdomains"])
+    def __init__(self, controller, stop, rps, active_modules, lock, crawler):
+        super().__init__(["gobuster", "subfinder", "gau"], controller, stop, rps, active_modules, lock, ["fuzzPaths", "findPaths", "fuzzSubdomains", "findSubdomains"])
         self.crawler = crawler
         self.updateDelay()
 
@@ -47,7 +47,7 @@ class Finder(Module):
 
         # If function hasn't been called by itself
         if len(errcodes) == 0:
-            lib.controller.Controller.send_msg("Fuzzing path %s" % url, "finder")
+            self.send_msg("Fuzzing path %s" % url, "finder")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -57,7 +57,7 @@ class Finder(Module):
                 code = int(line.split('(')[1].split(')')[0].split(':')[1].strip())
                 discovered = urljoin(url, ''.join(line.split(' ')[0].split('/')[1:]))
                 if (code != 404) and (code != 400) and (code != 500) and self.crawler.isQueueable(discovered):
-                        lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
+                        self.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "finder")
                         self.crawler.addToQueue(discovered)
             except:
                 pass
@@ -79,7 +79,7 @@ class Finder(Module):
     def __findPaths(self, domain):
         command = [shutil.which('gau')]
 
-        lib.controller.Controller.send_msg("Finding paths for domain %s" % str(domain), "finder")
+        self.send_msg("Finding paths for domain %s" % str(domain), "finder")
         
         for url in subprocess.run(command, capture_output=True, encoding='utf-8', input=str(domain)).stdout.splitlines():
             if self.crawler.isQueueable(url):
@@ -90,7 +90,7 @@ class Finder(Module):
                 self.updateDelay()
                 
                 if (code != 404) and (code != 400) and (code != 500):
-                    lib.controller.Controller.send_msg("PATH FOUND: Queued %s to crawler" % url, "finder")
+                    self.send_msg("PATH FOUND: Queued %s to crawler" % url, "finder")
                     self.crawler.addToQueue(url)
 
     def __fuzzSubDomains(self, domain, errcodes=[]):
@@ -100,7 +100,7 @@ class Finder(Module):
             command.append('-s')
             command.append(','.join(errcodes))
 
-        lib.controller.Controller.send_msg("Fuzzing domain %s" % str(domain)[1:], "finder")
+        self.send_msg("Fuzzing domain %s" % str(domain)[1:], "finder")
 
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -109,7 +109,7 @@ class Finder(Module):
             try:
                 discovered = line.split('Found: ')[1].rstrip()
                 if Domain.checkScope(discovered) and not Domain.get(discovered):
-                    lib.controller.Controller.send_msg("DOMAIN FOUND: Inserted %s to database" % discovered, "finder")
+                    self.send_msg("DOMAIN FOUND: Inserted %s to database" % discovered, "finder")
                     Domain.insert(discovered, check=True)
             except:
                 pass
@@ -119,7 +119,7 @@ class Finder(Module):
         # Collect errors if execution fails
         if process.poll() != 0:
             error = process.stderr.readline().decode('utf-8', errors='ignore')
-            lib.controller.Controller.send_msg(error, "finder")
+            self.send_msg(error, "finder")
             # If errorcodes must be specified to gobuster
             if 'Error: the server returns a status code that matches the provided options for non existing urls' in error:
                 try:
@@ -134,7 +134,7 @@ class Finder(Module):
         # Rate is limited to 1 always because if doesn't, it adds too much traffic and ISPs are very greedy
         command = [shutil.which('subfinder'), '-oJ', '-nc', '-all', '-d', str(domain)[1:], '-rl', '1']
 
-        lib.controller.Controller.send_msg("Finding subdomains for %s" % str(domain)[1:], "finder")
+        self.send_msg("Finding subdomains for %s" % str(domain)[1:], "finder")
 
         for line in subprocess.run(command, capture_output=True, encoding='utf-8', input=str(domain)).stdout.splitlines():
             discovered = json.loads(line).get('host')
@@ -144,7 +144,7 @@ class Finder(Module):
                     # Check if domain really exist, since subfinder does not check it
                     socket.gethostbyname(d)
                     if Domain.checkScope(d) and not Domain.get(discovered):
-                        lib.controller.Controller.send_msg("DOMAIN FOUND: Inserted %s to database" % d, "finder")
+                        self.send_msg("DOMAIN FOUND: Inserted %s to database" % d, "finder")
                         Domain.insert(d, check=True)
                 except:
                     continue
@@ -172,4 +172,4 @@ class Finder(Module):
                     self.setInactive()
                     time.sleep(5)
             except:
-                lib.controller.Controller.send_error_msg(utils.getExceptionString(), "finder")
+                self.send_error_msg(utils.getExceptionString(), "finder")

@@ -1,5 +1,5 @@
 import logging, urllib3
-import lib.controller, lib.bot, config
+import lib.discord_connector, config
 
 title = '''
 
@@ -44,8 +44,5 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logging.basicConfig(filename=config.LOG_FILE, format='[%(asctime)s][%(levelname)s] %(message)s', level=logging.INFO)
 logging.info(title)
 
-# Init controller
-controller = lib.controller.Controller()
-
 # Init bot
-lib.bot.initBot(controller, config.DISCORD_TOKEN)
+lib.discord_connector.Connector(config.DISCORD_TOKEN)

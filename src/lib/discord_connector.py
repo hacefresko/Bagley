@@ -1,47 +1,12 @@
 from abc import abstractmethod
 import discord, logging, aiohttp, os, random, string, shutil
-import config, lib.utils
-
-# Create bot object
-bot = discord.Client()
-
-# Function to send messages to a channel
-async def send_msg(msg, channel):
-    for c in bot.get_all_channels():
-        if c.name == channel:
-            if len(msg) < 5000:
-                sent = 0
-                while sent < len(msg):
-                    m = msg[sent:sent+1000]
-                    sent += len(m)
-                    await c.send("`" + m + "`")
-            else:
-                # Create file, send it and remove it
-                filename = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.txt'
-                while os.path.exists(filename):
-                    filename = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.txt'
-
-                temp_file = open(filename, 'w')
-                temp_file.write(msg)
-                temp_file.close()
-                
-                await c.send(file=discord.File(filename))
-
-                os.remove(filename)
-
-            break
-
-# Function to send files to a channel
-async def send_file(filename, channel):
-    for c in bot.get_all_channels():
-        if c.name == channel:
-            await c.send(file=discord.File(filename))
-            break
+import config, lib.utils, lib.controller, lib.commands
 
 # Define commands
 class Command:
-    def __init__(self, controller, name, help_msg, usage_msg):
+    def __init__(self, controller, discord_connector, name, help_msg, usage_msg):
         self.controller = controller
+        self.discord_connector = discord_connector
         self.name = name
         self.help_msg = help_msg
         self.usage_msg = usage_msg
@@ -66,7 +31,7 @@ class StartCommand(Command):
 
     async def run(self, args):
         self.controller.start()
-        await send_msg('Started', "terminal")
+        await self.discord_connector.send_msg('Started', "terminal")
 
 class StopCommand(Command):
     def __init__(self, controller):
@@ -79,9 +44,9 @@ class StopCommand(Command):
         return True
 
     async def run(self, args):
-        await send_msg('Stopping', "terminal")
+        await self.discord_connector.send_msg('Stopping', "terminal")
         self.controller.stop()
-        await send_msg('Stopped', "terminal")
+        await self.discord_connector.send_msg('Stopped', "terminal")
 
 class RestartCommand(Command):
     def __init__(self, controller):
@@ -94,10 +59,10 @@ class RestartCommand(Command):
         return True
 
     async def run(self, args):
-        await send_msg('Restarting', "terminal")
+        await self.discord_connector.send_msg('Restarting', "terminal")
         self.controller.stop()
         self.controller.start()
-        await send_msg('Restarted', "terminal")
+        await self.discord_connector.send_msg('Restarted', "terminal")
 
 class AddCommand(Command):
     def __init__(self, controller):
@@ -139,7 +104,7 @@ excluded_submodules Submodules that won't be executed with the added domains. Av
         else:
             s = self.controller.addDomain(args[1], " ".join(args[2:]))
         
-        await send_msg(s, "terminal")
+        await self.discord_connector.send_msg(s, "terminal")
 
 class RmCommand(Command):
     def __init__(self, controller):
@@ -152,7 +117,7 @@ class RmCommand(Command):
         return True
 
     async def run(self, args):
-        await send_msg(self.controller.removeDomain(args[1]), "terminal")
+        await self.discord_connector.send_msg(self.controller.removeDomain(args[1]), "terminal")
 
 class GetDomainsCommand(Command):
     def __init__(self, controller):
@@ -167,12 +132,12 @@ class GetDomainsCommand(Command):
     async def run(self, args):
         domains = self.controller.getDomains()
         if len(domains) == 0:
-            await send_msg("There are no domains yet", "terminal")
+            await self.discord_connector.send_msg("There are no domains yet", "terminal")
         else:
             s = "Domains:\n"
             for d in domains:
                 s += str(d) + "\n"
-            await send_msg(s, "terminal")
+            await self.discord_connector.send_msg(s, "terminal")
 
 class GetPathsCommand(Command):
     def __init__(self, controller):
@@ -188,9 +153,9 @@ class GetPathsCommand(Command):
         domain = args[1]
         paths = self.controller.getPaths(domain)
         if not paths:
-            await send_msg("%s does not exists" % domain, "terminal")
+            await self.discord_connector.send_msg("%s does not exists" % domain, "terminal")
         else:
-            await send_msg("\n" + paths, "terminal")
+            await self.discord_connector.send_msg("\n" + paths, "terminal")
 
 class GetRPSCommand(Command):
     def __init__(self, controller):
@@ -203,7 +168,7 @@ class GetRPSCommand(Command):
         return True
 
     async def run(self, args):
-        await send_msg("Requests per second: %d" % self.controller.getRPS(), "terminal")
+        await self.discord_connector.send_msg("Requests per second: %d" % self.controller.getRPS(), "terminal")
 
 class SetRPSCommand(Command):
     def __init__(self, controller):
@@ -222,7 +187,7 @@ class SetRPSCommand(Command):
     async def run(self, args):
         rps = int(args[1])
         self.controller.setRPS(rps)
-        await send_msg("Requests per second set to %d" % rps, "terminal")
+        await self.discord_connector.send_msg("Requests per second set to %d" % rps, "terminal")
 
 class GetActiveCommand(Command):
     def __init__(self, controller):
@@ -236,7 +201,7 @@ class GetActiveCommand(Command):
 
     async def run(self, args):
         active = self.controller.get_active_modules()
-        await send_msg("Active modules: %d\n%s" % (len(active), "\n".join(active)), "terminal")
+        await self.discord_connector.send_msg("Active modules: %d\n%s" % (len(active), "\n".join(active)), "terminal")
 
 class QueryCommand(Command):
     def __init__(self, controller):
@@ -250,9 +215,9 @@ class QueryCommand(Command):
 
     async def run(self, args):
         try:
-            await send_msg("\n" + self.controller.query(" ".join(args[1:])), "terminal")
+            await self.discord_connector.send_msg("\n" + self.controller.query(" ".join(args[1:])), "terminal")
         except:
-            await send_msg(lib.utils.getExceptionString(), "terminal")
+            await self.discord_connector.send_msg(lib.utils.getExceptionString(), "terminal")
 
 class GetScriptCommand(Command):
     def __init__(self, controller):
@@ -271,7 +236,7 @@ class GetScriptCommand(Command):
     async def run(self, args):
         script = self.controller.getScript(args[1])
         if script is None:
-            await send_msg("Specified script was not found", "terminal")
+            await self.discord_connector.send_msg("Specified script was not found", "terminal")
             return
 
         msg = "SCRIPT %d\n" % script.id
@@ -295,8 +260,8 @@ class GetScriptCommand(Command):
                     msg += "\t" + str(request.path) + "\n"
         msg += "\n"
 
-        await send_msg(msg, "terminal")
-        await send_file(script.filename, "terminal")
+        await self.discord_connector.send_msg(msg, "terminal")
+        await self.discord_connector.send_file(script.filename, "terminal")
 
         # Compress unpacked script if exists
         script_unpacked = config.SCRIPTS_FOLDER + str(script.id)
@@ -310,7 +275,7 @@ class GetScriptCommand(Command):
             shutil.move(str(script.id) + '.zip', zip_file_name)
             
             # Send file
-            await send_file(zip_file_name, "terminal")
+            await self.discord_connector.send_file(zip_file_name, "terminal")
 
             # Delete file
             os.remove(zip_file_name)
@@ -341,7 +306,7 @@ class CommandParser():
             help_msg += "help        Print this message\n"
             for c in self.commands:
                 help_msg += c.name.ljust(12) + c.help_msg + "\n"
-            await send_msg(help_msg, "terminal")
+            await self.discord_connector.send_msg(help_msg, "terminal")
         else:
             try:
                 for c in self.commands:
@@ -349,51 +314,89 @@ class CommandParser():
                         if c.parse(args):
                             await c.run(args)
                         else:
-                            await send_msg(c.usage_msg, "terminal")
+                            await self.discord_connector.send_msg(c.usage_msg, "terminal")
                         return
                 
-                await send_msg('Cannot understand "%s"' % line, "terminal")
+                await self.discord_connector.send_msg('Cannot understand "%s"' % line, "terminal")
             except:
-                await send_msg(lib.utils.getExceptionString(), "terminal")
-                
-# Define dispatchers for custom events
-def dispatch_msg(message, channel):
-    bot.dispatch("bagley_msg", message, channel)
+                await self.discord_connector.send_msg(lib.utils.getExceptionString(), "terminal")
+    
 
-def dispatch_img(filename, channel):
-    bot.dispatch("bagley_img", filename, channel)
+# Define discord connector class
+class Connector:
+    def __init__(self, token, controller):
+        # Create bot
+        self.bot = discord.Client()
 
-# Define event handlers and init bot
-def initBot(controller, token):
-    cp = CommandParser(controller)
+        # Create command parser
+        cp = lib.commands.CommandParser(controller, self)
 
-    @bot.event
-    async def on_ready():
-        logging.info("Connected to Discord bot")
-        for c in bot.get_all_channels():
-            if c.name == "terminal":
-                await c.send("`Hello`")
+        @self.bot.event
+        async def on_ready():
+            logging.info("Connected to Discord bot")
+            for c in self.bot.get_all_channels():
+                if c.name == "terminal":
+                    await c.send("`Hello`")
 
-    @bot.event
-    async def on_message(message):
-        if message.author.id != bot.user.id:
-            if len(message.attachments) == 0:
-                for line in message.content.split('\n'):
-                    await cp.parse(line)
-            else:
-                for attachment in message.attachments:
-                    async with aiohttp.ClientSession().get(attachment.url) as r:
-                        txt = await r.text()
-                        if txt: 
-                            for line in txt.split('\n'):
-                                await cp.parse(line)
+        @self.bot.event
+        async def on_message(message):
+            if message.author.id != self.bot.user.id:
+                if len(message.attachments) == 0:
+                    for line in message.content.split('\n'):
+                        await cp.parse(line)
+                else:
+                    for attachment in message.attachments:
+                        async with aiohttp.ClientSession().get(attachment.url) as r:
+                            txt = await r.text()
+                            if txt: 
+                                for line in txt.split('\n'):
+                                    await cp.parse(line)
 
-    @bot.event
-    async def on_bagley_msg(msg, channel):
-        await send_msg(msg, channel)
+        @self.bot.event
+        async def on_bagley_msg(msg, channel):
+            self.send_msg(msg, channel)
 
-    @bot.event
-    async def on_bagley_img(filename, channel):
-        await send_file(filename, channel)
+        @self.bot.event
+        async def on_bagley_file(filename, channel):
+            self.send_file(filename, channel)
 
-    bot.run(token)
+        self.bot.run(token)
+
+    # Function for directly sending messages/files (only works for async functions)
+    async def send_msg(self, msg, channel):
+        for c in self.bot.get_all_channels():
+            if c.name == channel:
+                if len(msg) < 5000:
+                    sent = 0
+                    while sent < len(msg):
+                        m = msg[sent:sent+1000]
+                        sent += len(m)
+                        await c.send("`" + m + "`")
+                else:
+                    # Create file, send it and remove it
+                    filename = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.txt'
+                    while os.path.exists(filename):
+                        filename = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=20)) + '.txt'
+
+                    temp_file = open(filename, 'w')
+                    temp_file.write(msg)
+                    temp_file.close()
+                    
+                    await c.send(file=discord.File(filename))
+
+                    os.remove(filename)
+
+                break
+
+    async def send_file(self, filename, channel):
+        for c in self.bot.get_all_channels():
+            if c.name == channel:
+                await c.send(file=discord.File(filename))
+                break
+
+    # Dispatchers for custom events (send_msg() and send_file() can only be used in async functions)
+    def dispatch_msg(self, message, channel):
+        self.bot.dispatch("bagley_msg", message, channel)
+
+    def dispatch_file(self, filename, channel):
+        self.bot.dispatch("bagley_file", filename, channel)

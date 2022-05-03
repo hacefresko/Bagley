@@ -1,5 +1,5 @@
 import threading, logging, json
-import lib.modules, lib.bot, config
+import lib.modules, lib.discord_connector, config
 
 from lib.entities import *
 from .database import DB
@@ -12,11 +12,11 @@ class Controller:
         self.active_modules = 0
         self.lock = threading.Lock()
 
-        crawler = lib.modules.Crawler(self.stopThread, self.rps, self.active_modules, self.lock)
-        finder = lib.modules.Finder(self.stopThread, self.rps, self.active_modules, self.lock, crawler)
-        injector = lib.modules.Injector(self.stopThread, self.rps, self.active_modules, self.lock)
-        dynamic_analyzer = lib.modules.Dynamic_Analyzer(self.stopThread, self.rps, self.active_modules, self.lock)
-        static_analyzer = lib.modules.Static_Analyzer(self.stopThread, self.rps, self.active_modules, self.lock, crawler)
+        crawler = lib.modules.Crawler(self, self.stopThread, self.rps, self.active_modules, self.lock)
+        finder = lib.modules.Finder(self, self.stopThread, self.rps, self.active_modules, self.lock, crawler)
+        injector = lib.modules.Injector(self, self.stopThread, self.rps, self.active_modules, self.lock)
+        dynamic_analyzer = lib.modules.Dynamic_Analyzer(self, self.stopThread, self.rps, self.active_modules, self.lock)
+        static_analyzer = lib.modules.Static_Analyzer(self, self.stopThread, self.rps, self.active_modules, self.lock, crawler)
 
         self.modules = {
             "crawler": crawler,
@@ -28,7 +28,9 @@ class Controller:
 
         # Check dependences for the modules
         for m in self.modules.values():
-            m.checkDependences()           
+            m.checkDependences()
+
+        self.discord_connector = lib.discord_connector.Connector(config.DISCORD_TOKEN, self)
 
     # Methods to communicate with traffic controller
 
@@ -172,24 +174,20 @@ class Controller:
 
     # Methods to communicate with bot
 
-    @staticmethod
-    def send_msg(msg, channel):
+    def send_msg(self, msg, channel):
         logging.info("[%s] %s", channel, msg)
-        lib.bot.dispatch_msg(msg, channel)
+        self.discord_connector.dispatch_msg(msg, channel)
 
-    @staticmethod
-    def send_error_msg(msg, channel):
+    def send_error_msg(self, msg, channel):
         logging.error(msg)
-        lib.bot.dispatch_msg(msg, channel)
-        lib.bot.dispatch_msg(msg, "errors")
+        self.discord_connector.dispatch_msg(msg, channel)
+        self.discord_connector.dispatch_msg(msg, "errors")
 
-    @staticmethod
-    def send_vuln_msg(msg, channel):
+    def send_vuln_msg(self, msg, channel):
         logging.critical(msg)
-        lib.bot.dispatch_msg(msg, channel)
-        lib.bot.dispatch_msg(msg, "vulnerabilities")
+        self.discord_connector.dispatch_msg(msg, channel)
+        self.discord_connector.dispatch_msg(msg, "vulnerabilities")
  
-    @staticmethod
-    def send_img(filename, channel):
+    def send_file(self, filename, channel):
         logging.info("[%s] Sent image %s", channel, filename)
-        lib.bot.dispatch_img(filename, channel)
+        self.discord_connector.dispatch_file(filename, channel)
