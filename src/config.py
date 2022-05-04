@@ -24,6 +24,9 @@ TIMEOUT = 30
 # Formats that won't be stored
 EXTENSIONS_BLACKLIST = ['.css', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp', '.bmp', '.ico', '.tiff', '.woff2', '.woff', '.mp4', '.rar', '.zip', '.pdf', '.apk', '.mp3']
 
+# Scripts extensions
+SCRIPT_EXTENSIONS = ['.js', '.ts']
+
 # Params and POST data containing these words, won't be stored
 PARAMS_BLACKLIST = ['csrf']
 
