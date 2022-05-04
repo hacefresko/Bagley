@@ -61,6 +61,6 @@ class Module (threading.Thread):
     def send_vuln_msg(self, msg, channel):
         self.controller.send_vuln_msg(msg, channel)
 
-    def send_img(self, filename, channel):
-        self.controller.send_img(filename, channel)
+    def send_file(self, filename, channel):
+        self.controller.send_file(filename, channel)
     

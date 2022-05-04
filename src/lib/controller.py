@@ -1,3 +1,4 @@
+from gettext import find
 import threading, logging, json
 import lib.modules, lib.discord_connector, config
 
@@ -12,11 +13,21 @@ class Controller:
         self.active_modules = 0
         self.lock = threading.Lock()
 
+        self.initModules()
+
+        # Check dependences for the modules
+        for m in self.modules.values():
+            m.checkDependences()
+
+        self.discord_connector = lib.discord_connector.Connector(self)
+        self.discord_connector.init(config.DISCORD_TOKEN)
+
+    def initModules(self):
         crawler = lib.modules.Crawler(self, self.stopThread, self.rps, self.active_modules, self.lock)
         finder = lib.modules.Finder(self, self.stopThread, self.rps, self.active_modules, self.lock, crawler)
         injector = lib.modules.Injector(self, self.stopThread, self.rps, self.active_modules, self.lock)
         dynamic_analyzer = lib.modules.Dynamic_Analyzer(self, self.stopThread, self.rps, self.active_modules, self.lock)
-        static_analyzer = lib.modules.Static_Analyzer(self, self.stopThread, self.rps, self.active_modules, self.lock, crawler)
+        static_analyzer = lib.modules.Static_Analyzer(self, self.stopThread, crawler)
 
         self.modules = {
             "crawler": crawler,
@@ -25,12 +36,6 @@ class Controller:
             "dynamic_analyzer": dynamic_analyzer,
             "static_analyzer": static_analyzer
         }
-
-        # Check dependences for the modules
-        for m in self.modules.values():
-            m.checkDependences()
-
-        self.discord_connector = lib.discord_connector.Connector(config.DISCORD_TOKEN, self)
 
     # Methods to communicate with traffic controller
 
@@ -64,6 +69,9 @@ class Controller:
         self.stopThread.set()
         for m in self.modules.values():
             m.join()
+
+        # Init modules again so start() can be called after stop() (Threads can only be started once so we need to create the objects again)
+        self.initModules()
 
     def addToQueue(self, url):
         self.modules.get("crawler").addToQueue(url)

@@ -1,14 +1,15 @@
-import hashlib, pathlib, iptools, json
+import hashlib, iptools, json
 from urllib.parse import urlparse, urlunparse
+from os.path import splitext
 
 import config
 from .database import DB
 
 class Domain:
-    def __init__(self, id, name, excluded=""):
+    def __init__(self, id, name, excluded=None):
         self.id = id
         self.name = name
-        self.excluded = excluded.split(";")
+        self.excluded = excluded.split(";") if excluded else "" 
         self.headers = self.__getHeaders()
         self.cookies = self.__getCookies()
 
@@ -103,7 +104,7 @@ class Domain:
         result = []
         db = DB()
         for d in db.query_all('SELECT * FROM domains', ()):
-            result.append(Domain(d[0], d[1]), d[2])
+            result.append(Domain(d[0], d[1], d[2]))
         return result
 
     # Yields domains or None if there are no requests. It continues infinetly until program stops
@@ -375,7 +376,7 @@ class Path:
      # Returns False if extension is in blacklist from config.py, else True   
     @staticmethod
     def checkExtension(url):
-        return False if pathlib.Path(url.split('?')[0]).suffix.lower() in config.EXTENSIONS_BLACKLIST else True
+        return False if splitext(urlparse(url).path)[0].lower() in config.EXTENSIONS_BLACKLIST else True
 
     # Returns True if path is parent of current Object, else False
     def checkParent(self, path):

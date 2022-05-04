@@ -1,5 +1,5 @@
 import logging, urllib3
-import lib.discord_connector, config
+import config, lib.controller
 
 title = '''
 
@@ -45,4 +45,4 @@ logging.basicConfig(filename=config.LOG_FILE, format='[%(asctime)s][%(levelname)
 logging.info(title)
 
 # Init bot
-lib.discord_connector.Connector(config.DISCORD_TOKEN)
+lib.controller.Controller()

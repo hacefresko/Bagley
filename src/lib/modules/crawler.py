@@ -1,12 +1,13 @@
 from threading import current_thread
 import time, requests, random, string, os, re
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+from os.path import splitext
+from urllib.parse import urljoin, urlparse
 from seleniumwire import webdriver
 from seleniumwire.utils import decode
 from selenium.webdriver.chrome.options import Options
 
-import config, lib.controller
+import config
 from lib.entities import *
 from lib.modules.module import Module
 import lib.utils as utils
@@ -80,9 +81,6 @@ class Crawler (Module):
                 newQueue.append(url)
 
         self.queue = newQueue
-
-    def __isScript(url):
-        return pathlib.Path(url.split('?')[0]).suffix.lower() == '.js'
 
     # Update initial cookies in case some of them have dissapeared because of a logout or something else
     def __updateCookies(self, url):
@@ -464,9 +462,10 @@ class Crawler (Module):
 
         # Process all requests
         for request in self.driver.iter_requests():
+            extension = splitext(urlparse(request.url).path)[0].lower()
 
             # Scripts
-            if (self.__isScript(request.url)) and (request.response is not None) and (request.response.status_code == 200):
+            if (extension in config.SCRIPT_EXTENSIONS) and (request.response is not None) and (request.response.status_code == 200):
                 if self.__processScript(request, main_response):
                     self.send_msg('[SCRIPT] %s' % (request.url), "crawler")
 
@@ -489,11 +488,11 @@ class Crawler (Module):
                 code = main_response.code
                 if code//100 == 3:
                     if code == 304:
-                        self.send_msg("304 received: Chached response", "crawler")
+                        self.send_msg("[304]: Chached response", "crawler")
                     else:
                         redirect_to = main_response.getHeader('location').value
                         if not redirect_to:
-                            self.send_error_msg("Received %d but location header is not present" % code, "crawler")
+                            self.send_msg("[%d][ERROR] location header is not present" % code, "crawler")
                         else:
                             redirect_to = urljoin(parent_url, redirect_to)
 
@@ -509,6 +508,8 @@ class Crawler (Module):
 
                         return
 
+                self.send_msg("[%d] %s" % (code, request.url), "crawler")
+
                 # Send screenshot once we know if the request was redirected or not
                 self.__sendScreenshot(main_request.path)
 
@@ -521,6 +522,7 @@ class Crawler (Module):
                 req = self.__processRequest(request)
                 resp = self.__processResponse(request, req)
                 if resp:
+                    self.send_msg("[%d][DYNAMIC] %s" % (resp.code, request.url), "crawler")
                     # If dynamic request responded with HTML, send it to analize
                     if (resp.body is not None) and (resp.getHeader('content-type') is not None) and (resp.getHeader('content-type').value == "text/html"):
                         resp_to_analyze.append({'url': request.url, 'response':resp})

@@ -1,6 +1,6 @@
 from abc import abstractmethod
 import discord, logging, aiohttp, os, random, string, shutil
-import config, lib.utils, lib.controller, lib.commands
+import config, lib.utils, lib.controller
 
 # Define commands
 class Command:
@@ -20,8 +20,8 @@ class Command:
         pass
 
 class StartCommand(Command):
-    def __init__(self, controller):
-        super().__init__(controller, "start", "Start execution", "start does not accept arguments")
+    def __init__(self, controller, discord_connector):
+        super().__init__(controller, discord_connector, "start", "Start execution", "start does not accept arguments")
 
     def parse(self, args):
         if len(args) > 1:
@@ -34,8 +34,8 @@ class StartCommand(Command):
         await self.discord_connector.send_msg('Started', "terminal")
 
 class StopCommand(Command):
-    def __init__(self, controller):
-        super().__init__(controller, "stop", "Stop execution", "stop does not accept arguments")
+    def __init__(self, controller, discord_connector):
+        super().__init__(controller, discord_connector, "stop", "Stop execution", "stop does not accept arguments")
 
     def parse(self, args):
         if len(args) > 1:
@@ -49,8 +49,8 @@ class StopCommand(Command):
         await self.discord_connector.send_msg('Stopped', "terminal")
 
 class RestartCommand(Command):
-    def __init__(self, controller):
-        super().__init__(controller, "restart", "Restart execution", "restart does not accept arguments")
+    def __init__(self, controller, discord_connector):
+        super().__init__(controller, discord_connector, "restart", "Restart execution", "restart does not accept arguments")
 
     def parse(self, args):
         if len(args) > 1:
@@ -65,8 +65,8 @@ class RestartCommand(Command):
         await self.discord_connector.send_msg('Restarted', "terminal")
 
 class AddCommand(Command):
-    def __init__(self, controller):
-        super().__init__(controller, "add", "Add a new domain (add help for more info)", "Usage: add <domain/group of subdomains> [options]")
+    def __init__(self, controller, discord_connector):
+        super().__init__(controller, discord_connector, "add", "Add a new domain (add help for more info)", "Usage: add <domain/group of subdomains> [options]")
 
     def parse(self, args):
         if len(args) < 2:
@@ -107,8 +107,8 @@ excluded_submodules Submodules that won't be executed with the added domains. Av
         await self.discord_connector.send_msg(s, "terminal")
 
 class RmCommand(Command):
-    def __init__(self, controller):
-        super().__init__(controller, "rm", "Removes a domain", "Usage: rm <domain/group of subdomains> [options]")
+    def __init__(self, controller, discord_connector):
+        super().__init__(controller, discord_connector, "rm", "Removes a domain", "Usage: rm <domain/group of subdomains> [options]")
 
     def parse(self, args):
         if len(args) != 2:
@@ -120,8 +120,8 @@ class RmCommand(Command):
         await self.discord_connector.send_msg(self.controller.removeDomain(args[1]), "terminal")
 
 class GetDomainsCommand(Command):
-    def __init__(self, controller):
-        super().__init__(controller, "getDomains", "Print all domains", "getDomains does not accept arguments")
+    def __init__(self, controller, discord_connector):
+        super().__init__(controller, discord_connector, "getDomains", "Print all domains", "getDomains does not accept arguments")
 
     def parse(self, args):
         if len(args) > 1:
@@ -140,8 +140,8 @@ class GetDomainsCommand(Command):
             await self.discord_connector.send_msg(s, "terminal")
 
 class GetPathsCommand(Command):
-    def __init__(self, controller):
-        super().__init__(controller, "getPaths", "Print all paths for a domain", "Usage: getpaths <domain>")
+    def __init__(self, controller, discord_connector):
+        super().__init__(controller, discord_connector, "getPaths", "Print all paths for a domain", "Usage: getpaths <domain>")
 
     def parse(self, args):
         if len(args) != 2:
@@ -158,8 +158,8 @@ class GetPathsCommand(Command):
             await self.discord_connector.send_msg("\n" + paths, "terminal")
 
 class GetRPSCommand(Command):
-    def __init__(self, controller):
-        super().__init__(controller, "getRPS", "Print current requests per second", "getRPS does not accept arguments")
+    def __init__(self, controller, discord_connector):
+        super().__init__(controller, discord_connector, "getRPS", "Print current requests per second", "getRPS does not accept arguments")
 
     def parse(self, args):
         if len(args) > 1:
@@ -171,8 +171,8 @@ class GetRPSCommand(Command):
         await self.discord_connector.send_msg("Requests per second: %d" % self.controller.getRPS(), "terminal")
 
 class SetRPSCommand(Command):
-    def __init__(self, controller):
-        super().__init__(controller, "setRPS", "Set requests per second", "Usage: setrps <RPS>")
+    def __init__(self, controller, discord_connector):
+        super().__init__(controller, discord_connector, "setRPS", "Set requests per second", "Usage: setrps <RPS>")
 
     def parse(self, args):
         if (len(args) != 2):
@@ -190,8 +190,8 @@ class SetRPSCommand(Command):
         await self.discord_connector.send_msg("Requests per second set to %d" % rps, "terminal")
 
 class GetActiveCommand(Command):
-    def __init__(self, controller):
-        super().__init__(controller, "getActive", "Print active modules", "getActive does not accept arguments")
+    def __init__(self, controller, discord_connector):
+        super().__init__(controller, discord_connector, "getActive", "Print active modules", "getActive does not accept arguments")
 
     def parse(self, args):
         if len(args) > 1:
@@ -204,8 +204,8 @@ class GetActiveCommand(Command):
         await self.discord_connector.send_msg("Active modules: %d\n%s" % (len(active), "\n".join(active)), "terminal")
 
 class QueryCommand(Command):
-    def __init__(self, controller):
-        super().__init__(controller, "query", "Query directly to database", "Usage: query <query>")
+    def __init__(self, controller, discord_connector):
+        super().__init__(controller, discord_connector, "query", "Query directly to database", "Usage: query <query>")
 
     def parse(self, args):
         if len(args) < 2:
@@ -220,8 +220,8 @@ class QueryCommand(Command):
             await self.discord_connector.send_msg(lib.utils.getExceptionString(), "terminal")
 
 class GetScriptCommand(Command):
-    def __init__(self, controller):
-        super().__init__(controller, "getScript", "Get script information", "getScript <script id>")
+    def __init__(self, controller, discord_connector):
+        super().__init__(controller, discord_connector, "getScript", "Get script information", "getScript <script id>")
 
     def parse(self, args):
         if (len(args) != 2):
@@ -282,20 +282,22 @@ class GetScriptCommand(Command):
 
 
 class CommandParser():
-    def __init__(self, controller):
+    def __init__(self, controller, discord_connector):
+        self.discord_connector = discord_connector
+
         self.commands = [
-            StartCommand(controller), 
-            StopCommand(controller), 
-            RestartCommand(controller), 
-            AddCommand(controller),
-            RmCommand(controller),
-            GetDomainsCommand(controller), 
-            GetPathsCommand(controller), 
-            GetScriptCommand(controller),
-            QueryCommand(controller),
-            GetRPSCommand(controller), 
-            SetRPSCommand(controller), 
-            GetActiveCommand(controller)
+            StartCommand(controller, discord_connector), 
+            StopCommand(controller, discord_connector), 
+            RestartCommand(controller, discord_connector), 
+            AddCommand(controller, discord_connector),
+            RmCommand(controller, discord_connector),
+            GetDomainsCommand(controller, discord_connector), 
+            GetPathsCommand(controller, discord_connector), 
+            GetScriptCommand(controller, discord_connector),
+            QueryCommand(controller, discord_connector),
+            GetRPSCommand(controller, discord_connector), 
+            SetRPSCommand(controller, discord_connector), 
+            GetActiveCommand(controller, discord_connector)
         ]
 
     async def parse(self, line):
@@ -324,12 +326,12 @@ class CommandParser():
 
 # Define discord connector class
 class Connector:
-    def __init__(self, token, controller):
+    def __init__(self, controller):
         # Create bot
         self.bot = discord.Client()
 
         # Create command parser
-        cp = lib.commands.CommandParser(controller, self)
+        cp = CommandParser(controller, self)
 
         @self.bot.event
         async def on_ready():
@@ -354,12 +356,13 @@ class Connector:
 
         @self.bot.event
         async def on_bagley_msg(msg, channel):
-            self.send_msg(msg, channel)
+            await self.send_msg(msg, channel)
 
         @self.bot.event
         async def on_bagley_file(filename, channel):
-            self.send_file(filename, channel)
+            await self.send_file(filename, channel)
 
+    def init(self, token):
         self.bot.run(token)
 
     # Function for directly sending messages/files (only works for async functions)

@@ -7,8 +7,8 @@ from lib.modules.module import Module
 import lib.utils as utils
 
 class Static_Analyzer (Module):
-    def __init__(self, stop, rps, active_modules, lock, crawler):
-        super().__init__(['linkfinder', 'unwebpack_sourcemap', 'codeql'], stop, rps, active_modules, lock, ["searchKeys", "linkfinder", "codeql"])
+    def __init__(self, controller, stop, crawler):
+        super().__init__(['linkfinder', 'unwebpack_sourcemap', 'codeql'], controller, stop, submodules=["searchKeys", "linkfinder", "codeql"])
         self.crawler = crawler
         self.updateDelay()
 
@@ -116,9 +116,7 @@ class Static_Analyzer (Module):
                 for path in script_locations:
                     discovered = urljoin(path, line.rstrip())
                     if self.crawler.isQueueable(discovered):
-                        self.applyDelay()
                         code = requests.get(discovered, verify=False, allow_redirects=False).status_code
-                        self.updateDelay()
                         if (code != 404) and (code != 400) and (code != 500):
                             self.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "static-analyzer")
                             self.crawler.addToQueue(discovered)
@@ -152,9 +150,7 @@ class Static_Analyzer (Module):
             sourcemap = matches.groups(0)[0].strip()
             for path in script.getPaths():
                 sourcemap_url = urljoin(str(path), sourcemap)
-                self.applyDelay()
                 ok = requests.get(sourcemap_url, verify=False).ok
-                self.updateDelay()   
                 if ok:
                     break
         
