@@ -376,7 +376,7 @@ class Path:
      # Returns False if extension is in blacklist from config.py, else True   
     @staticmethod
     def checkExtension(url):
-        return False if splitext(urlparse(url).path)[0].lower() in config.EXTENSIONS_BLACKLIST else True
+        return False if splitext(urlparse(url).path)[1].lower() in config.EXTENSIONS_BLACKLIST else True
 
     # Returns True if path is parent of current Object, else False
     def checkParent(self, path):

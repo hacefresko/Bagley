@@ -462,7 +462,7 @@ class Crawler (Module):
 
         # Process all requests
         for request in self.driver.iter_requests():
-            extension = splitext(urlparse(request.url).path)[0].lower()
+            extension = splitext(urlparse(request.url).path)[1].lower()
 
             # Scripts
             if (extension in config.SCRIPT_EXTENSIONS) and (request.response is not None) and (request.response.status_code == 200):
