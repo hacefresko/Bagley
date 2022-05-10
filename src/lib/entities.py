@@ -1226,6 +1226,16 @@ class Technology:
         self.cpe = cpe
         self.name = name
         self.version = version
+        self.cves = self.__getCVEs();
+
+    def __getCVEs(self):
+        db = DB()
+        cves = db.query_all("SELECT * FROM cves WHERE tech = %d", (self.id,))
+        
+        result = []
+        for cve in cves:
+            result.append(CVE(cve[0], cve[1]))
+        return result
 
     @staticmethod
     def get(cpe, version=None):
@@ -1247,15 +1257,6 @@ class Technology:
         tech = db.query_one('SELECT * FROM technologies WHERE id = %d', (id,))
         return Technology(tech[0], tech[1], tech[2], tech[3]) if tech else None
 
-    def getCVEs(self):
-        db = DB()
-        cves = db.query_all("SELECT * FROM cves WHERE tech = %d", (self.id,))
-        
-        result = []
-        for cve in cves:
-            result.append(cve)
-        return result
-
     @staticmethod
     def insert(cpe, name, version=None):
         if Technology.get(name, version):
@@ -1269,15 +1270,14 @@ class Technology:
         db.exec('INSERT INTO path_technologies (path, tech) VALUES (%d, %d)', (path.id, self.id))
 
 class CVE:
-    def __init__(self, id, tech):
+    def __init__(self, id):
         self.id = id
-        self.tech = Technology.getById(tech)
 
     @staticmethod
     def get(id):
         db = DB()
         cve = db.query_one('SELECT * FROM cves WHERE id = %s', (id,))
-        return CVE(cve[0], cve[1]) if cve else None
+        return CVE(cve[0]) if cve else None
 
     @staticmethod
     def insert(id, tech):
