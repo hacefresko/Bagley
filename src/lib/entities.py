@@ -1084,8 +1084,8 @@ class Script:
     def __init__(self, script_id, script_hash, content=None):
         self.id = script_id
         self.hash = script_hash
-        self.file = config.SCRIPTS_FOLDER + script_id + ".js"
-        folder = config.SCRIPTS_FOLDER + script_id
+        self.file = config.SCRIPTS_FOLDER + str(script_id) + ".js"
+        folder = config.SCRIPTS_FOLDER + str(script_id)
         self.folder = folder if os.path.isdir(folder) else None
         self.content = content if content is not None else self.__getContent() # If content is not provided, it's read from file
 
