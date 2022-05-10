@@ -1,4 +1,4 @@
-import hashlib, iptools, json
+import hashlib, iptools, json, os
 from urllib.parse import urlparse, urlunparse
 from os.path import splitext
 
@@ -764,11 +764,11 @@ class Response:
     # Returns the list of scripts of the response
     def __getScripts(self):
         db = DB()
-        scripts = db.query_all('SELECT * FROM scripts INNER JOIN response_scripts on id = script WHERE response = %d', (self.id,))
+        scripts = db.query_all('SELECT id, hash FROM scripts INNER JOIN response_scripts on id = script WHERE response = %d', (self.id,))
 
         result = []
         for script in scripts:
-            result.append(Script(script[0], script[1], script[2], script[3]))
+            result.append(Script(script[0], script[1]))
 
         return result
 
@@ -1081,11 +1081,13 @@ class Cookie:
             return False
 
 class Script:
-    def __init__(self, id, hash, filename, content=None):
-        self.id = id
-        self.hash = hash
-        self.filename = filename
-        self.content = content if content is not None else self.__getContent() # If content is not provided, it's read from disk
+    def __init__(self, script_id, script_hash, content=None):
+        self.id = script_id
+        self.hash = script_hash
+        self.file = config.SCRIPTS_FOLDER + script_id + ".js"
+        folder = config.SCRIPTS_FOLDER + script_id
+        self.folder = folder if os.path.isdir(folder) else None
+        self.content = content if content is not None else self.__getContent() # If content is not provided, it's read from file
 
     def __eq__(self, other):
         if not other:
@@ -1093,7 +1095,7 @@ class Script:
         return self.hash == other.hash
 
     def __getContent(self):
-        fd = open(self.filename)
+        fd = open(self.file)
         content = fd.read()
         fd.close()
 
@@ -1133,7 +1135,7 @@ class Script:
         result = db.query_one('SELECT * FROM scripts WHERE hash = %s', (Script.__hash(content),))
         if not result:
             return None
-        return Script(result[0], result[1], result[2])
+        return Script(result[0], result[1])
 
     # Returns script by id or None if it does not exist   
     @staticmethod 
@@ -1143,7 +1145,7 @@ class Script:
         result = db.query_one('SELECT * FROM scripts WHERE id = %d', (script_id,))
         if not result:
             return None
-        return Script(result[0], result[1], result[2])
+        return Script(result[0], result[1])
 
     # Inserts script. If already inserted, returns None
     @staticmethod 
@@ -1154,16 +1156,15 @@ class Script:
         db = DB()
         script_id = int(db.query_one("SELECT count(*) FROM scripts", ())[0]) + 1
 
-        # Save script in scripts folder with random name (20 chars)
-        filename = config.SCRIPTS_FOLDER + str(script_id) + '.js'
-        script_file = open(filename, 'w')
+        # Save script in <scripts_folder>/<id>.js
+        script_file = open(config.SCRIPTS_FOLDER + str(script_id) + '.js', 'w')
         script_file.write(content)
         script_file.close()
 
         script_hash = Script.__hash(content)
-        script_id = db.exec_and_get_last_id('INSERT INTO scripts (hash, filename) VALUES (%s,%s)', (script_hash, filename))
+        script_id = db.exec_and_get_last_id('INSERT INTO scripts (hash) VALUES (%s,%s)', (script_hash))
         
-        return Script(script_id, script_hash, filename, content)
+        return Script(script_id, script_hash, content)
 
     # Links script to response or to path. If everything is correct, returns Truee
     def link(self, element):
@@ -1192,7 +1193,7 @@ class Script:
                 continue
             id = script[0]
             db.exec('UPDATE yield_counters SET scripts = %d', (id,))
-            yield Script(script[0], script[1], script[2])
+            yield Script(script[0], script[1])
 
 class Vulnerability:
     def __init__(self, id, vuln_type, description, element, command):

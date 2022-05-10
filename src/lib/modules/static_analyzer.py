@@ -99,7 +99,7 @@ class Static_Analyzer (Module):
                     self.send_vuln_msg("KEYS FOUND: %s at %s\n%s" % (name, paths, value), "static-analyzer")
 
     def __findPaths(self, script):
-        command = [shutil.which('linkfinder'), '-i', script.filename, '-o', 'cli']
+        command = [shutil.which('linkfinder'), '-i', script.file, '-o', 'cli']
 
         script_locations = []
         for response in script.getResponses():
@@ -173,12 +173,12 @@ class Static_Analyzer (Module):
 
         else:
             # Just beautify
-            result = jsbeautifier.beautify_file(script.filename)
-            f = open(script.filename, "w")
+            result = jsbeautifier.beautify_file(script.file)
+            f = open(script.file, "w")
             f.write(result)
             f.close()
             
-            shutil.copy(script.filename, tmp_dir)
+            shutil.copy(script.file, tmp_dir)
 
         self.send_msg("Analyzing script %d in %s" % (script.id, script_locations_str), "static-analyzer")
 

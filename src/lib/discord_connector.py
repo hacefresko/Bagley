@@ -261,18 +261,20 @@ class GetScriptCommand(Command):
         msg += "\n"
 
         await self.discord_connector.send_msg(msg, "terminal")
-        await self.discord_connector.send_file(script.filename, "terminal")
+        await self.discord_connector.send_file(script.file, "terminal")
 
         # Compress unpacked script if exists
-        script_unpacked = config.SCRIPTS_FOLDER + str(script.id)
-        if os.path.isdir(script_unpacked):
+        if script.folder is not None:
+
+            dir_name = script.folder.split("/")[-1]
+            parent_dir = "/".join(script.folder.split("/")[:-1]) + "/"
 
             # This function has very confusing params, http://www.seanbehan.com/how-to-use-python-shutil-make_archive-to-zip-up-a-directory-recursively-including-the-root-folder/ for more info
-            shutil.make_archive(str(script.id), "zip", config.SCRIPTS_FOLDER, str(script.id))
+            shutil.make_archive(dir_name, "zip", parent_dir, dir_name)
 
             # Move zip file to temporary files directory
-            zip_file_name = config.FILES_FOLDER + str(script.id) + '.zip'
-            shutil.move(str(script.id) + '.zip', zip_file_name)
+            zip_file_name = script.folder + '.zip'
+            shutil.move(dir_name + '.zip', zip_file_name)
             
             # Send file
             await self.discord_connector.send_file(zip_file_name, "terminal")

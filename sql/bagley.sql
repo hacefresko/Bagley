@@ -51,8 +51,8 @@ CREATE TABLE responses (
 CREATE TABLE requests (
     id INT PRIMARY KEY AUTO_INCREMENT,
     path INT NOT NULL,
-    params TEXT,
     method TEXT NOT NULL,
+    params TEXT,
     data TEXT,
     response INT,
     FOREIGN KEY (path) REFERENCES paths(id) ON DELETE CASCADE,
@@ -80,8 +80,7 @@ CREATE TABLE cookies (
 
 CREATE TABLE scripts (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    hash VARCHAR(255) UNIQUE KEY,
-    filename TEXT
+    hash VARCHAR(255) UNIQUE KEY
 );
 
 

@@ -47,11 +47,19 @@ class Injector (Module):
         if result.stderr != '':
             self.send_error_msg(result.stderr, "injector")
 
-
     def __xss(self, request):
-        url = str(request.path) + ('?' + request.params if request.params else '')
-        command = [shutil.which('dalfox'), 'url', url, '-S', '--skip-bav', '--skip-grepping', '--no-color', "--delay", str(int(self.getDelay()*1000)), "-X", request.method]
+        url = str(request.path)
+        command = [shutil.which('dalfox'), 'url', url, '-S', '-F', '--skip-bav', '--skip-grepping', '--waf-evasion', '--no-color', "--delay", str(int(self.getDelay()*1000)), "-X", request.method]
         
+        # Add URL params
+        if request.params:
+            command.append('-p')
+            params = []
+            for p in request.params.split("&"):
+                params.append(p.split("=")[0])
+            params = ",".join(params)
+            command.append(params)
+
         # Add POST data
         if request.method == 'POST' and request.data:
             command.append('-d')
