@@ -1162,7 +1162,7 @@ class Script:
         script_file.close()
 
         script_hash = Script.__hash(content)
-        script_id = db.exec_and_get_last_id('INSERT INTO scripts (hash) VALUES (%s)', (script_hash))
+        script_id = db.exec_and_get_last_id('INSERT INTO scripts (hash) VALUES (%s)', (script_hash,))
         
         return Script(script_id, script_hash, content)
 
