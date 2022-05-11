@@ -2,8 +2,6 @@ import subprocess, time, shutil, traceback
 
 from lib.modules.module import Module
 from lib.entities import *
-import lib.controller
-import lib.utils as utils
 
 class Injector (Module):
     def __init__(self, controller, stop, rps, active_modules, lock):

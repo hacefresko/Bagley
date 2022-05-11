@@ -3,7 +3,6 @@ import subprocess, shutil, requests, time, json, traceback
 import config, lib.controller
 from lib.entities import *
 from lib.modules.module import Module
-import lib.utils as utils
 
 class Dynamic_Analyzer (Module):
     def __init__(self, controller, stop, rps, active_modules, lock):

@@ -2,9 +2,7 @@ import time, re, rure, shutil, subprocess, requests, os, shutil, random, string,
 from urllib.parse import urljoin
 
 from lib.entities import *
-import lib.controller
 from lib.modules.module import Module
-import lib.utils as utils
 
 class Static_Analyzer (Module):
     def __init__(self, controller, stop, crawler):

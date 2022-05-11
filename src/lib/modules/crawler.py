@@ -9,7 +9,6 @@ from selenium.webdriver.chrome.options import Options
 import config
 from lib.entities import *
 from lib.modules.module import Module
-import lib.utils as utils
 
 class Crawler (Module):
     def __init__(self, controller, stop, rps, active_modules, lock):
