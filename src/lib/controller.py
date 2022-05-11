@@ -1,17 +1,16 @@
-from gettext import find
-import threading, logging, json
+import threading, json
 import lib.modules, lib.discord_connector, config
-
 from lib.entities import *
 from .database import DB
 
 class Controller:
-    def __init__(self):
+    def __init__(self, logger):
         self.stopThread = threading.Event()
 
         self.rps = config.REQ_PER_SEC
         self.active_modules = 0
         self.lock = threading.Lock()
+        self.logger = logger
 
         self.initModules()
 
@@ -183,19 +182,19 @@ class Controller:
     # Methods to communicate with bot
 
     def send_msg(self, msg, channel):
-        logging.info("[%s] %s", channel, msg)
+        self.logger.info("[%s] %s", channel, msg)
         self.discord_connector.dispatch_msg(msg, channel)
 
     def send_error_msg(self, msg, channel):
-        logging.error(msg)
+        self.logger.error(msg)
         self.discord_connector.dispatch_msg(msg, channel)
         self.discord_connector.dispatch_msg(msg, "errors")
 
     def send_vuln_msg(self, msg, channel):
-        logging.critical(msg)
+        self.logger.critical(msg)
         self.discord_connector.dispatch_msg(msg, channel)
         self.discord_connector.dispatch_msg(msg, "vulnerabilities")
  
     def send_file(self, filename, channel):
-        logging.info("[%s] Sent image %s", channel, filename)
+        self.logger.info("[%s] Sent image %s", channel, filename)
         self.discord_connector.dispatch_file(filename, channel)
