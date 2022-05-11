@@ -29,7 +29,7 @@ class DB:
             instance = super(DB, cls).__new__(cls)
 
             # Assign a connection to this instance
-            instance.__connectin = DB.__connectionPool.get_connection()
+            instance.__connection = DB.__connectionPool.get_connection()
 
             # Assign this instance to the thread calling DB()
             DB.__instances[tid] = instance
