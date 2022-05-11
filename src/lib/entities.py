@@ -482,11 +482,11 @@ class Path:
         return None
 
 class Request:
-    def __init__(self, id, path_id, params, method, data, response_id):
+    def __init__(self, id, path_id, method, params, data, response_id):
         self.id = id
         self.path = Path.get(path_id)
-        self.params = params
         self.method = method
+        self.params = params
         self.data = data
         self.response = Response.getById(response_id)
         self.headers = self.__getHeaders()
