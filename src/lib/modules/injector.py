@@ -48,9 +48,6 @@ class Injector (Module):
     def __xss(self, request):
         url = str(request.path)
         command = [shutil.which('dalfox'), 'url', url, '-S', '-F', '--skip-bav', '--skip-grepping', '--waf-evasion', '--no-color', "--delay", str(int(self.getDelay()*1000)), "-X", request.method]
-        
-        for c in command:
-            self.send_msg(c, "terminal")
 
         # Add URL params
         if request.params:
