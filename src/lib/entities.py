@@ -1154,10 +1154,11 @@ class Script:
             return None
         
         db = DB()
-        script_id = int(db.query_one("SELECT count(*) FROM scripts", ())[0]) + 1
+        script_id = int(db.query_one("SELECT count(*) FROM scripts")[0]) + 1
 
         # Save script in <scripts_folder>/<id>.js
-        script_file = open(config.SCRIPTS_FOLDER + str(script_id) + '.js', 'w')
+        filename = config.SCRIPTS_FOLDER + str(script_id) + '.js'
+        script_file = open(filename, 'w')
         script_file.write(content)
         script_file.close()
 

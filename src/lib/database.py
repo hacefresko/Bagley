@@ -30,7 +30,7 @@ class DB:
         cursor.execute(query, params)
         cursor.close()
 
-    def exec_and_get_last_id(self, query, params):
+    def exec_and_get_last_id(self, query, params=()):
         cursor = self.__connection.cursor()
         cursor.execute(query, params)
         id = cursor.lastrowid
@@ -38,7 +38,7 @@ class DB:
 
         return id
 
-    def query_one(self, query, params):
+    def query_one(self, query, params=()):
         cursor = self.__connection.cursor()
         cursor.execute(query, params)
         result = cursor.fetchone()
@@ -46,7 +46,7 @@ class DB:
 
         return result
 
-    def query_all(self, query, params):
+    def query_all(self, query, params=()):
         cursor = self.__connection.cursor()
         cursor.execute(query, params)
         result = cursor.fetchall()
@@ -54,7 +54,7 @@ class DB:
 
         return result
 
-    def query_string_like(self, query):
+    def query_string_like(self, query=()):
         cursor = self.__connection.cursor()
         cursor.execute(query, ())
         results = cursor.fetchall()
