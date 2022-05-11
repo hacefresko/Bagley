@@ -22,7 +22,7 @@ REQ_PER_SEC = 10
 TIMEOUT = 30
 
 # Formats that won't be stored
-EXTENSIONS_BLACKLIST = ['.css', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp', '.bmp', '.ico', '.tiff', '.woff2', '.woff', '.mp4', '.rar', '.zip', '.pdf', '.apk', '.mp3']
+EXTENSIONS_BLACKLIST = ['.css', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp', '.bmp', '.ico', '.tiff', '.woff2', '.woff', '.mp4', '.rar', '.zip', '.pdf', '.apk', '.mp3', '.otf']
 
 # Scripts extensions
 SCRIPT_EXTENSIONS = ['.js', '.ts']

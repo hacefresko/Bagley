@@ -1,5 +1,5 @@
-import logging, urllib3
-import config, lib.controller
+import urllib3
+import logging, config, lib.controller
 
 title = '''
 
@@ -40,9 +40,14 @@ title = '''
 # Disable SSL requests warnings
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Start logging
-logging.basicConfig(filename=config.LOG_FILE, format='[%(asctime)s][%(levelname)s] %(message)s', level=logging.INFO)
-logging.info(title)
+# Create logger
+logger = logging.getLogger("bagley")
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+handler.setFormatter(logging.Formatter('[%(asctime)s][%(levelname)s] %(message)s'))
+logger.addHandler(handler)
+logger.info(title)
 
 # Init bot
-lib.controller.Controller()
+lib.controller.Controller(logger)
