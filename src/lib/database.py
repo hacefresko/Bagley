@@ -14,7 +14,7 @@ class DB:
         password=config.DB_PASSWORD, 
         autocommit=True,
         pool_name="bagley",
-        pool_size=6) # autocommit = True -> https://stackoverflow.com/questions/9305669/mysql-python-connection-does-not-see-changes-to-database-made-on-another-connect
+        pool_size=6 )
 
 
     __instances = {}

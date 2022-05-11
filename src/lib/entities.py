@@ -99,6 +99,7 @@ class Domain:
             return None
         return Domain(domain[0], domain[1], domain[2])
 
+    # Returns all domains
     @staticmethod
     def getAll():
         result = []
@@ -286,7 +287,7 @@ class Path:
         self.id = id
         self.protocol = protocol
         self.element = element
-        self.parent = Path.get(parent)
+        self.parent = Path.getById(parent)
         self.domain = Domain.getById(domain)
         self.technologies = self.__getTechs()
 
@@ -309,7 +310,7 @@ class Path:
 
         return result 
 
-    # Returns the list of technologies of the
+    # Returns the list of technologies of the path
     def __getTechs(self):
         db = DB()
     
@@ -373,7 +374,7 @@ class Path:
 
         return result if result['protocol'] != '' and result['domain'] != '' else None
 
-     # Returns False if extension is in blacklist from config.py, else True   
+    # Returns False if extension is in blacklist from config.py, else True   
     @staticmethod
     def checkExtension(url):
         return False if splitext(urlparse(url).path)[1].lower() in config.EXTENSIONS_BLACKLIST else True
@@ -391,7 +392,7 @@ class Path:
         if child.parent == path.parent:
             return True
         while child.parent:
-            child = Path.get(child.parent.id)
+            child = Path.getById(child.parent.id)
             if child and child.parent == path.parent:
                 return True
 
@@ -399,7 +400,7 @@ class Path:
 
     # Returns path corresponding to id or False if it does not exist
     @staticmethod
-    def get(id):
+    def getById(id):
         db = DB()
         path = db.query_one('SELECT id, protocol, element, parent, domain FROM paths WHERE id = %d', (id,))
         return Path(path[0], path[1], path[2], path[3], path[4]) if path else None
@@ -418,22 +419,23 @@ class Path:
             db.exec('UPDATE yield_counters SET paths = %d', (id,))
             yield Path(path[0], path[1], path[2], path[3], path[4])
 
-    # Yields paths corresponding to directories or False if there are no requests. It continues infinetly until program stops
+    # Yields paths corresponding to directories
     @staticmethod
     def yieldDirectories():
-        id = 0
         db = DB()
+        id = db.query_one('SELECT directories FROM yield_counters', ())[0]
         while True:
             path = db.query_one('SELECT * FROM paths WHERE element is Null AND id > %d LIMIT 1', (id,))
             if not path:
                 yield None
                 continue
             id = path[0]
+            db.exec('UPDATE yield_counters SET directories = %d', (id,))
             yield Path(path[0], path[1], path[2], path[3], path[4])
 
     # Returns path corresponding to URL or None if it does not exist in the database
     @staticmethod
-    def parseURL(url):
+    def check(url):
         parsedURL = Path.__parseURL(url)
         if not parsedURL:
             return None
@@ -475,7 +477,7 @@ class Path:
         for i, element in enumerate(parsedURL['elements']):
             path = Path.__get(protocol, element, parent, domain)
             if not path:
-                path = Path.get(db.exec_and_get_last_id('INSERT INTO paths (protocol, element, parent, domain) VALUES (%s,%s,%d,%d)', (protocol, element, parent.id if parent else None, domain.id)))
+                path = Path.getById(db.exec_and_get_last_id('INSERT INTO paths (protocol, element, parent, domain) VALUES (%s,%s,%d,%d)', (protocol, element, parent.id if parent else None, domain.id)))
             if i == len(parsedURL['elements']) - 1:
                 return path
             parent = path
@@ -484,7 +486,7 @@ class Path:
 class Request:
     def __init__(self, id, path_id, method, params, data, response_id):
         self.id = id
-        self.path = Path.get(path_id)
+        self.path = Path.getById(path_id)
         self.method = method
         self.params = params
         self.data = data
@@ -559,12 +561,11 @@ class Request:
         return None
 
     # Returns True if request exists in database else False. 
-    # If there are already some (5) requests with the same path and method but different params/data with same key, it returns True to avoid saving same requests with different CSRFs, session values, etc.
-    # If there are already requests to X but without cookies belonging to this domain and path inside cookies, it returns False
+    # If there are already 5 requests that are equal except for some values for the params or the data, it returns True to avoid filling up the database with same requests with different values for the session, dates, CSRF tokens, etc.
     # If requested file extension belongs to config.EXTENSIONS_BLACKLIST, returns False
     @staticmethod
     def check(url, method, content_type=None, data=None):
-        path = Path.parseURL(url)
+        path = Path.check(url)
         if not path:
             return False
 
@@ -589,6 +590,7 @@ class Request:
             if len(result) >= 5:
                 return True
 
+        # Check this request is already inserted
         query = 'SELECT * FROM requests WHERE path = %d AND method = %s '
         query_params = [path.id, method]
 
@@ -621,7 +623,7 @@ class Request:
     # Returns request if exists else None
     @staticmethod
     def get(url, method, content_type=None, data=None):
-        path = Path.parseURL(url)
+        path = Path.check(url)
         if not path:
             return None
         params = Request.__parseParams(urlparse(url).query)
@@ -879,7 +881,7 @@ class Header:
                 value = '1337'
         return (key, value)
 
-    # Returns header or False if it does not exist  
+    # Returns header or None if it does not exist  
     @staticmethod
     def get(key, value):
         key, value = Header.__parseHeader(key, value)
@@ -992,7 +994,7 @@ class Cookie:
         if not cookie_dictionary:
             return False
 
-        path = Path.parseURL(url)
+        path = Path.check(url)
         if not path:
             return False
 
@@ -1016,7 +1018,7 @@ class Cookie:
         if not cookie_string:
             return None
 
-        path = Path.parseURL(url)
+        path = Path.check(url)
         if not path:
             return None
         domain = str(path.domain)
@@ -1046,7 +1048,7 @@ class Cookie:
 
         return None
 
-    # Return cookie with specified name and value
+    # Return cookie with specified name and value or None if it doe smnot exist
     # If URL is specified, url must macth domain and path of the cookie
     @staticmethod
     def get(name, value, url=None):
@@ -1196,31 +1198,6 @@ class Script:
             db.exec('UPDATE yield_counters SET scripts = %d', (id,))
             yield Script(script[0], script[1])
 
-class Vulnerability:
-    def __init__(self, id, vuln_type, description, element, command):
-        self.id = id
-        self.type = vuln_type
-        self.description = description
-        self.path = element
-        self.command = command
-
-    @staticmethod
-    def get(id):
-        db = DB()
-        vuln = db.query_one('SELECT * FROM vulnerabilities WHERE id = %d', (id,))
-        return Vulnerability(vuln[0], vuln[1], vuln[2], vuln[3], vuln[4]) if vuln else None
-
-    @staticmethod
-    def getByType(vuln_type):
-        db = DB()
-        vuln = db.query_one('SELECT * FROM vulnerabilities WHERE type = %s', (vuln_type,))
-        return Vulnerability(vuln[0], vuln[1], vuln[2], vuln[3], vuln[4]) if vuln else None
-
-    @staticmethod
-    def insert(vuln_type, description, element, command=None):
-        db = DB()
-        return Vulnerability(db.exec_and_get_last_id('INSERT INTO vulnerabilities (type, description, element, command) VALUES (%s,%s, %d, %s)', (vuln_type, description, element, command)), vuln_type, description, element, command)
-
 class Technology:
     def __init__(self, id, cpe, name, version):
         self.id = id
@@ -1275,18 +1252,43 @@ class CVE:
         self.id = id
 
     @staticmethod
-    def get(id):
+    def getById(id):
         db = DB()
         cve = db.query_one('SELECT * FROM cves WHERE id = %s', (id,))
         return CVE(cve[0]) if cve else None
 
     @staticmethod
     def insert(id, tech):
-        if CVE.get(id):
+        if CVE.getById(id):
             return None
         db = DB()
         cve = CVE(db.exec_and_get_last_id('INSERT INTO cves (id, tech) VALUES (%s, %d)', (id, tech.id)), tech.id)
         return cve
+
+class Vulnerability:
+    def __init__(self, id, vuln_type, description, element, command):
+        self.id = id
+        self.type = vuln_type
+        self.description = description
+        self.path = element
+        self.command = command
+
+    @staticmethod
+    def get(id):
+        db = DB()
+        vuln = db.query_one('SELECT * FROM vulnerabilities WHERE id = %d', (id,))
+        return Vulnerability(vuln[0], vuln[1], vuln[2], vuln[3], vuln[4]) if vuln else None
+
+    @staticmethod
+    def getByType(vuln_type):
+        db = DB()
+        vuln = db.query_one('SELECT * FROM vulnerabilities WHERE type = %s', (vuln_type,))
+        return Vulnerability(vuln[0], vuln[1], vuln[2], vuln[3], vuln[4]) if vuln else None
+
+    @staticmethod
+    def insert(vuln_type, description, element, command=None):
+        db = DB()
+        return Vulnerability(db.exec_and_get_last_id('INSERT INTO vulnerabilities (type, description, element, command) VALUES (%s,%s, %d, %s)', (vuln_type, description, element, command)), vuln_type, description, element, command)
 
 
 # Util functions

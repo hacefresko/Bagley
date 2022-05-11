@@ -179,8 +179,9 @@ DROP TABLE IF EXISTS yield_counters;
 CREATE TABLE yield_counters (
     domains INT,
     paths INT,
+    directories INT,
     requests INT,
     responses INT,
     scripts INT
 );
-INSERT INTO yield_counters VALUES (0,0,0,0,0);
+INSERT INTO yield_counters VALUES (0,0,0,0,0,0);
