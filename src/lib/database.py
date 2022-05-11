@@ -7,18 +7,32 @@ import config
 #
 
 class DB:
+    __connectionPool = mariadb.ConnectionPool(
+        host=config.DB_HOST, 
+        user=config.DB_USER, 
+        database=config.DB_NAME, 
+        password=config.DB_PASSWORD, 
+        autocommit=True,
+        pool_name="bagley",
+        pool_size=6) # autocommit = True -> https://stackoverflow.com/questions/9305669/mysql-python-connection-does-not-see-changes-to-database-made-on-another-connect
+
+
     __instances = {}
-    __lock = threading.Lock()
 
     def __new__(cls):
         tid = threading.get_ident()
 
+        # If the thred hasn't called DB() yet
         if DB.__instances.get(tid) is None:
-            with cls.__lock:
-                # another thread could have created the instance before we acquired the lock. So check that the instance is still nonexistent.
-                if DB.__instances.get(tid) is None:
-                    DB.__instances[tid] = super(DB, cls).__new__(cls)
-                    DB.__instances.get(tid).__connection = mariadb.connect(host=config.DB_HOST, user=config.DB_USER, database=config.DB_NAME, password=config.DB_PASSWORD, autocommit=True) # autocommit = True -> https://stackoverflow.com/questions/9305669/mysql-python-connection-does-not-see-changes-to-database-made-on-another-connect
+
+            # Create an instance of DB
+            instance = super(DB, cls).__new__(cls)
+
+            # Assign a connection to this instance
+            instance.__connectin = DB.__connectionPool.get_connection()
+
+            # Assign this instance to the thread calling DB()
+            DB.__instances[tid] = instance
 
         return DB.__instances.get(tid)
 
