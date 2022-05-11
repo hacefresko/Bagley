@@ -1,6 +1,6 @@
 from abc import abstractmethod
-import discord, logging, aiohttp, os, random, string, shutil
-import config, lib.utils, lib.controller
+import discord, logging, aiohttp, os, random, string, shutil, traceback
+import config, lib.controller
 
 # Define commands
 class Command:
@@ -217,7 +217,7 @@ class QueryCommand(Command):
         try:
             await self.discord_connector.send_msg("\n" + self.controller.query(" ".join(args[1:])), "terminal")
         except:
-            await self.discord_connector.send_msg(lib.utils.getExceptionString(), "terminal")
+            await self.discord_connector.send_msg(traceback.format_exc(), "terminal")
 
 class GetScriptCommand(Command):
     def __init__(self, controller, discord_connector):
@@ -323,7 +323,7 @@ class CommandParser():
                 
                 await self.discord_connector.send_msg('Cannot understand "%s"' % line, "terminal")
             except:
-                await self.discord_connector.send_msg(lib.utils.getExceptionString(), "terminal")
+                await self.discord_connector.send_msg(traceback.format_exc(), "terminal")
     
 
 # Define discord connector class

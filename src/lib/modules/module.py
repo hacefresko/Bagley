@@ -1,4 +1,4 @@
-import threading, shutil, datetime, time
+import threading, shutil, datetime, time, traceback
 
 class Module (threading.Thread):
     def __init__(self, dependences, controller, stop, rps=None, active_modules=None, lock=None, submodules=[]):

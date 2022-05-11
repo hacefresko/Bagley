@@ -1,4 +1,4 @@
-import time, re, rure, shutil, subprocess, requests, os, shutil, random, string, jsbeautifier
+import time, re, rure, shutil, subprocess, requests, os, shutil, random, string, jsbeautifier, traceback
 from urllib.parse import urljoin
 
 from lib.entities import *
@@ -229,4 +229,4 @@ class Static_Analyzer (Module):
                         time.sleep(5)
                         continue
             except:
-                self.send_error_msg(utils.getExceptionString(), "static-analyzer")
+                self.send_error_msg(traceback.format_exc(), "static-analyzer")

@@ -1,4 +1,4 @@
-import subprocess, shutil, requests, time, json
+import subprocess, shutil, requests, time, json, traceback
 
 import config, lib.controller
 from lib.entities import *
@@ -68,7 +68,7 @@ class Dynamic_Analyzer (Module):
                     if tech:
                         tech.link(path)
         except:
-            self.send_error_msg(utils.getExceptionString(), "dynamic-analyzer")
+            self.send_error_msg(traceback.format_exc(), "dynamic-analyzer")
 
     def __subdomainTakeover(self, domain):
         command = [shutil.which('subjack'), '-a', '-m', '-d', str(domain)]
@@ -209,4 +209,4 @@ class Dynamic_Analyzer (Module):
                     time.sleep(5)
 
             except Exception as e:
-                self.send_error_msg(utils.getExceptionString(), "dynamic-analyzer")
+                self.send_error_msg(traceback.format_exc(), "dynamic-analyzer")

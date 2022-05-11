@@ -1,4 +1,4 @@
-import subprocess, time, shutil
+import subprocess, time, shutil, traceback
 
 from lib.modules.module import Module
 from lib.entities import *
@@ -190,5 +190,5 @@ class Injector (Module):
                 # Add request with same keys in POST/GET data to tested list
                 tested = [*[request.id for request in request.getSameKeysRequests()], *tested]
             except:
-                self.send_error_msg(utils.getExceptionString(), "injector")
+                self.send_error_msg(traceback.format_exc(), "injector")
 

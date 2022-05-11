@@ -1,5 +1,4 @@
-from threading import current_thread
-import time, requests, random, string, os, re
+import time, requests, random, string, os, re, traceback
 from bs4 import BeautifulSoup
 from os.path import splitext
 from urllib.parse import urljoin, urlparse
@@ -334,7 +333,7 @@ class Crawler (Module):
                     try:
                         content = requests.get(src, verify=False).text
                     except:
-                        self.send_error_msg(utils.getExceptionString(), "crawler")
+                        self.send_error_msg(traceback.format_exc(), "crawler")
                         continue
 
                     if content:
@@ -449,7 +448,7 @@ class Crawler (Module):
             if "timeout: Timed out receiving message from renderer" in e.msg:
                 self.send_msg("Timeout exception requesting %s" % parent_url, "crawler")
             else:
-                self.send_error_msg(utils.getExceptionString(), "crawler")
+                self.send_error_msg(traceback.format_exc(), "crawler")
             return
 
         self.updateDelay()
@@ -547,7 +546,7 @@ class Crawler (Module):
                 try:
                     requests.get(url, allow_redirects=False, verify=False)
                 except:
-                    self.send_error_msg(utils.getExceptionString(), "crawler")
+                    self.send_error_msg(traceback.format_exc(), "crawler")
                     continue
 
                 domain = Domain.get(urlparse(url).netloc)

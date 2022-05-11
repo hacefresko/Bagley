@@ -1,4 +1,4 @@
-import subprocess, json, shutil, time, socket, os, requests
+import subprocess, json, shutil, time, socket, os, requests, traceback
 from urllib.parse import urljoin
 
 import config, lib.controller
@@ -172,4 +172,4 @@ class Finder(Module):
                     self.setInactive()
                     time.sleep(5)
             except:
-                self.send_error_msg(utils.getExceptionString(), "finder")
+                self.send_error_msg(traceback.format_exc(), "finder")
