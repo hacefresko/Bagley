@@ -9,7 +9,17 @@ class Injector (Module):
 
     def __sqli(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')
-        command = [shutil.which('sqlmap'), '--random-agent', '--flush-session', '--batch', '-u',  url, '--method', request.method, "--delay="+str(self.getDelay()), '-v', '0', '-o']
+
+        # Sqlmap options:
+        # --random-agent: use a random user agent on every request
+        # --batch: automatically choose the default options when something is asked to the user
+        # -u: URL to test
+        # --method: HTTP method to use
+        # --delay: delay between requests
+        # -v: verbosity level
+        # -o: Turn on all optimization switches
+
+        command = [shutil.which('sqlmap'), '--random-agent', '--batch', '-u',  url, '--method', request.method, "--delay="+str(self.getDelay()), '-v', '0', '-o']
 
         # Add POST data
         if request.method == 'POST' and request.data:
@@ -47,6 +57,18 @@ class Injector (Module):
 
     def __xss(self, request):
         url = str(request.path)
+
+        # Dalfox options:
+        # url: use single target
+        # -S: silent mode
+        # -F: follow redirects
+        # --skip-bav: don't test for other vulnerabilities (it's not good at it)
+        # --skip-grepping: don't grep for credentials, known error messages, etc.
+        # --waf-evasion: try evasion techniques if WAF is detected
+        # --no-color: no color in output
+        # --delay: delay between requests
+        # -X: method to use
+        
         command = [shutil.which('dalfox'), 'url', url, '-S', '-F', '--skip-bav', '--skip-grepping', '--waf-evasion', '--no-color', "--delay", str(int(self.getDelay()*1000)), "-X", request.method]
 
         # Add URL params

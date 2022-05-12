@@ -87,7 +87,7 @@ class Finder(Module):
                 except:
                     continue
  
-    def __fuzzPaths(self, path, headers, cookies, errcodes=[]):
+    def __fuzzPaths(self, path, errcodes=[]):
         url = str(path)
 
         # Gobuster options:
@@ -103,15 +103,15 @@ class Finder(Module):
         command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-t', '1', '-w', config.DIR_FUZZING, '-u', url, '--delay', str(int(self.getDelay()*1000))+'ms', '--random-agent', '-r']
 
         # Add headers
-        for header in headers:
+        for header in path.domain.headers:
             command.append('-H')
             command.append("'" + str(header) + "'")
 
         # Add cookies
-        if cookies:
+        if path.domain.cookies:
             command.append('-c')
             cookies = ''
-            for cookie in cookies:
+            for cookie in path.domain.cookie:
                 cookies += str(cookie) + ' '
             command.append(cookies)
 
@@ -139,15 +139,14 @@ class Finder(Module):
             finally:
                 line = process.stdout.readline().decode('utf-8', errors='ignore')
         
-        # Collect errors if execution fails
+        # If execution fails because errorcodes must be specified to gobuster, run again specifing error codes
         if process.poll() != 0:
             error = process.stderr.readline().decode('utf-8', errors='ignore')
-            # If errorcodes must be specified to gobuster
             if 'Error: the server returns a status code that matches the provided options for non existing urls' in error:
                 try:
                     errcode = error.split('=>')[1].split('(')[0].strip()
                     errcodes.append(errcode)
-                    self.__fuzzPaths(url, headers, cookies, errcodes)
+                    self.__fuzzPaths(url, errcodes)
                 except:
                     return
 
@@ -196,7 +195,7 @@ class Finder(Module):
                 directory = next(directories)
                 if (directory is not None) and ("fuzz_paths" not in directory.domain.excluded):
                         self.setActive()
-                        self.__fuzzPaths(directory, directory.domain.headers, directory.domain.cookies)
+                        self.__fuzzPaths(directory)
                         self.setInactive()
 
                 if not domain and not directory:
