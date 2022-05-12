@@ -5,7 +5,7 @@ from lib.entities import *
 
 class Injector (Module):
     def __init__(self, controller, stop, rps, active_modules, lock):
-        super().__init__(["sqlmap", "dalfox", "crlfuzz", "tplmap"], controller, stop, rps, active_modules, lock, ["sqlmap", "dalfox"])
+        super().__init__(["sqlmap", "dalfox", "crlfuzz"], controller, stop, rps, active_modules, lock, ["sqlmap", "dalfox"])
 
     def __sqli(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')
@@ -127,40 +127,6 @@ class Injector (Module):
         if result.stderr != '':
             self.send_error_msg(result.stderr, "injector")
 
-    def __ssti(self, request):
-        url = str(request.path) + ('?' + request.params if request.params else '')
-        command = [shutil.which('tplmap'), '-u', url]
-        
-        # Add POST data
-        if request.method == 'POST' and request.data:
-            command.append('-d')
-            command.append(request.data)
-
-        # Add headers
-        if request.headers:
-            for header in request.headers:
-                # Tplmap detects char * as an injection point, so Headers containing that won't be added
-                if '*' in str(header):
-                    continue
-                command.append('-H')
-                command.append(str(header))
-
-        # Add cookies
-        if request.cookies:
-            for cookie in request.cookies:
-                command.append('-c')
-                command.append(str(cookie))
-        
-        self.send_msg("Testing SSTI in %s [%s]" % (url, request.method), "injector")
-
-        result = subprocess.run(command, capture_output=True, encoding='utf-8')
-
-        if "Tplmap identified the following injection point" in result.stdout:
-            Vulnerability.insert('SSTI', result.stdout, str(request.path), " ".join(command))
-            self.send_vuln_msg("SSTI: %s\n%s\n" % (url, result.stdout), "injector")
-        if result.stderr != '':
-            self.send_error_msg(result.stderr, "injector")
-            
     def run(self):
         tested = []
         requests = Request.yieldAll()

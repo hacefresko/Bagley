@@ -18,7 +18,15 @@ class Finder(Module):
         return super().checkDependencies()
 
     def __fuzzSubDomains(self, domain, errcodes=[]):
+        # Gobuster options:
+        # dns: Bruteforce subdomains
+        # -q: quiet
+        # -t: threads -> only 1
+        # -w: wordlist to use
+        # -d: domain to bruteforce
+        # --delay: delay between requests
         command = [shutil.which('gobuster'), 'dns', '-q', '-t', '1', '-w', config.DOMAIN_FUZZING, '-d', str(domain)[1:], '--delay', str(int(self.getDelay()*1000))+'ms']
+
         # Add errorcodes if specified
         if len(errcodes) != 0:
             command.append('-s')
@@ -55,7 +63,13 @@ class Finder(Module):
                     return
 
     def __findSubDomains(self,domain):
-        # Rate is limited to 1 always because if doesn't, it adds too much traffic and ISPs are very greedy
+
+        # Subfinder options:
+        # -oJ: output in JSON
+        # -nc: don't use colors in output
+        # -all: use all sources
+        # -d: domain to find subdomains for
+        # -rl: requests per second = 1 -> Else, it generates too much traffic and ISPs are very greedy and take down the Internet. It doesn't compromise performance
         command = [shutil.which('subfinder'), '-oJ', '-nc', '-all', '-d', str(domain)[1:], '-rl', '1']
 
         self.send_msg("Finding subdomains for %s" % str(domain)[1:], "finder")
@@ -76,6 +90,16 @@ class Finder(Module):
     def __fuzzPaths(self, path, headers, cookies, errcodes=[]):
         url = str(path)
 
+        # Gobuster options:
+        # dir: Bruteforce URL paths
+        # -q: quiet
+        # -k: don't check SSL certs
+        # -t: threads -> only 1
+        # -w: wordlist to use
+        # -u: URL to bruteforce
+        # --delay: delay between requests
+        # --random-agent: use random agents on each request
+        # -r: follow redirects
         command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-t', '1', '-w', config.DIR_FUZZING, '-u', url, '--delay', str(int(self.getDelay()*1000))+'ms', '--random-agent', '-r']
 
         # Add headers

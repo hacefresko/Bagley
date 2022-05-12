@@ -49,9 +49,6 @@ RUN go install github.com/hahwul/dalfox/v2@latest
 # Install crlfuzz
 RUN GO111MODULE=on go install github.com/dwisiswant0/crlfuzz/cmd/crlfuzz@latest
 
-# Install tplmap
-RUN git clone https://github.com/epinna/tplmap /usr/lib/tplmap && sed -i "s/#!\/usr\/bin\/env python/#!\/usr\/bin\/env python2/" /usr/lib/tplmap/tplmap.py && ln -s /usr/lib/tplmap/tplmap.py /usr/local/sbin/tplmap && pip2 install -r /usr/lib/tplmap/requirements.txt && sed -i "s/time_based_blind_delay: 4/time_based_blind_delay: 15/" /usr/lib/tplmap/config.yml
-
 # Install wappalyzer
 RUN git clone https://github.com/AliasIO/wappalyzer.git /usr/lib/wappalyzer && cd /usr/lib/wappalyzer && yarn install && yarn run link && ln -s /usr/lib/wappalyzer/src/drivers/npm/cli.js /usr/local/sbin/wappalyzer
 
