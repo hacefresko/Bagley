@@ -9,20 +9,16 @@ class Finder(Module):
     def __init__(self, controller, stop, rps, active_modules, lock, crawler):
         super().__init__(["gobuster", "subfinder", "gau"], controller, stop, rps, active_modules, lock, ["fuzzPaths", "findPaths", "fuzzSubdomains", "findSubdomains"])
         self.crawler = crawler
-        self.updateDelay()
 
-    def checkDependences(self):
+    def checkDependencies(self):
         for f in [config.DIR_FUZZING, config.DOMAIN_FUZZING]:
             if not os.path.exists(f):
                 print('%s from config file not found' % f)
                 return False
-        return super().checkDependences()
+        return super().checkDependencies()
 
     def __fuzzPaths(self, path, headers, cookies, errcodes=[]):
         url = str(path)
-        # Crawl all urls on the database that has not been crawled
-        if self.crawler.isQueueable(url):
-            self.crawler.addToQueue(url)
 
         command = [shutil.which('gobuster'), 'dir', '-q', '-k', '-t', '1', '-w', config.DIR_FUZZING, '-u', url, '--delay', str(int(self.getDelay()*1000))+'ms', '--random-agent', '-r']
 
@@ -86,7 +82,7 @@ class Finder(Module):
 
                 code = requests.get(url, verify=False, allow_redirects=False).status_code
 
-                self.updateDelay()
+                self.updateLastRequest()
                 
                 if (code != 404) and (code != 400) and (code != 500):
                     self.send_msg("PATH FOUND: Queued %s to crawler" % url, "finder")

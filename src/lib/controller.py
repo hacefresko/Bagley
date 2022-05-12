@@ -14,9 +14,9 @@ class Controller:
 
         self.initModules()
 
-        # Check dependences for the modules
+        # Check dependencies for the modules
         for m in self.modules.values():
-            m.checkDependences()
+            m.checkDependencies()
 
         self.discord_connector = lib.discord_connector.Connector(self)
         self.discord_connector.init(config.DISCORD_TOKEN)

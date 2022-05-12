@@ -8,7 +8,6 @@ class Static_Analyzer (Module):
     def __init__(self, controller, stop, crawler):
         super().__init__(['linkfinder', 'unwebpack_sourcemap', 'codeql'], controller, stop, submodules=["searchKeys", "linkfinder", "codeql"])
         self.crawler = crawler
-        self.updateDelay()
 
     def _searchKeys(self, element):
         # Taken from https://github.com/sdushantha/dora/blob/main/dora/db/data.json

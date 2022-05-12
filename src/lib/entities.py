@@ -561,8 +561,11 @@ class Request:
         return None
 
     # Returns True if request exists in database else False. 
-    # If there are already 5 requests that are equal except for some values for the params or the data, it returns True to avoid filling up the database with same requests with different values for the session, dates, CSRF tokens, etc.
+    # If there are already <config.SAME_REQUESTS_ALLOWED> requests that are equal except for some values of the 
+    # params or the data, it returns True to avoid filling up the database with same requests with different values 
+    # for session tokens, dates, CSRF tokens, etc.
     # If requested file extension belongs to config.EXTENSIONS_BLACKLIST, returns False
+    # Content Type can be optionally supplied to better analyze POST data with substitutePOSTData() function
     @staticmethod
     def check(url, method, content_type=None, data=None):
         path = Path.check(url)
@@ -587,7 +590,7 @@ class Request:
                 query_params.append(substitutePOSTData(content_type, data, None, '%'))
             result = db.query_all(query, tuple(query_params))
 
-            if len(result) >= 5:
+            if len(result) >= config.SAME_REQUESTS_ALLOWED:
                 return True
 
         # Check this request is already inserted

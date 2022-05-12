@@ -7,7 +7,6 @@ from lib.modules.module import Module
 class Dynamic_Analyzer (Module):
     def __init__(self, controller, stop, rps, active_modules, lock):
         super().__init__(["subjack", "wappalyzer"], controller, stop, rps, active_modules, lock, ["CVE", "subdomainTakeover", "bypass403"])
-        self.updateDelay()
 
     def __lookupCVEs(self, tech):
         vulns = []
@@ -51,7 +50,7 @@ class Dynamic_Analyzer (Module):
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
         
-        self.updateDelay()
+        self.updateLastRequest()
 
         try:
             for t in json.loads(result.stdout).get('technologies'):
@@ -78,7 +77,7 @@ class Dynamic_Analyzer (Module):
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
-        self.updateDelay()
+        self.updateLastRequest()
 
         if result.stdout != '':
             Vulnerability.insert('Subdomain Takeover', result.stdout, str(domain))
@@ -156,7 +155,7 @@ class Dynamic_Analyzer (Module):
 
                 r = requests.request(method, str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
 
-                self.updateDelay()
+                self.updateLastRequest()
 
                 if r.status_code//100 == 2:
                     Vulnerability.insert('Broken Access Control', "Method: " + method, str(request.path))
@@ -170,7 +169,7 @@ class Dynamic_Analyzer (Module):
 
                 r = requests.request(request.method, str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
                 
-                self.updateDelay()
+                self.updateLastRequest()
 
                 if r.status_code//100 == 2:
                     Vulnerability.insert('Broken Access Control', k+": "+v, str(request.path))
