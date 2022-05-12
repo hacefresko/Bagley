@@ -6,7 +6,7 @@ from lib.modules.module import Module
 
 class Static_Analyzer (Module):
     def __init__(self, controller, stop, crawler):
-        super().__init__(['linkfinder', 'unwebpack_sourcemap', 'codeql'], controller, stop, submodules=["searchKeys", "linkfinder", "codeql"])
+        super().__init__(['linkfinder', 'unwebpack_sourcemap', 'codeql'], controller, stop, submodules=["search_keys", "linkfinder", "codeql"])
         self.crawler = crawler
 
     def _searchKeys(self, element):

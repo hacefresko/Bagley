@@ -304,13 +304,16 @@ class CommandParser():
 
     async def parse(self, line):
         args = line.lower().split()
+        if len(args) == 0:
+            await self.discord_connector.send_msg('Use "help" to see the available commands', "terminal")
 
-        if args[0] == 'help':
+        elif args[0] == 'help':
             help_msg = "Available commands:\n\n"
             help_msg += "help        Print this message\n"
             for c in self.commands:
                 help_msg += c.name.ljust(12) + c.help_msg + "\n"
             await self.discord_connector.send_msg(help_msg, "terminal")
+            
         else:
             try:
                 for c in self.commands:
@@ -321,7 +324,7 @@ class CommandParser():
                             await self.discord_connector.send_msg(c.usage_msg, "terminal")
                         return
                 
-                await self.discord_connector.send_msg('Cannot understand "%s"' % line, "terminal")
+                await self.discord_connector.send_msg('Cannot understand "%s". Use "help" for see  the available commands.' % line, "terminal")
             except:
                 await self.discord_connector.send_msg(traceback.format_exc(), "terminal")
     

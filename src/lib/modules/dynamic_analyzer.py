@@ -6,7 +6,7 @@ from lib.modules.module import Module
 
 class Dynamic_Analyzer (Module):
     def __init__(self, controller, stop, rps, active_modules, lock):
-        super().__init__(["subjack", "wappalyzer"], controller, stop, rps, active_modules, lock, ["CVE", "subdomainTakeover", "bypass403"])
+        super().__init__(["subjack", "wappalyzer"], controller, stop, rps, active_modules, lock, ["cve", "subdomain_takeover", "bypass403"])
 
     def __lookupCVEs(self, tech):
         vulns = []
