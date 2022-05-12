@@ -536,8 +536,6 @@ class Crawler (Module):
         # Generator for domains
         domains = Domain.yieldAll()
         while not self.stop.is_set():
-            # Mark module as inactive
-            self.setInactive()
 
             # Get url from queue. If queue is empty, get domain from database. If it's also
             # empty, sleep for 5 seconds and start again
@@ -604,3 +602,6 @@ class Crawler (Module):
             self.__crawl(url, 'GET')
 
             self.send_msg('Finished crawling %s' % url, "crawler")
+
+            # Set module as active
+            self.setInactive()

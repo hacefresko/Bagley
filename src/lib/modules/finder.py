@@ -151,20 +151,31 @@ class Finder(Module):
             try:
                 domain = next(domains)
                 if domain:
-                    self.setActive()
+
+                    # If domain is a group of subdomains
                     if domain.name[0] == '.':
-                        self.__findSubDomains(domain)
-                        self.__fuzzSubDomains(domain)
-                    else:
+                        if "findsubdomains" not in domain.excluded:
+                            self.setActive()
+                            self.__findSubDomains(domain)
+                            self.setInactive()
+
+                        if "fuzzsubdomains" not in domain.excluded:
+                            self.setActive()
+                            self.__fuzzSubDomains(domain)
+                            self.setInactive()
+
+                    elif "findpaths" not in domain.excluded:
+                        self.setActive()
                         self.__findPaths(domain)
+                        self.setInactive()
 
                 directory = next(directories)
-                if directory:
-                    self.setActive()
-                    self.__fuzzPaths(directory, directory.domain.headers, directory.domain.cookies)
+                if (directory is not None) and ("fuzzpaths" not in directory.domain.excluded):
+                        self.setActive()
+                        self.__fuzzPaths(directory, directory.domain.headers, directory.domain.cookies)
+                        self.setInactive()
 
                 if not domain and not directory:
-                    self.setInactive()
                     time.sleep(5)
             except:
                 self.send_error_msg(traceback.format_exc(), "finder")

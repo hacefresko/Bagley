@@ -217,7 +217,7 @@ class Domain:
 
     # Inserts array of excluded submodules to domain (removes everything that was before)
     def addExcludedSubmodules(self, excluded_submodules):
-        excluded_submodules = ";".join(excluded_submodules)
+        excluded_submodules = ";".join(excluded_submodules).lower()
 
         db = DB()
         db.exec('UPDATE domains SET excluded_submodules = %s WHERE id = %d', (excluded_submodules, self.id))
