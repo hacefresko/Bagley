@@ -14,9 +14,6 @@ class Crawler (Module):
     def __init__(self, controller, stop, rps, active_modules, lock):
         super().__init__(["chromedriver"], controller, stop, rps, active_modules, lock)
 
-        # Init time for applying delay
-        self.updateDelay()
-
         # Init queue for other modules to send urls to crawler
         self.queue = []
 
@@ -25,33 +22,38 @@ class Crawler (Module):
 
         # Init selenium driver http://www.assertselenium.com/java/list-of-chrome-driver-command-line-arguments/
         opts = Options()
-        opts.headless = True
-        opts.incognito = True
-        opts.add_argument("--no-proxy-server")                  # https://stackoverflow.com/questions/51503437/headless-chrome-web-driver-too-slow-and-unable-to-download-file
-        opts.add_argument("--proxy-server='direct://'")         # https://stackoverflow.com/questions/51503437/headless-chrome-web-driver-too-slow-and-unable-to-download-file
-        opts.add_argument("--proxy-bypass-list=*")              # https://stackoverflow.com/questions/51503437/headless-chrome-web-driver-too-slow-and-unable-to-download-file
-        opts.add_argument("start-maximized");                   # https://stackoverflow.com/a/26283818/1689770
-        opts.add_argument("enable-automation");                 # https://stackoverflow.com/a/43840128/1689770
-        opts.add_argument("--no-sandbox");                      # https://stackoverflow.com/a/50725918/1689770
-        opts.add_argument("--disable-infobars");                # https://stackoverflow.com/a/43840128/1689770
-        opts.add_argument("--disable-dev-shm-usage");           # https://stackoverflow.com/a/50725918/1689770
-        opts.add_argument("--disable-browser-side-navigation"); # https://stackoverflow.com/a/49123152/1689770
-        opts.add_argument("--disable-gpu");                     # https://stackoverflow.com/questions/51959986/how-to-solve-selenium-chromedriver-timed-out-receiving-message-from-renderer-exc
 
-        opts.add_experimental_option("excludeSwitches", ["enable-logging"])
+        # Enable headless mode
+        opts.headless = True
+
+        # Enable incognito mode
+        opts.incognito = True
+
+        # Options to increase performance
+        opts.add_argument("--no-proxy-server")                  
+        opts.add_argument("--proxy-server='direct://'") 
+        opts.add_argument("--proxy-bypass-list=*") 
+        opts.add_argument("start-maximized"); 
+        opts.add_argument("enable-automation");
+        opts.add_argument("--no-sandbox");
+        opts.add_argument("--disable-infobars")
+        opts.add_argument("--disable-dev-shm-usage");
+        opts.add_argument("--disable-browser-side-navigation");
+        opts.add_argument("--disable-gpu");
 
         self.driver = webdriver.Chrome(options=opts)
 
         # Set timeout
         self.driver.set_page_load_timeout(config.TIMEOUT)
 
-    def checkDependences(self):
+    def checkDependencies(self):
         if not os.path.exists(config.SCREENSHOT_FOLDER):
             raise Exception('%s not found' % config.SCREENSHOT_FOLDER)
         
-        super().checkDependences()
+        super().checkDependencies()
 
-    # Check if requests can be crawled based on the scope, the type of resource to be requested and if the request has been already made
+    # Check if requests can be crawled based on the scope, the type of resource to be requested and 
+    # if the request has been already made
     def isCrawlable(self, url, method='GET', content_type=None, data=None):
         domain = urlparse(url).netloc
 
@@ -60,16 +62,20 @@ class Crawler (Module):
 
         return False
 
-    # Check if url can be queued based on if url already exists on db or on queue and if it's in scope
+    # If URL already exists in db or in queue, if it's not in scope or if file extension is blackilsted, it returns False
     def isQueueable(self, url):
         if Path.check(url) or (url in self.queue) or (not Domain.checkScope(urlparse(url).netloc)) or (not Path.checkExtension(url)):
             return False
 
         return True
 
+    # Add URL to the queue 
+    # If it already exists in db or in queue, if it's not in scope or if file extension is blackilsted, it won't be added
     def addToQueue(self, url):
-        self.queue.append(url)
+        if Path.check(url) or (url in self.queue) or (not Domain.checkScope(urlparse(url).netloc)) or (not Path.checkExtension(url)):
+            self.queue.append(url)
 
+    # Remove all URLs belonging to domain from the queue
     def removeDomainFromQueue(self, domain):
         newQueue = []
 
@@ -80,7 +86,7 @@ class Crawler (Module):
 
         self.queue = newQueue
 
-    # Update initial cookies in case some of them have dissapeared because of a logout or something else
+    # Update initial cookies so they remain although a logout button is pressed
     def __updateCookies(self, url):
         domain = Path.check(url).domain
         if domain.cookies:
@@ -105,7 +111,7 @@ class Crawler (Module):
                     if str(domain) != current_domain:
                         del self.driver.requests
 
-    # https://stackoverflow.com/questions/46361494/how-to-get-the-localstorage-with-python-and-selenium-webdriver
+    # Add to local storage attribute to later update browser
     def addToLocalStorage(self, url, d):
         self.localStorage[url] = d
 
@@ -117,15 +123,16 @@ class Crawler (Module):
             
             self.applyDelay()
 
+            # Location must be visited so the browser inserts the data in the local storage corresponding to that location
             self.driver.get(location)
 
-            self.updateDelay()
+            self.updateLastRequest()
 
             for k,v in self.localStorage.get(location).items():
                 self.driver.execute_script("window.localStorage.setItem(arguments[0], arguments[1]);", k, v)
 
-    # Function to use any HTTP method, taken from https://stackoverflow.com/questions/5660956/is-there-any-way-to-start-with-a-post-request-using-selenium
-    def __request(self, path, method, data, headers):
+    # Function to send requests using any HTTP method by using JavaScript in the browser
+    def __request(self, url, method, data, headers):
         current_requests = len(self.driver.requests)
 
         headers_dict = {}
@@ -133,8 +140,8 @@ class Crawler (Module):
             headers_dict[header.key] = header.value
 
         self.driver.execute_script("""
-        function req(path, method, data, headers) {
-            fetch(path, {
+        function req(url, method, data, headers) {
+            fetch(url, {
                 method: method,
                 headers: headers,
                 body: data
@@ -142,7 +149,7 @@ class Crawler (Module):
         }
         
         req(arguments[0], arguments[1], arguments[2], arguments[3]);
-        """, path, method, data, headers_dict)
+        """, url, method, data, headers_dict)
 
         # Wait until request is received by selenium or until it times out
         i = 0
@@ -239,7 +246,7 @@ class Crawler (Module):
         return True
 
     # Traverse the HTML looking for paths to crawl
-    def __parseHTML(self, parent_url, response, headers):
+    def __parseHTML(self, parent_url, response):
         parser = BeautifulSoup(response.body, 'html.parser')
         for element in parser(['a', 'form', 'script', 'iframe', 'button']):
             if element.name == 'a':
@@ -258,7 +265,7 @@ class Crawler (Module):
                 url = urljoin(parent_url, path)
 
                 if self.isCrawlable(url, 'GET'):
-                    self.__crawl(url, 'GET', headers)
+                    self.__crawl(url, 'GET')
                 
             elif element.name == 'form':
                 form_id = element.get('id')
@@ -294,7 +301,6 @@ class Crawler (Module):
                         
                 data = data[:-1] if data != '' else None
                     
-                req_headers = headers
                 # If form method is GET, append data to URL as params and set data and content type to None
                 if method == 'GET':
                     content_type = None
@@ -303,13 +309,9 @@ class Crawler (Module):
                             url = url.split('?')[0]
                         url += '?' + data
                         data = None
-                else:
-                    content_type = 'application/x-www-form-urlencoded'
-                    h = Header.get('content-type', content_type) or  Header.insert('content-type', content_type)
-                    req_headers += [h]
 
                 if self.isCrawlable(url, method, content_type, data):
-                    self.__crawl(url, method, data, req_headers)
+                    self.__crawl(url, method, data)
 
             elif element.name == 'script':
                 if (element.get('type')) and (element.get('type') != "application/javascript") and (element.get('type') != "application/ecmascript"):
@@ -349,7 +351,7 @@ class Crawler (Module):
                 url = urljoin(parent_url, path)
 
                 if self.isCrawlable(url, 'GET'):
-                    self.__crawl(url, 'GET', headers)   
+                    self.__crawl(url, 'GET')   
 
             elif element.name == 'button':
                 # If button belongs to a form                
@@ -384,13 +386,13 @@ class Crawler (Module):
                         data = req.body.decode('utf-8', errors='ignore')
                         
                         if self.isCrawlable(req.url, req.method, req.headers.get_content_type(), data):
-                            self.__crawl(req.url, req.method, data, headers)
+                            self.__crawl(req.url, req.method, data)
 
                     #Else, check if at least the url has changed
                     elif self.driver.current_url != parent_url:
                         
                         if self.isCrawlable(self.driver.current_url, 'GET'):
-                            self.__crawl(self.driver.current_url, 'GET', headers)
+                            self.__crawl(self.driver.current_url, 'GET')
 
                 except:
                     continue
@@ -404,7 +406,7 @@ class Crawler (Module):
         return True
 
     # Main method of crawler
-    def __crawl(self, parent_url, method, data=None, headers=[]):
+    def __crawl(self, parent_url, method, data=None):
         # If execution is stopped
         if self.stop.is_set():
             return
@@ -426,11 +428,11 @@ class Crawler (Module):
             self.applyDelay()
 
             if method == 'GET':
-                if headers:
+                if path.domain.headers:
                     # If we try to acces headers from interceptor by domain.headers, when another variable
                     # named domain is used, it will overwrite driver.headers so it will throw an exception.
                     # We need interceptor_headers to store the headers for the interceptor
-                    interceptor_headers = headers
+                    interceptor_headers = path.domain.headers
                     def interceptor(request):
                         for header in interceptor_headers:
                             try:
@@ -442,7 +444,7 @@ class Crawler (Module):
 
                 self.driver.get(parent_url)
             else:
-                self.__request(parent_url, method, data, headers)
+                self.__request(parent_url, method, data, path.domain.headers)
         except Exception as e:
             if "timeout: Timed out receiving message from renderer" in e.msg:
                 self.send_msg("Timeout exception requesting %s" % parent_url, "crawler")
@@ -450,10 +452,10 @@ class Crawler (Module):
                 self.send_error_msg(traceback.format_exc(), "crawler")
             return
 
-        self.updateDelay()
+        self.updateLastRequest()
 
         # List of responses to analyze
-        resp_to_analyze = []
+        responses2analyze = []
 
         main_request = None
         main_response = None
@@ -468,10 +470,11 @@ class Crawler (Module):
                     self.send_msg('[SCRIPT] %s' % (request.url), "crawler")
 
             # Main request
+            # Main request doesn't have to be the first one that the iterator returns, since the order depends
+            # on depends on when did they become available for the driver to get them. So in order to check which 
+            # is the first one, it checks if request.url == parent_url
             elif request.url == parent_url and main_request is None and main_response is None:
 
-                # Only cookies sent in requests are merged because cookies coming in set-cookie headers may not be accepted by the browser. 
-                # It's easier to only take into account those which get directly accepted by only taking cookies from requests
                 main_request = self.__processRequest(request)
                 if not main_request:
                     self.send_msg("[ERROR] Couldn't process request for %s" % (request.url), "crawler")
@@ -500,7 +503,7 @@ class Crawler (Module):
 
                             if self.isCrawlable(redirect_to, method, data=data):
                                 self.send_msg("[%d] Redirect to %s" % (code, redirect_to), "crawler")
-                                self.__crawl(redirect_to, method, data, headers)
+                                self.__crawl(redirect_to, method, data)
                             elif not Domain.checkScope(urlparse(redirect_to).netloc):
                                 self.send_msg("[%d] Redirect to %s [OUT OF SCOPE]" % (code, redirect_to), "crawler")
 
@@ -511,7 +514,7 @@ class Crawler (Module):
                 # Send screenshot once we know if the request was redirected or not
                 self.__sendScreenshot(main_request.path)
 
-                resp_to_analyze.append({'url': parent_url, 'response':main_response})
+                responses2analyze.append({'url': parent_url, 'response':main_response})
 
             # Dynamic requests
             elif self.isCrawlable(request.url, request.method, request.headers.get('content-type'), request.body.decode('utf-8', errors='ignore')):
@@ -523,11 +526,11 @@ class Crawler (Module):
                     self.send_msg("[%d][DYNAMIC] %s" % (resp.code, request.url), "crawler")
                     # If dynamic request responded with HTML, send it to analize
                     if (resp.body is not None) and (resp.getHeader('content-type') is not None) and (resp.getHeader('content-type').value == "text/html"):
-                        resp_to_analyze.append({'url': request.url, 'response':resp})
+                        responses2analyze.append({'url': request.url, 'response':resp})
 
         # Process all captured responses that are valid HTML
-        for r in resp_to_analyze:
-            self.__parseHTML(r['url'], r['response'], headers)
+        for r in responses2analyze:
+            self.__parseHTML(r['url'], r['response'])
 
     def run(self):
         # Generator for domains
@@ -590,14 +593,14 @@ class Crawler (Module):
                     continue
 
             # If url already in database, skip
-            if Path.check(url):
+            if Request.check(url, 'GET'):
                 continue
 
-            # Mark module as active
+            # Set module as active
             self.setActive()
 
             self.send_msg("Started crawling %s" % url, "crawler")
             
-            self.__crawl(url, 'GET', headers=domain.headers)
+            self.__crawl(url, 'GET')
 
             self.send_msg('Finished crawling %s' % url, "crawler")
