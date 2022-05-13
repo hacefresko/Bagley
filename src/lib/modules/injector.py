@@ -5,7 +5,7 @@ from lib.entities import *
 
 class Injector (Module):
     def __init__(self, controller, stop, rps, active_modules, lock):
-        super().__init__(["sqlmap", "dalfox", "crlfuzz"], controller, stop, rps, active_modules, lock, ["sqlmap", "dalfox"])
+        super().__init__(["sqlmap", "dalfox", "crlfuzz"], controller, stop, rps, active_modules, lock, ["sqli", "xss"])
 
     def __sqli(self, request):
         url = str(request.path) + ('?' + request.params if request.params else '')
@@ -68,7 +68,7 @@ class Injector (Module):
         # --no-color: no color in output
         # --delay: delay between requests
         # -X: method to use
-        
+
         command = [shutil.which('dalfox'), 'url', url, '-S', '-F', '--skip-bav', '--skip-grepping', '--waf-evasion', '--no-color', "--delay", str(int(self.getDelay()*1000)), "-X", request.method]
 
         # Add URL params
@@ -155,23 +155,30 @@ class Injector (Module):
         while not self.stop.is_set():
             try:
                 request = next(requests)
-                if not request:
-                    self.setInactive()
+                if (request is None):
                     time.sleep(5)
                     continue
-                if not request.response or request.id in tested or request.response.code == 404 or request.response.code == 500 or (request.response.code // 100 == 3):
-                    self.setInactive()
+
+                response = request.response
+                if (request.id in tested) or \
+                (response is None) or \
+                (response.code == 404) or \
+                (response.code == 500) or \
+                (response.code // 100 == 3) or \
+                ((request.params is None) and (request.data is None)):
                     continue
-                
+
                 self.setActive()
 
-                if request.params or request.data:
-                    response = request.response
-                    if response:
-                        content_type = response.getHeader('content-type')
-                        if (content_type is not None) and ('text/html' in str(content_type)):
-                            self.__xss(request)
+                if response:
+                    content_type = response.getHeader('content-type')
+                    if (content_type is not None) and ('text/html' in str(content_type)) and ("xss" not in request.path.domain.excluded):
+                        self.__xss(request)
+                
+                if ("sqli" not in request.path.domain.excluded):
                     self.__sqli(request)
+
+                self.setInactive()
 
                 # Add request with same keys in POST/GET data to tested list
                 tested = [*[request.id for request in request.getSameKeysRequests()], *tested]

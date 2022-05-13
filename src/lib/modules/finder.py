@@ -198,7 +198,8 @@ class Finder(Module):
                         self.__fuzzPaths(directory)
                         self.setInactive()
 
-                if not domain and not directory:
+                if (domain is None) and (directory is None):
                     time.sleep(5)
+                    
             except:
                 self.send_error_msg(traceback.format_exc(), "finder")

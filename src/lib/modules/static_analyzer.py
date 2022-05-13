@@ -6,10 +6,10 @@ from lib.modules.module import Module
 
 class Static_Analyzer (Module):
     def __init__(self, controller, stop, crawler):
-        super().__init__(['linkfinder', 'unwebpack_sourcemap', 'codeql'], controller, stop, submodules=["search_keys", "linkfinder", "codeql"])
+        super().__init__(['linkfinder', 'unwebpack_sourcemap', 'codeql'], controller, stop, submodules=["search_keys", "find_paths", "analyze_script"])
         self.crawler = crawler
 
-    def _searchKeys(self, element):
+    def __searchKeys(self, element):
         # Taken from https://github.com/sdushantha/dora/blob/main/dora/db/data.json
         patterns = {
             #"Google API Key": "AIza[0-9A-Za-z-_]{35}",
@@ -124,7 +124,7 @@ class Static_Analyzer (Module):
 
         self.send_msg(process.stderr.read().decode('utf-8', errors='ignore'), "static-analyzer")
 
-    def __analyzeCodeQL(self, script):
+    def __analyzeScript(self, script):
 
         tmp_dir = config.FILES_FOLDER + ''.join(random.choices(string.ascii_lowercase, k=10)) + '/'
         os.mkdir(tmp_dir)
@@ -210,20 +210,48 @@ class Static_Analyzer (Module):
         responses = Response.yieldAll()
         while not self.stop.is_set():
             try:
+                executed = False
+
                 script = next(scripts)
-                if script and script.content:
-                    self.__findPaths(script)
-                    self.__analyzeCodeQL(script)
+                if (script is not None) and (script.content is not None):
+                    executed = True
+
+                    # Check that there is at least one domain among the paths associated to 
+                    # this script that allows to use each submodule
+                    allow_find_paths = False
+                    allow_analyze_script = False
+                    allow_search_keys = False
+                    for path in script.getPaths():
+                        if "find_paths" not in path.domain.excluded:
+                            allow_find_paths = True
+                        if "analyze_script" not in path.domain.excluded:
+                            allow_analyze_script = True
+                        if "search_keys" not in path.domain.excluded:
+                            allow_search_keys = True
+
+                    if allow_find_paths:
+                        self.__findPaths(script)
+
+                    if allow_analyze_script:
+                        self.__analyzeScript(script)
 
                     # Scripts embedded in html file are analyzed with the whole response body
-                    if len(script.getPaths()) > 0:
-                        self._searchKeys(script)
-                else:
-                    response = next(responses)
-                    if response and response.body and response.code == 200:
-                        self._searchKeys(response)
-                    else:
-                        time.sleep(5)
-                        continue
+                    if(len(script.getPaths()) > 0) and allow_search_keys:
+                        self.__searchKeys(script)
+                
+                response = next(responses)
+                if (response is not None) and (response.body is not None) and (response.code == 200):
+                    executed = True
+
+                    # Check that there is at least one domain among the paths from the
+                    # requests associated to this response that allows to use this submodule
+                    for request in response.getRequests():
+                        if "search_keys" not in request.path.domain.excluded:
+                            self.__searchKeys(response)
+                            break
+
+                if not executed:
+                    time.sleep(5)
+                    
             except:
                 self.send_error_msg(traceback.format_exc(), "static-analyzer")

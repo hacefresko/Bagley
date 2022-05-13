@@ -18,7 +18,7 @@ class Controller:
         for m in self.modules.values():
             m.checkDependencies()
 
-        self.discord_connector = lib.discord_connector.Connector(self)
+        self.discord_connector = lib.discord_connector.Discord_Connector(self)
         self.discord_connector.init(config.DISCORD_TOKEN)
 
     def initModules(self):

@@ -7,14 +7,18 @@ class Command:
     def __init__(self, controller, discord_connector, name, help_msg, usage_msg):
         self.controller = controller
         self.discord_connector = discord_connector
+
+        # These attributes must be supplied by each command
         self.name = name
         self.help_msg = help_msg
         self.usage_msg = usage_msg
 
+    # Function to check if supplied arguments are valid
     @abstractmethod
-    def parse(self, args):
+    def checkArgs(self, args):
         pass
 
+    # Function to execute the command
     @abstractmethod
     async def run(self, args):
         pass
@@ -23,7 +27,7 @@ class StartCommand(Command):
     def __init__(self, controller, discord_connector):
         super().__init__(controller, discord_connector, "start", "Start execution", "start does not accept arguments")
 
-    def parse(self, args):
+    def checkArgs(self, args):
         if len(args) > 1:
             return False
 
@@ -37,7 +41,7 @@ class StopCommand(Command):
     def __init__(self, controller, discord_connector):
         super().__init__(controller, discord_connector, "stop", "Stop execution", "stop does not accept arguments")
 
-    def parse(self, args):
+    def checkArgs(self, args):
         if len(args) > 1:
             return False
 
@@ -52,7 +56,7 @@ class RestartCommand(Command):
     def __init__(self, controller, discord_connector):
         super().__init__(controller, discord_connector, "restart", "Restart execution", "restart does not accept arguments")
 
-    def parse(self, args):
+    def checkArgs(self, args):
         if len(args) > 1:
             return False
 
@@ -68,7 +72,7 @@ class AddCommand(Command):
     def __init__(self, controller, discord_connector):
         super().__init__(controller, discord_connector, "add", "Add a new domain (add help for more info)", "Usage: add <domain/group of subdomains> [options]")
 
-    def parse(self, args):
+    def checkArgs(self, args):
         if len(args) < 2:
             return False
 
@@ -110,7 +114,7 @@ class RmCommand(Command):
     def __init__(self, controller, discord_connector):
         super().__init__(controller, discord_connector, "rm", "Removes a domain", "Usage: rm <domain/group of subdomains> [options]")
 
-    def parse(self, args):
+    def checkArgs(self, args):
         if len(args) != 2:
             return False
 
@@ -123,7 +127,7 @@ class GetDomainsCommand(Command):
     def __init__(self, controller, discord_connector):
         super().__init__(controller, discord_connector, "getDomains", "Print all domains", "getDomains does not accept arguments")
 
-    def parse(self, args):
+    def checkArgs(self, args):
         if len(args) > 1:
             return False
 
@@ -143,7 +147,7 @@ class GetPathsCommand(Command):
     def __init__(self, controller, discord_connector):
         super().__init__(controller, discord_connector, "getPaths", "Print all paths for a domain", "Usage: getpaths <domain>")
 
-    def parse(self, args):
+    def checkArgs(self, args):
         if len(args) != 2:
             return False
 
@@ -161,7 +165,7 @@ class GetRPSCommand(Command):
     def __init__(self, controller, discord_connector):
         super().__init__(controller, discord_connector, "getRPS", "Print current requests per second", "getRPS does not accept arguments")
 
-    def parse(self, args):
+    def checkArgs(self, args):
         if len(args) > 1:
             return False
 
@@ -174,7 +178,7 @@ class SetRPSCommand(Command):
     def __init__(self, controller, discord_connector):
         super().__init__(controller, discord_connector, "setRPS", "Set requests per second", "Usage: setrps <RPS>")
 
-    def parse(self, args):
+    def checkArgs(self, args):
         if (len(args) != 2):
             return False
 
@@ -193,7 +197,7 @@ class GetActiveCommand(Command):
     def __init__(self, controller, discord_connector):
         super().__init__(controller, discord_connector, "getActive", "Print active modules", "getActive does not accept arguments")
 
-    def parse(self, args):
+    def checkArgs(self, args):
         if len(args) > 1:
             return False
 
@@ -207,7 +211,7 @@ class QueryCommand(Command):
     def __init__(self, controller, discord_connector):
         super().__init__(controller, discord_connector, "query", "Query directly to database", "Usage: query <query>")
 
-    def parse(self, args):
+    def checkArgs(self, args):
         if len(args) < 2:
             return False
 
@@ -223,7 +227,7 @@ class GetScriptCommand(Command):
     def __init__(self, controller, discord_connector):
         super().__init__(controller, discord_connector, "getScript", "Get script information", "getScript <script id>")
 
-    def parse(self, args):
+    def checkArgs(self, args):
         if (len(args) != 2):
             return False
 
@@ -313,16 +317,15 @@ class CommandParser():
             for c in self.commands:
                 help_msg += c.name.ljust(12) + c.help_msg + "\n"
             await self.discord_connector.send_msg(help_msg, "terminal")
-            
+
         else:
             try:
                 for c in self.commands:
-                    if args[0] == c.name.lower():
-                        if c.parse(args):
-                            await c.run(args)
-                        else:
-                            await self.discord_connector.send_msg(c.usage_msg, "terminal")
-                        return
+                    if (args[0] == c.name.lower()) and c.checkArgs(args):
+                        await c.run(args)
+                    else:
+                        await self.discord_connector.send_msg(c.usage_msg, "terminal")
+                    return
                 
                 await self.discord_connector.send_msg('Cannot understand "%s". Use "help" for see  the available commands.' % line, "terminal")
             except:
@@ -330,7 +333,7 @@ class CommandParser():
     
 
 # Define discord connector class
-class Connector:
+class Discord_Connector:
     def __init__(self, controller):
         # Create bot
         self.bot = discord.Client()
@@ -348,16 +351,22 @@ class Connector:
         @self.bot.event
         async def on_message(message):
             if message.author.id != self.bot.user.id:
+                # If message is a regular message
                 if len(message.attachments) == 0:
                     for line in message.content.split('\n'):
                         await cp.parse(line)
+                # If message is a file
                 else:
-                    for attachment in message.attachments:
-                        async with aiohttp.ClientSession().get(attachment.url) as r:
-                            txt = await r.text()
-                            if txt: 
-                                for line in txt.split('\n'):
-                                    await cp.parse(line)
+                    try:
+                        for attachment in message.attachments:
+                            # Get text file directly as r
+                            async with aiohttp.ClientSession().get(attachment.url) as r:
+                                txt = await r.text()
+                                if txt: 
+                                    for line in txt.split('\n'):
+                                        await cp.parse(line)
+                    except:
+                        return
 
         @self.bot.event
         async def on_bagley_msg(msg, channel):
@@ -370,7 +379,9 @@ class Connector:
     def init(self, token):
         self.bot.run(token)
 
-    # Function for directly sending messages/files (only works for async functions)
+    # Wrapper for Channel.send() to send messages. 
+    # If the message is too big, it divides it in several messages.
+    # If it's even bigger, it sends it as a .txt file
     async def send_msg(self, msg, channel):
         for c in self.bot.get_all_channels():
             if c.name == channel:
@@ -396,6 +407,7 @@ class Connector:
 
                 break
 
+    # Wrapper for channel.send() to send files
     async def send_file(self, filename, channel):
         for c in self.bot.get_all_channels():
             if c.name == channel:

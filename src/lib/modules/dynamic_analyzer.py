@@ -6,7 +6,7 @@ from lib.modules.module import Module
 
 class Dynamic_Analyzer (Module):
     def __init__(self, controller, stop, rps, active_modules, lock):
-        super().__init__(["subjack", "wappalyzer"], controller, stop, rps, active_modules, lock, ["cve", "subdomain_takeover", "bypass403"])
+        super().__init__(["subjack", "wappalyzer"], controller, stop, rps, active_modules, lock, ["cve_finder", "subdomain_takeover", "bypass403"])
 
     def __lookupCVEs(self, tech):
         vulns = []
@@ -188,22 +188,24 @@ class Dynamic_Analyzer (Module):
                 if path:
                     self.setActive()
                     self.__wappalyzer(path)
+                    self.setInactive()
                     executed = True
 
                 domain = next(domains)
                 if (domain is not None) and (str(domain)[0] != '.'):
                     self.setActive()
                     self.__subdomainTakeover(domain)
+                    self.setInactive()
                     executed = True
 
                 request = next(requests)
                 if (request) and (request.response) and (request.response.code == 403):
                     self.setActive()
                     self.__bypass403(request)
+                    self.setInactive()
                     executed = True
 
                 if not executed:
-                    self.setInactive()
                     time.sleep(5)
 
             except Exception as e:
