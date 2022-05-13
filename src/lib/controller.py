@@ -69,7 +69,8 @@ class Controller:
         for m in self.modules.values():
             m.join()
 
-        # Init modules again so start() can be called after stop() (Threads can only be started once so we need to create the objects again)
+        # Init modules again so start() can be called after stop() 
+        # (Threads can only be started once so we need to create the objects again)
         self.initModules()
 
     def addToQueue(self, url):

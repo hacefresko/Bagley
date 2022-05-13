@@ -327,7 +327,7 @@ class CommandParser():
                         await self.discord_connector.send_msg(c.usage_msg, "terminal")
                     return
                 
-                await self.discord_connector.send_msg('Cannot understand "%s". Use "help" for see  the available commands.' % line, "terminal")
+                await self.discord_connector.send_msg('Cannot understand "%s". Type "help".' % line, "terminal")
             except:
                 await self.discord_connector.send_msg(traceback.format_exc(), "terminal")
     
