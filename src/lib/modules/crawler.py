@@ -88,7 +88,7 @@ class Crawler (Module):
 
     # Update initial cookies so they remain although a logout button is pressed
     def __updateCookies(self, url):
-        domain = Path.check(url).domain
+        domain = Path.get(url).domain
         if domain.cookies:
             for cookie in domain.cookies:
                 browser_cookie = self.driver.get_cookie(cookie.name)

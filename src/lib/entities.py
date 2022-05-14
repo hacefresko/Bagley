@@ -435,7 +435,7 @@ class Path:
 
     # Returns path corresponding to URL or None if it does not exist in the database
     @staticmethod
-    def check(url):
+    def get(url):
         parsedURL = Path.__parseURL(url)
         if not parsedURL:
             return None
@@ -452,6 +452,27 @@ class Path:
                 return None
             if i == len(parsedURL['elements']) - 1:
                 return path
+            parent = path
+
+    # Returns true if path corresponding to URL already exists
+    @staticmethod
+    def check(url):
+        parsedURL = Path.__parseURL(url)
+        if not parsedURL:
+            return False
+
+        domain = Domain.get(parsedURL['domain'])
+        if not domain:
+            return False
+
+        # Iterate over each domain/file from URL
+        parent = None
+        for i, element in enumerate(parsedURL['elements']):
+            path = Path.__get(parsedURL['protocol'], element, parent, domain)
+            if not path:
+                return False
+            if i == len(parsedURL['elements']) - 1:
+                return True
             parent = path
 
     # Inserts each path inside the URL if not already inserted and returns last path (last element from URL).
@@ -568,8 +589,8 @@ class Request:
     # Content Type can be optionally supplied to better analyze POST data with substitutePOSTData() function
     @staticmethod
     def check(url, method, content_type=None, data=None):
-        path = Path.check(url)
-        if not path:
+        path = Path.get(url)
+        if path is None:
             return False
 
         params = Request.__parseParams(urlparse(url).query) if urlparse(url).query else None
@@ -626,8 +647,8 @@ class Request:
     # Returns request if exists else None
     @staticmethod
     def get(url, method, content_type=None, data=None):
-        path = Path.check(url)
-        if not path:
+        path = Path.get(url)
+        if path is None:
             return None
         params = Request.__parseParams(urlparse(url).query)
         data = Request.__parseData(content_type, data) if method == 'POST' else None
@@ -997,8 +1018,8 @@ class Cookie:
         if not cookie_dictionary:
             return False
 
-        path = Path.check(url)
-        if not path:
+        path = Path.get(url)
+        if path is None:
             return False
 
         # Check domain
@@ -1021,8 +1042,8 @@ class Cookie:
         if not cookie_string:
             return None
 
-        path = Path.check(url)
-        if not path:
+        path = Path.get(url)
+        if path is None:
             return None
         domain = str(path.domain)
         
