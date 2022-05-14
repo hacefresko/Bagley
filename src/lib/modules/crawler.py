@@ -301,8 +301,11 @@ class Crawler (Module):
                         
                 data = data[:-1] if data != '' else None
                     
-                # If form method is GET, append data to URL as params and set data and content type to None
-                if method == 'GET':
+                if method == 'POST':
+                    content_type = "application/x-www-form-urlencoded"
+               
+                # If form method is not POST, append data to URL as params and set data and content type to None
+                else:
                     content_type = None
                     if data:
                         if url.find('?'):
