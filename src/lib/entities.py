@@ -1207,15 +1207,23 @@ class Technology:
         self.cpe = cpe
         self.name = name
         self.version = version
-        self.cves = self.__getCVEs();
 
-    def __getCVEs(self):
+    def getCVEs(self):
         db = DB()
         cves = db.query_all("SELECT * FROM cves WHERE tech = %d", (self.id,))
         
         result = []
         for cve in cves:
             result.append(CVE(cve[0], cve[1]))
+        return result
+
+    def getPaths(self):
+        db = DB()
+        paths = db.query_all("SELECT * FROM path_technologies WHERE tech = %d", (self.id,))
+        
+        result = []
+        for path in paths:
+            result.append(Path(path[0], path[1], path[2], path[3], path[4]))
         return result
 
     @staticmethod
@@ -1251,8 +1259,9 @@ class Technology:
         db.exec('INSERT INTO path_technologies (path, tech) VALUES (%d, %d)', (path.id, self.id))
 
 class CVE:
-    def __init__(self, id):
+    def __init__(self, id, tech):
         self.id = id
+        self.tech = Technology.getById(tech)
 
     @staticmethod
     def getById(id):
