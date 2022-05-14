@@ -7,19 +7,22 @@ import config
 #
 
 class DB:
-    __connectionPool = mariadb.ConnectionPool(
-        host=config.DB_HOST, 
-        user=config.DB_USER, 
-        database=config.DB_NAME, 
-        password=config.DB_PASSWORD, 
-        autocommit=True,
-        pool_name="bagley",
-        pool_size=6 )
-
-
+    __connectionPool = None
     __instances = {}
 
     def __new__(cls):
+
+        # If it's the first time that DB() is called, connect to the database
+        if DB.__connectionPool is None:
+            DB.__connectionPool = mariadb.ConnectionPool(
+                host=config.DB_HOST, 
+                user=config.DB_USER, 
+                database=config.DB_NAME, 
+                password=config.DB_PASSWORD, 
+                autocommit=True,
+                pool_name="bagley",
+                pool_size=6 )
+        
         tid = threading.get_ident()
 
         # If the thred hasn't called DB() yet
