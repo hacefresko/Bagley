@@ -321,11 +321,12 @@ class CommandParser():
         else:
             try:
                 for c in self.commands:
-                    if (args[0] == c.name.lower()) and c.checkArgs(args):
-                        await c.run(args)
-                    else:
-                        await self.discord_connector.send_msg(c.usage_msg, "terminal")
-                    return
+                    if args[0] == c.name.lower():
+                        if c.checkArgs(args):
+                            await c.run(args)
+                        else:
+                            await self.discord_connector.send_msg(c.usage_msg, "terminal")
+                        return
                 
                 await self.discord_connector.send_msg('Cannot understand "%s". Type "help".' % line, "terminal")
             except:
