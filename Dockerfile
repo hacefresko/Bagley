@@ -10,7 +10,7 @@ RUN apt update && apt install -y nano iptables wget unzip git python3 python3-pi
 RUN wget https://bootstrap.pypa.io/pip/2.7/get-pip.py && python2 get-pip.py && rm get-pip.py
 
 # Install Go (apt only installs up to Go 1.13)
-RUN wget https://dl.google.com/go/go1.16.4.linux-amd64.tar.gz && tar -xvf go1.16.4.linux-amd64.tar.gz && mv go /usr/local && rm go1.16.4.linux-amd64.tar.gz
+RUN wget https://go.dev/dl/go1.18.2.linux-amd64.tar.gz && tar -xvf go1.18.2.linux-amd64.tar.gz && mv go /usr/local && rm go1.18.2.linux-amd64.tar.gz
 ENV GOROOT=/usr/local/go
 ENV GOPATH=$HOME/go
 ENV PATH=$GOPATH/bin:$GOROOT/bin:$PATH
@@ -44,7 +44,7 @@ RUN go install github.com/lc/gau/v2/cmd/gau@latest
 RUN git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git /usr/lib/sqlmap && sed -i "s/#!\/usr\/bin\/env python/#!\/usr\/bin\/env python3/" /usr/lib/sqlmap/sqlmap.py && ln -s /usr/lib/sqlmap/sqlmap.py /usr/local/sbin/sqlmap
 
 # Install dalfox
-RUN GO111MODULE=on go get github.com/hahwul/dalfox/v2
+RUN go install github.com/hahwul/dalfox/v2@latest
 
 # Install crlfuzz
 RUN GO111MODULE=on go install github.com/dwisiswant0/crlfuzz/cmd/crlfuzz@latest
