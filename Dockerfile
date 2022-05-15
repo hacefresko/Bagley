@@ -35,7 +35,7 @@ RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
 RUN subfinder || :
 
 # Install subjack
-RUN go get github.com/haccer/subjack
+RUN go install get github.com/haccer/subjack@latest
 
 # Install gau
 RUN go install github.com/lc/gau/v2/cmd/gau@latest
