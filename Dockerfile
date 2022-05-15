@@ -44,7 +44,7 @@ RUN go install github.com/lc/gau/v2/cmd/gau@latest
 RUN git clone --depth 1 https://github.com/sqlmapproject/sqlmap.git /usr/lib/sqlmap && sed -i "s/#!\/usr\/bin\/env python/#!\/usr\/bin\/env python3/" /usr/lib/sqlmap/sqlmap.py && ln -s /usr/lib/sqlmap/sqlmap.py /usr/local/sbin/sqlmap
 
 # Install dalfox
-RUN go install github.com/hahwul/dalfox/v2@latest
+RUN GO111MODULE=on go get github.com/hahwul/dalfox/v2
 
 # Install crlfuzz
 RUN GO111MODULE=on go install github.com/dwisiswant0/crlfuzz/cmd/crlfuzz@latest
