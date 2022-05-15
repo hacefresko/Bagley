@@ -307,11 +307,11 @@ class CommandParser():
         ]
 
     async def parse(self, line):
-        args = line.lower().split()
+        args = line.split()
         if len(args) == 0:
             await self.discord_connector.send_msg('Use "help" to see the available commands', "terminal")
 
-        elif args[0] == 'help':
+        elif args[0].lower() == 'help':
             help_msg = "Available commands:\n\n"
             help_msg += "help        Print this message\n"
             for c in self.commands:
@@ -321,7 +321,7 @@ class CommandParser():
         else:
             try:
                 for c in self.commands:
-                    if args[0] == c.name.lower():
+                    if args[0].lower() == c.name.lower():
                         if c.checkArgs(args):
                             await c.run(args)
                         else:

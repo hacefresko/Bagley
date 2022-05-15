@@ -72,7 +72,7 @@ class Crawler (Module):
     # Add URL to the queue 
     # If it already exists in db or in queue, if it's not in scope or if file extension is blackilsted, it won't be added
     def addToQueue(self, url):
-        if Path.check(url) or (url in self.queue) or (not Domain.checkScope(urlparse(url).netloc)) or (not Path.checkExtension(url)):
+        if self.isQueueable(url):
             self.queue.append(url)
 
     # Remove all URLs belonging to domain from the queue

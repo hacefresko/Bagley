@@ -103,7 +103,7 @@ class Injector (Module):
             cookies_string = cookies_string[:-2]
             command.append(cookies_string)
         
-        self.send_msg("Testing XSS in %s [%s]" % (url, request.method), "injector")
+        self.send_msg("Testing XSS in %s [%s]" % (url if request.params is None else url + '?' + request.params, request.method), "injector")
 
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 

@@ -111,7 +111,7 @@ class Finder(Module):
         if path.domain.cookies:
             command.append('-c')
             cookies = ''
-            for cookie in path.domain.cookie:
+            for cookie in path.domain.cookies:
                 cookies += str(cookie) + ' '
             command.append(cookies)
 
