@@ -109,18 +109,19 @@ class Static_Analyzer (Module):
 
         line = process.stdout.readline().decode('utf-8', errors='ignore')
         while line:
-            try:
-                for path in script_locations:
-                    discovered = urljoin(path, line.rstrip())
-                    if self.crawler.isQueueable(discovered):
+            for path in script_locations:
+                discovered = urljoin(path, line.rstrip())
+                if self.crawler.isQueueable(discovered):
+                    try:
                         code = requests.get(discovered, verify=False, allow_redirects=False).status_code
                         if (code != 404) and (code != 400) and (code != 500):
                             self.send_msg("PATH FOUND: Queued %s to crawler" % discovered, "static-analyzer")
                             self.crawler.addToQueue(discovered)
-            except:
-                pass
-            finally:
-                line = process.stdout.readline().decode('utf-8', errors='ignore')
+                    except requests.exceptions.ConnectionError:
+                        # If site is not available
+                        pass
+
+            line = process.stdout.readline().decode('utf-8', errors='ignore')
 
         self.send_msg(process.stderr.read().decode('utf-8', errors='ignore'), "static-analyzer")
 

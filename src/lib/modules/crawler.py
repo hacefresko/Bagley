@@ -336,9 +336,9 @@ class Crawler (Module):
 
                     try:
                         content = requests.get(src, verify=False).text
-                    except:
-                        self.send_error_msg(traceback.format_exc(), "crawler")
-                        continue
+                    except requests.exceptions.ConnectionError:
+                        # If site is not available
+                        pass
 
                     if content:
                         s = Script.get(content) or Script.insert(content)
@@ -548,7 +548,7 @@ class Crawler (Module):
                 # Check if it's up before crawling it
                 try:
                     requests.get(url, allow_redirects=False, verify=False)
-                except:
+                except requests.exceptions.ConnectionError:
                     self.send_error_msg(traceback.format_exc(), "crawler")
                     continue
 

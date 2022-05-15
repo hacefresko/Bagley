@@ -158,9 +158,13 @@ class Finder(Module):
         for url in subprocess.run(command, capture_output=True, encoding='utf-8', input=str(domain)).stdout.splitlines():
             if self.crawler.isQueueable(url):
                 self.applyDelay()
-
-                code = requests.get(url, verify=False, allow_redirects=False).status_code
-
+                
+                try:
+                    code = requests.get(url, verify=False, allow_redirects=False).status_code
+                except requests.exceptions.ConnectionError:
+                    # If site is not available
+                    pass
+                
                 self.updateLastRequest()
                 
                 if (code != 404) and (code != 400) and (code != 500):
