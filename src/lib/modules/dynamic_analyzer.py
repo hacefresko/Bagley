@@ -15,7 +15,7 @@ class Dynamic_Analyzer (Module):
         fetched = 0
         total_results = 1
 
-        self.send_msg("Searching for known vulnerabilites for %s %s" % (tech.name, tech.version), "dynamic-analyzer")
+        self.send_msg("Searching for known vulnerabilites for %s %s [ID: %d]" % (tech.name, tech.version, tech.id), "dynamic-analyzer")
 
         while fetched < total_results:
             url = api % (fetched, cpe)
@@ -33,13 +33,13 @@ class Dynamic_Analyzer (Module):
                     if v != '' and v not in vulns:
                         vulns.append(v)
         
-        str = ""
+        s = ""
         for v in vulns:
             if CVE.insert(v, tech):
-                str += "\t" + v + "\n"
+                s += "\t" + v + "\n"
         
-        if str != '':
-            self.send_vuln_msg('CVE: Vulnerabilities found at %s %s\n%s' % (tech.name, tech.version, str), "dynamic-analyzer")
+        if s != '':
+            self.send_vuln_msg('CVE: Vulnerabilities found at %s %s [ID: %d]\n%s' % (tech.name, tech.version, tech.id, s), "dynamic-analyzer")
 
     def __wappalyzer(self, path):
         command = [shutil.which('wappalyzer'), str(path), '--probe', "-t", str(self.getDelay())]
