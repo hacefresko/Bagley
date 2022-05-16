@@ -1244,7 +1244,7 @@ class Technology:
         
         result = []
         for path in paths:
-            result.append(Path(path[0], path[1], path[2], path[3], path[4]))
+            result.append(Path.getById(path))
         return result
 
     @staticmethod

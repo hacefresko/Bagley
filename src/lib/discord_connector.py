@@ -348,9 +348,9 @@ class CommandParser():
 
         elif args[0].lower() == 'help':
             help_msg = "Available commands:\n\n"
-            help_msg += "help        Print this message\n"
+            help_msg += "help           Print this message\n"
             for c in self.commands:
-                help_msg += c.name.ljust(12) + c.help_msg + "\n"
+                help_msg += c.name.ljust(15) + c.help_msg + "\n"
             await self.discord_connector.send_msg(help_msg, "terminal")
 
         else:
