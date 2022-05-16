@@ -207,22 +207,6 @@ class GetActiveCommand(Command):
         active = self.controller.get_active_modules()
         await self.discord_connector.send_msg("Active modules: %d\n%s" % (len(active), "\n".join(active)), "terminal")
 
-class QueryCommand(Command):
-    def __init__(self, controller, discord_connector):
-        super().__init__(controller, discord_connector, "query", "Query directly to database", "Usage: query <query>")
-
-    def checkArgs(self, args):
-        if len(args) < 2:
-            return False
-
-        return True
-
-    async def run(self, args):
-        try:
-            await self.discord_connector.send_msg("\n" + self.controller.query(" ".join(args[1:])), "terminal")
-        except:
-            await self.discord_connector.send_msg(traceback.format_exc(), "terminal")
-
 class GetScriptCommand(Command):
     def __init__(self, controller, discord_connector):
         super().__init__(controller, discord_connector, "getScript", "Get script information", "getScript <script id>")
@@ -286,6 +270,56 @@ class GetScriptCommand(Command):
             # Delete file
             os.remove(zip_file_name)
 
+class GetTechnologyCommand(Command):
+    def __init__(self, controller, discord_connector):
+        super().__init__(controller, discord_connector, "getTechnology", "Get technolofy information", "getTechnology <technology id>")
+
+    def checkArgs(self, args):
+        if (len(args) != 2):
+            return False
+
+        try:
+            args[1] = int(args[1])
+            return True
+        except:
+            return False
+
+    async def run(self, args):
+        technology = self.controller.getTechnology(args[1])
+        if technology is None:
+            await self.discord_connector.send_msg("Specified technology was not found", "terminal")
+            return
+
+        msg = "%s %s [ID: %d]\n" % (technology.name, technology.version, technology.id)
+        msg += "Used by:\n"
+        for path in technology.getPaths():
+            msg += "\t" + str(path)
+        msg += "\n"
+        msg += "Vulnerabilities:\n"
+        cves = technology.getCVEs()
+        if len(cves) == 0:
+            msg += "No vulnerabilities found\n"
+        else:
+            for cve in cves:
+                msg += "\t" + cve
+        
+        await self.discord_connector.send_msg(msg, "terminal")
+
+class QueryCommand(Command):
+    def __init__(self, controller, discord_connector):
+        super().__init__(controller, discord_connector, "query", "Query directly to database", "Usage: query <query>")
+
+    def checkArgs(self, args):
+        if len(args) < 2:
+            return False
+
+        return True
+
+    async def run(self, args):
+        try:
+            await self.discord_connector.send_msg("\n" + self.controller.query(" ".join(args[1:])), "terminal")
+        except:
+            await self.discord_connector.send_msg(traceback.format_exc(), "terminal")
 
 class CommandParser():
     def __init__(self, controller, discord_connector):

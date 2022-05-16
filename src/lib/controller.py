@@ -175,6 +175,11 @@ class Controller:
     def getScript(self, id):
         return Script.getById(id)
 
+    def getTechnology(self, id):
+        return Technology.getById(id)
+        
+
+
     # Method to communicate directly with db
 
     def query(self, query):

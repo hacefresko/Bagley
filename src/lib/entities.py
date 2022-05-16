@@ -1284,6 +1284,9 @@ class CVE:
         self.id = id
         self.tech = Technology.getById(tech)
 
+    def __str__(self):
+        return self.id
+
     @staticmethod
     def getById(id):
         db = DB()
