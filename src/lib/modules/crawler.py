@@ -20,28 +20,29 @@ class Crawler (Module):
         # Initial local storage to be maintained along the crawl
         self.localStorage = {}
 
-        # Init selenium driver http://www.assertselenium.com/java/list-of-chrome-driver-command-line-arguments/
-        opts = Options()
+        # Init selenium driver options
+        self.opts = Options()
 
         # Enable headless mode
-        opts.headless = True
+        self.opts.headless = True
 
         # Enable incognito mode
-        opts.incognito = True
+        self.opts.incognito = True
 
-        # Options to increase performance
-        opts.add_argument("--no-proxy-server")                  
-        opts.add_argument("--proxy-server='direct://'") 
-        opts.add_argument("--proxy-bypass-list=*") 
-        opts.add_argument("start-maximized"); 
-        opts.add_argument("enable-automation");
-        opts.add_argument("--no-sandbox");
-        opts.add_argument("--disable-infobars")
-        opts.add_argument("--disable-dev-shm-usage");
-        opts.add_argument("--disable-browser-side-navigation");
-        opts.add_argument("--disable-gpu");
+        # Options to increase performance (Chrome options: https://peter.sh/experiments/chromium-command-line-switches/)
+        self.opts.add_argument("--no-proxy-server")                  
+        self.opts.add_argument("--proxy-server='direct://'") 
+        self.opts.add_argument("--proxy-bypass-list=*") 
+        self.opts.add_argument("start-maximized"); 
+        self.opts.add_argument("enable-automation");
+        self.opts.add_argument("--no-sandbox");
+        self.opts.add_argument("--disable-infobars")
+        self.opts.add_argument("--disable-dev-shm-usage");
+        self.opts.add_argument("--disable-browser-side-navigation");
+        self.opts.add_argument("--disable-gpu");
 
-        self.driver = webdriver.Chrome(options=opts)
+        # Init driver
+        self.driver = webdriver.Chrome(options=self.opts)
 
         # Set timeout
         self.driver.set_page_load_timeout(config.TIMEOUT)
@@ -445,15 +446,25 @@ class Crawler (Module):
                             request.headers[header.key] = header.value
                     self.driver.request_interceptor = interceptor
 
+
                 self.driver.get(parent_url)
             else:
                 self.__request(parent_url, method, data, path.domain.headers)
-        except Exception as e:
-            if "timeout: Timed out receiving message from renderer" in e.msg:
-                self.send_msg("Timeout exception requesting %s" % parent_url, "crawler")
-            else:
-                self.send_error_msg(traceback.format_exc(), "crawler")
+
+        except selenium.common.exceptions.InvalidSessionIdException:
+            # If InvalidSessionIdException is thrown, the driver needs to be restarted.
+            # Also call __crawl again with same args so that execution continues
+            self.driver.quit()
+            self.driver = webdriver.Chrome(options=self.opts)
+            self.driver.set_page_load_timeout(config.TIMEOUT)
+            self.__crawl(parent_url, method, data)
             return
+
+        except selenium.common.exceptions.TimeoutException:
+            self.send_msg("Timeout exception requesting %s" % parent_url, "crawler")
+
+        except:
+            self.send_error_msg(traceback.format_exc(), "crawler")
 
         self.updateLastRequest()
 
