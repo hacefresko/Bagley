@@ -214,7 +214,7 @@ class Static_Analyzer (Module):
                 executed = False
 
                 script = next(scripts)
-                if (script is not None) and (script.content is not None):
+                if script is not None:
                     executed = True
 
                     # Check that there is at least one domain among the paths associated to 
