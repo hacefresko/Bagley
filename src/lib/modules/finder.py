@@ -161,15 +161,14 @@ class Finder(Module):
                 
                 try:
                     code = requests.get(url, verify=False, allow_redirects=False).status_code
+                    if (code != 404) and (code != 400) and (code != 500):
+                        self.send_msg("PATH FOUND: Queued %s to crawler" % url, "finder")
+                        self.crawler.addToQueue(url)
                 except requests.exceptions.ConnectionError:
                     # If site is not available
                     pass
-                
-                self.updateLastRequest()
-                
-                if (code != 404) and (code != 400) and (code != 500):
-                    self.send_msg("PATH FOUND: Queued %s to crawler" % url, "finder")
-                    self.crawler.addToQueue(url)
+                finally:
+                    self.updateLastRequest()
        
     def run(self):
         directories = Path.yieldDirectories()

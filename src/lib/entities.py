@@ -1288,7 +1288,7 @@ class CVE:
     def getById(id):
         db = DB()
         cve = db.query_one('SELECT * FROM cves WHERE id = %s', (id,))
-        return CVE(cve[0]) if cve else None
+        return CVE(cve[0], cve[1]) if cve else None
 
     @staticmethod
     def insert(id, tech):
