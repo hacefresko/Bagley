@@ -1,7 +1,7 @@
 import os
 
 # Log file
-LOG_FILE = '/var/log/bagley.log'
+LOG_FILE = 'bagley.log'
 
 # Database variables
 DB_USER = os.getenv("DB_USER") if os.getenv("DB_USER") else 'bagley'
@@ -21,7 +21,6 @@ REQ_PER_SEC = 10
 # Timeout for selenium
 TIMEOUT = 30
 
-# Number of same requests with different values for params or data that are allowed to be saved in the database (Request.check() function for more info)
 SAME_REQUESTS_ALLOWED = 5
 
 # Formats that won't be stored
@@ -37,13 +36,13 @@ PARAMS_BLACKLIST = ['csrf']
 HEADERS_BLACKLIST = ['date', 'cookie', 'set-cookie', 'content-length']
 
 # Absolute path for screenshot folder
-SCREENSHOT_FOLDER = '/tmp/screenshots/'
+SCREENSHOT_FOLDER = 'screenshots/'
 
 # Absolute path for scripts folder
-SCRIPTS_FOLDER = '/tmp/scripts/'
+SCRIPTS_FOLDER = 'scripts/'
 
 # Absolute path for rempotal files
-FILES_FOLDER = '/tmp/'
+FILES_FOLDER = 'files/'
 
 # Directory fuzzing wordlist
 DIR_FUZZING = '/usr/lib/SecLists/Discovery/Web-Content/common.txt'
@@ -52,4 +51,4 @@ DIR_FUZZING = '/usr/lib/SecLists/Discovery/Web-Content/common.txt'
 DOMAIN_FUZZING = '/usr/lib/SecLists/Discovery/DNS/subdomains-top1million-5000.txt'
 
 # Suite for codeql
-CODEQL_SUITE = '/root/bagley/lib/modules/config/bagley_codeql.qls'
+CODEQL_SUITE = '/home/hacefresko/Security/Software/Bagley/src/lib/modules/config/bagley_codeql.qls'

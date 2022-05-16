@@ -334,6 +334,7 @@ class CommandParser():
             GetDomainsCommand(controller, discord_connector), 
             GetPathsCommand(controller, discord_connector), 
             GetScriptCommand(controller, discord_connector),
+            GetTechnologyCommand(controller, discord_connector),
             QueryCommand(controller, discord_connector),
             GetRPSCommand(controller, discord_connector), 
             SetRPSCommand(controller, discord_connector), 
