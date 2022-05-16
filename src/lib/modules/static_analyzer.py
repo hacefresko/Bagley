@@ -217,18 +217,24 @@ class Static_Analyzer (Module):
                 if script is not None:
                     executed = True
 
-                    # Check that there is at least one domain among the paths associated to 
-                    # this script that allows to use each submodule
-                    allow_find_paths = False
-                    allow_analyze_script = False
-                    allow_search_keys = False
-                    for path in script.getPaths():
-                        if "find_paths" not in path.domain.excluded:
-                            allow_find_paths = True
-                        if "analyze_script" not in path.domain.excluded:
-                            allow_analyze_script = True
-                        if "search_keys" not in path.domain.excluded:
-                            allow_search_keys = True
+                    paths = script.getPaths()
+                    if len(paths) == 0:
+                        allow_find_paths = True
+                        allow_analyze_script = True
+                        allow_search_keys = True
+                    else:
+                        # Check that there is at least one domain among the paths associated to 
+                        # this script that allows to use each submodule
+                        allow_find_paths = False
+                        allow_analyze_script = False
+                        allow_search_keys = False
+                        for path in paths:
+                            if "find_paths" not in path.domain.excluded:
+                                allow_find_paths = True
+                            if "analyze_script" not in path.domain.excluded:
+                                allow_analyze_script = True
+                            if "search_keys" not in path.domain.excluded:
+                                allow_search_keys = True
 
                     if allow_find_paths:
                         self.__findPaths(script)
