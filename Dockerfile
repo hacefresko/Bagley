@@ -30,7 +30,7 @@ RUN wget https://chromedriver.storage.googleapis.com/100.0.4896.60/chromedriver_
 # Install gobuster
 RUN go install github.com/OJ/gobuster/v3@latest
 
-# Install subfinder (must execute once to let it configure itself)
+# Install subfinder (must be executed once so that it configures itself)
 RUN go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
 RUN subfinder || :
 
