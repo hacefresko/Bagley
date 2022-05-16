@@ -1,4 +1,4 @@
-import time, requests, random, string, os, re, traceback
+import time, requests, random, string, os, re, traceback, selenium
 from bs4 import BeautifulSoup
 from os.path import splitext
 from urllib.parse import urljoin, urlparse
