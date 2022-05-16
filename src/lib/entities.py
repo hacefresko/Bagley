@@ -651,7 +651,7 @@ class Request:
         if path is None:
             return None
         params = Request.__parseParams(urlparse(url).query)
-        data = Request.__parseData(content_type, data) if method == 'POST' else None
+        Request.__parseData(content_type, data) if (method == 'POST') and (data is not None) else None
 
         db = DB()
 
@@ -692,7 +692,7 @@ class Request:
                 content_type = header.value
 
         params = Request.__parseParams(urlparse(url).query)
-        data = Request.__parseData(content_type, data) if method == 'POST' else None
+        data = Request.__parseData(content_type, data) if (method == 'POST') and (data is not None) else None
 
         if Request.check(url, method, content_type, data):
             return None
