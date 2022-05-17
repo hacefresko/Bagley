@@ -80,6 +80,10 @@ class AddCommand(Command):
 
     async def run(self, args):
         if args[1] == 'help':
+            subdodules = ""
+            for submodule in self.controller.getSubModules():
+                submodules += "\t\t\t\t\t\t\t\t" + submodule + "\n"
+
             s = self.usage_msg + "\n" + """Options (in JSON format):
 
 excluded                List of domains which are out of scope.
@@ -99,8 +103,9 @@ localStorage            Key/value pairs to be added to the local storage of the 
 queue                   URLs to start crawling from. Domain must be in scope.
                         {"queue": "http://example.com/example"}
 
-excluded_submodules     Submodules that won't be executed with the added domains. Available submodules: %s.
-                        {"excluded_submodules": ["sqlmap", "pathFinder"]}""" % ", ".join(self.controller.getSubModules())
+excluded_submodules     Submodules that won't be executed with the added domains. Available submodules:
+                        %s
+                        {"excluded_submodules": ["sqlmap", "pathFinder"]}""" % submodules
 
         elif len(args) == 2:
             s = self.controller.addDomain(args[1])
