@@ -690,6 +690,10 @@ class Request:
         if Request.check(url, method, content_type, data):
             return None
 
+        path = Path.get(url)
+        if path is None:
+            return None
+
         params = Request.__parseParams(urlparse(url).query)
         data = Request.__parseData(content_type, data) if (method == 'POST') and (data is not None) else None
 
