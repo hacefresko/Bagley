@@ -4,28 +4,30 @@
 
 Bagley is a tool made for bug bounty environments to automate the finding of vulnerabilities in web applications
 
-## Usage 
+## Deployment
 
-Options:
+* Clone this repository
+* Configure discord connection in docker-compose.yml
+* Run `docker-compose up`
 
-*   domain \[required\]: Adds a domain or group of subdomains (i.e .example.com) to the scope. Only domains inside the scope will be scanned. If a group of subdomains is specified, the scan will start with the parent domain specified and all referenced subdomains inside the specified group will be scanned (i.e if .example.com is specified, scan will start with example.com and any path with a domain such as api.example.com will be scanned).
+## Available commands:
 
-*   excluded: Explicitely specifies a list of domain to be out of scope. This way, a group of subdomains can be specified with some of its subdomains being out of scope. It's only valid when specifying a group of subdomains.
+    help           Print this message
+    start          Start execution
+    stop           Stop execution
+    restart        Restart execution
+    add            Add a new domain (add help for more info)
+    rm             Removes a domain
+    getDomains     Print all domains
+    getPaths       Print all paths for a domain
+    getScript      Get script information
+    getTechnology  Get technolofy information
+    query          Query directly to database
+    getRPS         Print current requests per second
+    setRPS         Set requests per second
+    getActive      Print active modules
 
-*   headers: Specifies the key and value of the headers that will be added to all requests when crawling the specified target.
-
-*   cookies: Specifies the cookies that will be sent with every request to the target. Fields `name`, `value` and `domain` are maandatory, the other ones are optional.
-
-*   localStorage: Adds key value pairs to the local storage of a given domain
-
-*   queue: Specifies list of URLs to start crawling from. Domain must be already added.
-
-### Example for adding domains
-
-    add .example.com -o {"excluded": ["test.example.com"], "queue": ["https://www.example.com/example?e=1337"], "localStorage": [{"key": "lel", "value": "1337", "url": "https://www.example.com"}]}
-    add api.example.com -o {"headers": {"Referer": "google.com", "Accept-Encoding": "gzip, deflate, br"}, "cookies": [{"name":"user_session", "value": "1234567890", "domain": "example.com"}, {"name": "logged_in", "value": "yes", "domain": ".example.com"}]}
-
-## Modules
+## Available modules
 
 Each modules runs in a different thread
 
@@ -34,6 +36,7 @@ Each modules runs in a different thread
 *   Finder: Looks for resources and subdomains in the server and sends discovered assets to the crawler:
 
     *   Searches for subdomains with [Subfinder](https://github.com/projectdiscovery/subfinder) and paths with [Gau](https://github.com/lc/gau)
+    
     *   Fuzzes subdomains and resources with [Gobuster](https://github.com/OJ/gobuster) and wordlists from [SecLists](https://github.com/danielmiessler/SecLists)
 
 *   Injector: Tests different injection vectors:
@@ -41,10 +44,6 @@ Each modules runs in a different thread
     *   SQLi with [Sqlmap](https://github.com/sqlmapproject/sqlmap)
 
     *   XSS with [DalFox](https://github.com/hahwul/dalfox)
-
-    *   CRLFi with [CRLFuzz](https://github.com/dwisiswant0/crlfuzz) (must be specified and does not control requests per second)
-
-    *   SSTI with [Tplmap](https://github.com/epinna/tplmap) (must be specified and does not control requests per second)
 
 *   Static Analyzer: Performs local analysis among obtained data, without generating network traffic:
 
