@@ -593,8 +593,8 @@ class Request:
         if path is None:
             return False
 
-        params = Request.__parseParams(urlparse(url).query) if urlparse(url).query else None
-        data = data if (data is not None and data and method == 'POST') else None
+        params = Request.__parseParams(urlparse(url).query)
+        data = Request.__parseData(content_type, data) if (method == 'POST') and (data is not None) else None
 
         db = DB()
 
@@ -651,7 +651,7 @@ class Request:
         if path is None:
             return None
         params = Request.__parseParams(urlparse(url).query)
-        Request.__parseData(content_type, data) if (method == 'POST') and (data is not None) else None
+        data = Request.__parseData(content_type, data) if (method == 'POST') and (data is not None) else None
 
         db = DB()
 
@@ -682,20 +682,16 @@ class Request:
     # If requested file extension belongs to config.EXTENSIONS_BLACKLIST, returns None
     @staticmethod
     def insert(url, method, headers, cookies, data):
-        path = Path.insert(url)
-        if not path:
-            return None
-
         content_type = None
         for header in headers:
             if header.key == 'content-type':
                 content_type = header.value
 
-        params = Request.__parseParams(urlparse(url).query)
-        data = Request.__parseData(content_type, data) if (method == 'POST') and (data is not None) else None
-
         if Request.check(url, method, content_type, data):
             return None
+
+        params = Request.__parseParams(urlparse(url).query)
+        data = Request.__parseData(content_type, data) if (method == 'POST') and (data is not None) else None
 
         db = DB()
         request = Request(db.exec_and_get_last_id('INSERT INTO requests (path, params, method, data) VALUES (%d,%s,%s,%s)', (path.id, params, method, data)), path.id, params, method, data, None)
