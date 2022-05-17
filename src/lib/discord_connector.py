@@ -80,7 +80,7 @@ class AddCommand(Command):
 
     async def run(self, args):
         if args[1] == 'help':
-            subdodules = ""
+            submodules = ""
             for submodule in self.controller.getSubModules():
                 submodules += "\t\t\t\t\t\t\t\t" + submodule + "\n"
 
