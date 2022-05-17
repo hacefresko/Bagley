@@ -82,7 +82,7 @@ class AddCommand(Command):
         if args[1] == 'help':
             submodules = ""
             for submodule in self.controller.getSubModules():
-                submodules += "\t\t\t\t\t\t\t\t" + submodule + "\n"
+                submodules += "\t\t\t\t\t\t\t  " + submodule + "\n"
             submodules = submodules[:-1]
 
             s = self.usage_msg + "\n" + """Options (in JSON format):
