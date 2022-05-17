@@ -561,7 +561,7 @@ class Request:
             return None
         new_params = params
         for word in config.PARAMS_BLACKLIST:
-            new_params = replaceURLencoded(new_params, word, word)
+            new_params = replaceURL(new_params, word, word)
         return new_params
 
     # Tries to parse data substituting all keys containing terms in blacklist by those terms. Returns None if data does not exist
@@ -605,7 +605,7 @@ class Request:
 
             if params:
                 query += ' AND params LIKE %s'
-                query_params.append(replaceURLencoded(params, None, '%'))
+                query_params.append(replaceURL(params, None, '%'))
             if data:
                 query += ' AND data LIKE %s'
                 query_params.append(substitutePOSTData(content_type, data, None, '%'))
@@ -734,7 +734,7 @@ class Request:
         query_params = [self.path.id, self.method]
         if self.params:
             query += ' AND params LIKE %s'
-            query_params.append(replaceURLencoded(self.params, None, '%'))
+            query_params.append(replaceURL(self.params, None, '%'))
         if self.data:
             query += ' AND data LIKE %s'
             query_params.append(substitutePOSTData(self.getHeader('content-type').value if self.getHeader('content-type') else None, self.data, None, '%'))
@@ -1329,28 +1329,41 @@ class Vulnerability:
 
 # Util functions
 
-def replaceURLencoded(data, match, newValue):
+# Replace in data all matches with newValue, given that data is a valid list of params of a URL
+# If match is None, every parameter will be replace except for those with blacklisted elements,
+# which are never replaced
+def replaceURL(data, match, newValue):
     if not data:
         return None
     new_data = ''
     for p in data.split('&'):
         if len(p.split('=')) == 1:
             return data
-        elif match is None or match.lower() in p.split('=')[0].lower():
+        elif (match is None) or (match.lower() in p.split('=')[0].lower()):
+            # If param name contains a blacklisted element, don't replace
+            for blacklisted in config.PARAMS_BLACKLIST:
+                if blacklisted in p.split('=')[0].lower():
+                    continue
             new_data += p.split('=')[0]
             new_data += '=' + newValue + '&'
         else:
             new_data += p + '&'
     return new_data[:-1]
 
+# Replace in data all matches with newValue, given that data is a valid JSON.
+# If match is None, every parameter will be replace except for those with blacklisted elements,
+# which are never replaced
 def replaceJSON(data, match, newValue):
     if isinstance(data, dict):
         for k,v in data.items():
             if isinstance(v, dict):
                 data.update({k:replaceJSON(v, match, newValue)})
-            else:
-                if match is None or match.lower() in k.lower():
-                    data.update({k:newValue})
+            elif (match is None) or (match.lower() in k.lower()):
+                # If param name contains a blacklisted element, don't replace
+                for blacklisted in config.PARAMS_BLACKLIST:
+                    if blacklisted in k.split('=')[0].lower():
+                        continue
+                data.update({k:newValue})
     elif isinstance(data, list):
         for e in data:
             replaceJSON(e, match, newValue)
@@ -1384,7 +1397,7 @@ def substitutePOSTData(content_type, data, match, newValue):
                 try:
                     new_content = json.dumps(replaceJSON(json.loads(content), match, newValue))
                 except:
-                    new_content = replaceURLencoded(content, match, newValue)
+                    new_content = replaceURL(content, match, newValue)
                 
                 if not new_content:
                     if match.lower() in name.lower() or match is None:
@@ -1400,4 +1413,4 @@ def substitutePOSTData(content_type, data, match, newValue):
     try:
         return json.dumps(replaceJSON(json.loads(data, strict=False), match, newValue)).replace('"%"', '%') # If  match is %, then it must match all values in db, not only strings, so quotes must be removed
     except Exception as e:
-        return  replaceURLencoded(data, match, newValue)
+        return  replaceURL(data, match, newValue)
