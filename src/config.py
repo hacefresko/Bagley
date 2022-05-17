@@ -1,5 +1,14 @@
 import os
 
+# Default value for requests per second
+REQ_PER_SEC = 10
+
+# Timeout for selenium
+TIMEOUT = 30
+
+# Number of same requests with different values for params or data that are allowed to be saved in the database (Request.check() function for more info)
+SAME_REQUESTS_ALLOWED = 5
+
 # Log file
 LOG_FILE = '/var/log/bagley.log'
 
@@ -15,22 +24,13 @@ if not DISCORD_TOKEN:
     print('DISCORD_TOKEN environment variable not found')
     exit()
 
-# Default value for requests per second
-REQ_PER_SEC = 10
-
-# Timeout for selenium
-TIMEOUT = 30
-
-# Number of same requests with different values for params or data that are allowed to be saved in the database (Request.check() function for more info)
-SAME_REQUESTS_ALLOWED = 5
-
 # Formats that won't be stored
 EXTENSIONS_BLACKLIST = ['.css', '.avif', '.gif', '.jpg', '.jpeg', '.png', '.svg', '.webp', '.bmp', '.ico', '.tiff', '.woff2', '.woff', '.mp4', '.rar', '.zip', '.pdf', '.apk', '.mp3', '.otf']
 
 # Scripts extensions
 SCRIPT_EXTENSIONS = ['.js', '.ts']
 
-# Params and POST data containing these words, won't be stored
+# Values for params and POST data containing these words will be substituted in order to not save the
 PARAMS_BLACKLIST = ['csrf']
 
 # Headers whose value won't be stored

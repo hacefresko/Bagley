@@ -19,7 +19,7 @@ services:
       - DB_NAME=bagley
       - DB_USER=bagley
       - DB_PASSWORD=vgytufqiyoguwpifbnweie
-      - DISCORD_TOKEN=OTA3NzY1MTg1NTA5NDYyMDk2.YYr8NQ.gTmNzNO_RwEEFPgTrUkKcW5HuNk
+      - DISCORD_TOKEN=write_your_discord_token_here
     cap_add:
       - NET_ADMIN
     depends_on:
