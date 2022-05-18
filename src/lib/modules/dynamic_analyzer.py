@@ -156,8 +156,10 @@ class Dynamic_Analyzer (Module):
                 try:
                     r = requests.request(method, str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
                 except requests.exceptions.TooManyRedirects:
-                    pass
-                
+                    continue
+                except requests.exceptions.ConnectionError:
+                    continue
+
                 self.updateLastRequest()
 
                 if r.status_code//100 == 2:
@@ -173,7 +175,9 @@ class Dynamic_Analyzer (Module):
                 try:
                     r = requests.request(request.method, str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
                 except requests.exceptions.TooManyRedirects:
-                    pass
+                    continue
+                except requests.exceptions.ConnectionError:
+                    continue
 
                 self.updateLastRequest()
 
