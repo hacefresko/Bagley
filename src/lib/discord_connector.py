@@ -307,7 +307,7 @@ class GetTechnologyCommand(Command):
             msg += "\tNo vulnerabilities found\n"
         else:
             for cve in cves:
-                msg += "\t" + cve + "\n"
+                msg += "\t" + str(cve) + "\n"
         
         await self.discord_connector.send_msg(msg, "terminal")
 
