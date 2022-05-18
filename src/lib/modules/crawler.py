@@ -457,6 +457,7 @@ class Crawler (Module):
             self.driver.quit()
             self.driver = webdriver.Chrome(options=self.opts)
             self.driver.set_page_load_timeout(config.TIMEOUT)
+            self.send_msg("Reseting web driver", "crawler")
             self.__crawl(parent_url, method, data)
             return
 
