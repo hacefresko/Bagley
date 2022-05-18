@@ -296,18 +296,18 @@ class GetTechnologyCommand(Command):
             await self.discord_connector.send_msg("Specified technology was not found", "terminal")
             return
 
-        msg = "%s %s [ID: %d]\n" % (technology.name, technology.version, technology.id)
+        msg = "%s %s [ID: %d]\n\n" % (technology.name, technology.version if technology.version is not None else "", technology.id)
         msg += "Used by:\n"
         for path in technology.getPaths():
-            msg += "\t" + str(path)
+            msg += "\t" + str(path) + "\n"
         msg += "\n"
         msg += "Vulnerabilities:\n"
         cves = technology.getCVEs()
         if len(cves) == 0:
-            msg += "No vulnerabilities found\n"
+            msg += "\tNo vulnerabilities found\n"
         else:
             for cve in cves:
-                msg += "\t" + cve
+                msg += "\t" + cve + "\n"
         
         await self.discord_connector.send_msg(msg, "terminal")
 
