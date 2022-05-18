@@ -1065,8 +1065,11 @@ class Cookie:
         if not cookie.get('secure'):
             cookie['secure'] = False
 
+        if cookie.get("path") is None:
+            cookie["path"] = "/"
+
         if Cookie.checkPath(cookie, url):
-            cookie_path = Path.insert(str(path.domain)+cookie["path"])
+            cookie_path = Path.insert(str(path.domain) + cookie["path"])
             if cookie_path:
                 Cookie.insert(cookie)
 
