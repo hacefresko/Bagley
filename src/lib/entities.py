@@ -402,7 +402,7 @@ class Path:
     @staticmethod
     def getById(id):
         db = DB()
-        path = db.query_one('SELECT id, protocol, element, parent, domain FROM paths WHERE id = %d', (id,))
+        path = db.query_one('SELECT * FROM paths WHERE id = %d', (id,))
         return Path(path[0], path[1], path[2], path[3], path[4]) if path else None
 
     # Yields paths
@@ -1240,11 +1240,11 @@ class Technology:
 
     def getPaths(self):
         db = DB()
-        paths = db.query_all("SELECT * FROM path_technologies WHERE tech = %d", (self.id,))
+        paths = db.query_all("SELECT path FROM path_technologies WHERE tech = %d", (self.id,))
         
         result = []
         for path in paths:
-            result.append(Path.getById(path))
+            result.append(Path.getById(path[0]))
         return result
 
     @staticmethod
