@@ -170,9 +170,9 @@ class Injector (Module):
 
                 self.setActive()
 
-                if response:
+                if ("xss" not in request.path.domain.excluded) and (response):
                     content_type = response.getHeader('content-type')
-                    if (content_type is not None) and ('text/html' in str(content_type)) and ("xss" not in request.path.domain.excluded):
+                    if (content_type is not None) and ('text/html' in str(content_type)):
                         self.__xss(request)
                 
                 if ("sqli" not in request.path.domain.excluded):

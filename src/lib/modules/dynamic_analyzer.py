@@ -153,8 +153,11 @@ class Dynamic_Analyzer (Module):
             for method in methods:
                 self.applyDelay()
 
-                r = requests.request(method, str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
-
+                try:
+                    r = requests.request(method, str(request.path), params=request.params, data=request.data, headers=headers, cookies=cookies, verify=False)
+                except requests.exceptions.TooManyRedirects:
+                    pass
+                
                 self.updateLastRequest()
 
                 if r.status_code//100 == 2:
