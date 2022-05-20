@@ -3,10 +3,10 @@ services:
   mariadb:
     image: mariadb
     environment:
-      - MARIADB_ROOT_PASSWORD=xwpogivnoqipwmelvwp4ebqwrv
+      - MARIADB_ROOT_PASSWORD=root_password
       - MARIADB_DATABASE=bagley
       - MARIADB_USER=bagley
-      - MARIADB_PASSWORD=vgytufqiyoguwpifbnweie
+      - MARIADB_PASSWORD=db_password
     volumes:
       - ./sql/bagley.sql:/docker-entrypoint-initdb.d/bagley.sql
     ports:
@@ -18,7 +18,7 @@ services:
       - DB_HOST=127.0.0.1
       - DB_NAME=bagley
       - DB_USER=bagley
-      - DB_PASSWORD=vgytufqiyoguwpifbnweie
+      - DB_PASSWORD=db_password
       - DISCORD_TOKEN=write_your_discord_token_here
     cap_add:
       - NET_ADMIN
@@ -26,3 +26,4 @@ services:
       - mariadb
     network_mode: "host"
     shm_size: '1gb'
+
