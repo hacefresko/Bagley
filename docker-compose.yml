@@ -25,3 +25,4 @@ services:
     depends_on:
       - mariadb
     network_mode: "host"
+    shm_size: '1gb'

@@ -465,7 +465,7 @@ class Crawler (Module):
             self.send_msg("Timeout exception requesting %s" % parent_url, "crawler")
 
         except:
-            self.send_error_msg(traceback.format_exc(), "crawler")
+            self.send_msg(traceback.format_exc(), "crawler")
 
         self.updateLastRequest()
 
