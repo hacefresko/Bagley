@@ -108,7 +108,7 @@ class Injector (Module):
         result = subprocess.run(command, capture_output=True, encoding='utf-8')
 
         if "[POC]" in result.stdout:
-            Vulnerability.insert('XSS', result.stdout, str(request.path), command)
+            Vulnerability.insert('XSS', result.stdout, str(request.path), " ".join(command))
             self.send_vuln_msg("XSS: %s\n%s\n" % (url, result.stdout), "injector")
         if result.stderr != '':
             self.send_error_msg(result.stderr, "injector")
