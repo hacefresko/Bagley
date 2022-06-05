@@ -3,10 +3,10 @@ bs4
 selenium
 selenium-wire
 mariadb
-pathlib
+pathlib==1.0.1
 iptools
 discord
 pyjwt
 tabulate
-rure
+rure==0.2.1
 jsbeautifier
