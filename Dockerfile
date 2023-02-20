@@ -4,7 +4,7 @@ FROM ubuntu:latest
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install apt packages
-RUN apt update && apt install -y nano iptables wget unzip git python3 python3-pip python2 libmariadb3 libmariadb-dev iputils-ping iproute2 nmap && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt install -y nano iptables wget unzip git python3 python3-pip python2 libmariadb3 libmariadb-dev iputils-ping iproute2 nmap openssl && rm -rf /var/lib/apt/lists/*
 
 # Install pip2
 RUN wget https://bootstrap.pypa.io/pip/2.7/get-pip.py && python2 get-pip.py && rm get-pip.py
@@ -25,7 +25,7 @@ RUN npm install -g yarn
 RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && apt install -y ./google-chrome-stable_current_amd64.deb libxss1 && rm google-chrome-stable_current_amd64.deb
 
 # Install Chrome Driver
-RUN wget https://chromedriver.storage.googleapis.com/102.0.5005.61/chromedriver_linux64.zip && unzip chromedriver_linux64.zip && mv chromedriver /usr/local/sbin && rm chromedriver_linux64.zip
+RUN wget https://chromedriver.storage.googleapis.com/110.0.5481.77/chromedriver_linux64.zip && unzip chromedriver_linux64.zip && mv chromedriver /usr/local/sbin && rm chromedriver_linux64.zip
 
 # Install gobuster
 RUN go install github.com/OJ/gobuster/v3@latest
