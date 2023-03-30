@@ -11,7 +11,11 @@ class Dynamic_Analyzer (Module):
     def __lookupCVEs(self, tech):
         vulns = []
         api = 'https://services.nvd.nist.gov/rest/json/cpes/1.0?addOns=cves&startIndex=%d&cpeMatchString=%s&resultsPerPage=5'
-        cpe = tech.cpe + ':' + tech.version
+        
+        s = tech.cpe.split(":")
+        s[5] = tech.version
+        cpe = ":".join(s)
+
         fetched = 0
         total_results = 1
 

@@ -10,7 +10,7 @@ RUN apt update && apt install -y nano iptables wget unzip git python3 python3-pi
 RUN wget https://bootstrap.pypa.io/pip/2.7/get-pip.py && python2 get-pip.py && rm get-pip.py
 
 # Install Go (apt only installs up to Go 1.13)
-RUN wget https://go.dev/dl/go1.18.2.linux-amd64.tar.gz && tar -xvf go1.18.2.linux-amd64.tar.gz && mv go /usr/local && rm go1.18.2.linux-amd64.tar.gz
+RUN wget https://go.dev/dl/go1.19.4.linux-amd64.tar.gz && tar -xvf go1.19.4.linux-amd64.tar.gz && mv go /usr/local && rm go1.19.4.linux-amd64.tar.gz
 ENV GOROOT=/usr/local/go
 ENV GOPATH=$HOME/go
 ENV PATH=$GOPATH/bin:$GOROOT/bin:$PATH

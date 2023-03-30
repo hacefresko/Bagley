@@ -378,7 +378,9 @@ class CommandParser():
 class Discord_Connector:
     def __init__(self, controller):
         # Create bot
-        self.bot = discord.Client()
+        intents = discord.Intents.default()
+        intents.message_content = True
+        self.bot = discord.Client(intents=intents)
 
         # Create command parser
         cp = CommandParser(controller, self)
